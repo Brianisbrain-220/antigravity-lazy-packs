@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>最後一公里的光 — Marathon Light</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@400;700;900&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; background: #0A0A0A; color: #F5EFE2;
+    font-family: 'Noto Sans TC', sans-serif; overflow: hidden;
+  }
+  .stage {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .beat {
+    position: absolute; inset: 0; opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .beat.active { opacity: 1; }
+  .beat .img {
+    position: absolute; inset: 0; background-size: cover; background-position: center;
+    transform: scale(1.0);
+    transition: transform var(--dur, 20s) linear;
+  }
+  .beat.active .img { transform: scale(1.08); }
+  .beat .vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(0,0,0,0.55) 100%),
+      linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);
+  }
+  .card {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+    text-align: center; padding: 0 8%;
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: clamp(40px, 6vw, 92px); letter-spacing: 0.04em;
+    color: #F5EFE2; text-shadow: 0 2px 24px rgba(0,0,0,0.55);
+    opacity: 0; transform: translateY(calc(-50% + 12px));
+    transition: opacity 1.5s ease, transform 1.5s ease;
+  }
+  .beat.active .card { opacity: 1; transform: translateY(-50%); }
+
+  .subtitle {
+    position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
+    max-width: 80%; padding: 12px 28px; border-radius: 6px;
+    background: rgba(0,0,0,0.6); color: #FFFFFF;
+    font-family: 'Noto Sans TC', sans-serif; font-weight: 400;
+    font-size: clamp(18px, 2vw, 30px); line-height: 1.5; text-align: center;
+    opacity: 0; transition: opacity 0.8s ease;
+  }
+  .beat.active .subtitle { opacity: 1; }
+
+  .chapter {
+    position: absolute; top: 24px; left: 28px;
+    font-family: 'JetBrains Mono', monospace; font-weight: 300;
+    font-size: 13px; letter-spacing: 0.18em; color: rgba(245,239,226,0.7);
+  }
+
+  .progress {
+    position: absolute; left: 0; bottom: 0; height: 2px; background: #E8B14A;
+    width: 0%; transition: width 0.2s linear; box-shadow: 0 0 8px rgba(232,177,74,0.6);
+  }
+
+  .start-screen {
+    position: fixed; inset: 0; background: #0A0A0A; z-index: 999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; gap: 28px;
+  }
+  .start-screen .title {
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: clamp(36px, 5vw, 64px); color: #F5EFE2; letter-spacing: 0.08em;
+  }
+  .start-screen .sub {
+    font-family: 'Noto Sans TC', sans-serif; color: rgba(245,239,226,0.6); font-size: 16px;
+  }
+  .start-screen .play {
+    width: 84px; height: 84px; border: 2px solid #E8B14A; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #E8B14A;
+    transition: all 0.3s ease;
+  }
+  .start-screen:hover .play { background: #E8B14A; color: #0A0A0A; }
+  .start-screen.hidden { display: none; }
+
+  /* Finish beat extra glow */
+  .beat[data-beat="10"] .card { color: #FFFFFF; text-shadow: 0 0 32px rgba(232,177,74,0.7); }
+
+  /* Last mile light effect */
+  .beat[data-beat="9"] .card { color: #FFFFFF; }
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="startScreen">
+  <div class="title">最後一公里的光</div>
+  <div class="play">
+    <svg width="24" height="28" viewBox="0 0 24 28"><path d="M2 2 L22 14 L2 26 Z" fill="currentColor"/></svg>
+  </div>
+  <div class="sub">點擊開始 · 建議全螢幕觀看 · 00:50</div>
+</div>
+
+<div class="stage" id="stage"></div>
+<div class="progress" id="progress"></div>
+<audio id="audio" src="assets/audio/最後一公里的光.mp3" preload="auto"></audio>
+
+<script>
+const BEATS = [
+  { i: 1,  s:  0, e:  5, label: "01/10 — DAWN",        img: "marathon_01_dawn_20260527_202531.png",     card: "在沒人看見的時候",             sub: "跑道記得你每一個清晨。" },
+  { i: 2,  s:  5, e: 10, label: "02/10 — TRAINING",    img: "marathon_02_training_20260527_202527.png", card: "重複，是最沉默的努力",         sub: "一圈、兩圈、一百圈。" },
+  { i: 3,  s: 10, e: 15, label: "03/10 — SIGN UP",     img: "marathon_03_signup_20260527_202527.png",   card: "決定，比準備更難",             sub: "怕了——還是去報名。" },
+  { i: 4,  s: 15, e: 20, label: "04/10 — START LINE",  img: "marathon_04_startline_20260527_202539.png",card: "起點，從來不擁擠",             sub: "能跑完的，只剩你自己。" },
+  { i: 5,  s: 20, e: 25, label: "05/10 — GUNSHOT",     img: "marathon_05_gunshot_20260527_202541.png",  card: "衝出去——",                     sub: "猶豫，全被踩在腳下。" },
+  { i: 6,  s: 25, e: 30, label: "06/10 — MIDWAY",      img: "marathon_06_midway_20260527_202538.png",   card: "有人陪你跑一段",               sub: "但下一步——還是你自己的。" },
+  { i: 7,  s: 30, e: 35, label: "07/10 — THE WALL",    img: "marathon_07_wall_20260527_202624.png",     card: "想放棄的那一刻",               sub: "腦袋裡只有一個聲音：停下來吧。" },
+  { i: 8,  s: 35, e: 40, label: "08/10 — STILL MOVING",img: "marathon_08_rain_20260527_202648.png",     card: "但你還是抬起了腳",             sub: "你只是——選擇了不停下。" },
+  { i: 9,  s: 40, e: 45, label: "09/10 — LAST MILE",   img: "marathon_09_lastmile_20260527_202627.png", card: "最後一公里，是光",             sub: "你還在跑，才看得見光。" },
+  { i:10,  s: 45, e: 50, label: "10/10 — FINISH",      img: "marathon_10_finish_20260527_202651.png",   card: "你完成的，是你自己",           sub: "" },
+];
+
+const TOTAL = 50;
+const FADE_START = 45;  // 最後 5 秒淡出
+const stage = document.getElementById('stage');
+
+BEATS.forEach(b => {
+  const el = document.createElement('div');
+  el.className = 'beat';
+  el.dataset.beat = b.i;
+  el.style.setProperty('--dur', (b.e - b.s) + 's');
+  el.innerHTML = `
+    <div class="img" style="background-image:url('assets/images/${b.img}')"></div>
+    <div class="vignette"></div>
+    <div class="chapter">${b.label}</div>
+    <div class="card">${b.card}</div>
+    ${b.sub ? `<div class="subtitle">${b.sub}</div>` : ''}
+  `;
+  stage.appendChild(el);
+});
+
+const beatEls = [...document.querySelectorAll('.beat')];
+const audio = document.getElementById('audio');
+const progress = document.getElementById('progress');
+const startScreen = document.getElementById('startScreen');
+
+let currentIdx = -1;
+function tick() {
+  const t = audio.currentTime;
+  progress.style.width = (Math.min(t / TOTAL, 1) * 100) + '%';
+
+  const idx = BEATS.findIndex(b => t >= b.s && t < b.e);
+  if (idx !== -1 && idx !== currentIdx) {
+    beatEls.forEach((el, i) => el.classList.toggle('active', i === idx));
+    currentIdx = idx;
+  }
+
+  // 50s 後音樂淡出 + 結束
+  if (t >= FADE_START && t < TOTAL) {
+    audio.volume = Math.max(0, 1 - (t - FADE_START) / (TOTAL - FADE_START));
+  } else if (t >= TOTAL) {
+    audio.pause();
+    audio.volume = 0;
+    beatEls.forEach(el => el.classList.remove('active'));
+    beatEls[BEATS.length - 1].classList.add('active');
+    return;
+  }
+
+  if (!audio.paused) requestAnimationFrame(tick);
+}
+
+startScreen.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  audio.volume = 1;
+  audio.currentTime = 0;
+  audio.play();
+  beatEls[0].classList.add('active');
+  currentIdx = 0;
+  requestAnimationFrame(tick);
+});
+</script>
+
+</body>
+</html>

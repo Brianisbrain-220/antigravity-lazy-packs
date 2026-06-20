@@ -1,4 +1,4 @@
-﻿# Anti-Gravity 懶人包 #09：服務連接與工作流程設定
+# Anti-Gravity 懶人包 #09：服務連接與工作流程設定
 
 > 版本：v1.4
 > 更新日期：2026-05-31
@@ -19,6 +19,7 @@
 - [ ] 已安裝 Python 或 `uv`
 - [ ] 有 Google 帳號，可登入 NotebookLM / Firebase
 - [ ] 有 GitHub 帳號
+- [ ] 有 Netlify 帳號（若需使用 Clasp + Netlify MCP 部署系統）
 - [ ] 已有 Obsidian vault，或知道筆記本資料夾位置
 
 Windows 快速檢查：
@@ -349,6 +350,88 @@ Obsidian vault：
 
 ---
 
+## 七、連接 Clasp 與 Netlify MCP 部署
+
+### 重點原則
+* **嚴禁**將 Netlify PAT、Google Apps Script OAuth 憑證等敏感資料寫入程式碼或提交至公開 Repo。
+* 所有 API 網址、部署 ID 與專案金鑰，必須在執行期間動態生成、填入或透過環境變數傳遞。
+
+### 本地檔案準備
+1. **GAS 主程式**（如 `gas_code.js`）：包含 `doGet` 與 `doPost`，處理 Sheets 資料。
+2. **`appsscript.json`**：GAS Manifest 檔案，其內必須配置 `webapp` 欄位以允許匿名存取：
+   ```json
+   {
+     "timeZone": "Asia/Taipei",
+     "dependencies": {},
+     "exceptionLogging": "STACKDRIVER",
+     "runtimeVersion": "V8",
+     "webapp": {
+       "executeAs": "USER_DEPLOYING",
+       "access": "ANYONE_ANONYMOUS"
+     }
+   }
+   ```
+3. **`.claspignore`**：排除前端網頁檔案，**僅允許**推送 GAS 後端檔案與 `appsscript.json`：
+   ```text
+   **/*
+   !gas_code.js
+   !appsscript.json
+   ```
+4. **前端網頁檔案**：準備好連線 JS 檔，將 API 網址變數保留為空字串，待後續動態注入。
+
+### 安裝與部署步驟
+1. 本地安裝 Clasp：
+   ```powershell
+   npm.cmd install @google/clasp
+   ```
+2. Google 授權：
+   ```powershell
+   npx.cmd clasp login
+   ```
+   * 複製終端機產生的 OAuth 網址至瀏覽器完成授權。
+3. 建立專案：
+   ```powershell
+   npx.cmd clasp create --title "專案資料庫" --type standalone
+   ```
+4. 強制推送並部署：
+   ```powershell
+   npx.cmd clasp push -f
+   npx.cmd clasp deploy --description "Production Web App"
+   ```
+5. 獲取並注入 API 網址：
+   * 執行 `npx.cmd clasp deployments` 取得 Deployment ID。
+   * 將 API 網址 `https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec` 回填寫入前端 JS。
+6. Netlify 發佈：
+   * 呼叫 `netlify-project-services-updater` 工具建立新專案以獲取 `site_id`。
+   * 呼叫 `netlify-deploy-services-updater` 將前端資料夾一鍵上傳。
+
+---
+
+## 八、影片製作規範與自動化渲染
+
+### 核心安裝與自檢流程
+Windows 環境下，建議透過隨附的 Python/PowerShell 編排器一次安裝所需的所有環境組件（包含 edge-tts 旁白、源石黑體與 Playwright）。
+
+1. **環境檢查與安裝**：
+   在 PowerShell 中執行以下命令檢查環境或一鍵安裝（此腳本將自動將 Playwright 下載至非 GDrive 的臨時目錄以避開同步效能地雷）：
+   ```powershell
+   # 檢查環境
+   python .agents/skills/09-video-specs/scripts/setup.py check
+   
+   # 一鍵安裝所有元件 (Edge-TTS, 源石黑體, Playwright)
+   powershell -ExecutionPolicy Bypass -File .agents/skills/09-video-specs/scripts/install_all.ps1
+   ```
+
+2. **影片動工最高防線**：
+   在開始生成 TTS 或渲染任何影片前，**務必產出 `SCRIPT.md`（腳本與分鏡）與 `DESIGN.md`（視覺規範）** 提交給使用者核准。
+
+3. **渲染自檢**：
+   - 字幕文案必須壓縮至單行且每段 ≤ 25 字。
+   - 合併音視訊時，FFmpeg 必加 `-map 0:v:0 -map 1:a:0` 參數以防止 Playwright 的空白音軌覆蓋旁白。
+   - Windows 執行 Python 腳本前，需設置 `$env:PYTHONUTF8=1` 防止 CP950 解碼崩潰。
+
+---
+
 ## 完成回報格式
 
 ```markdown
@@ -358,6 +441,8 @@ Obsidian vault：
 - GitHub：已登入 / 待登入 / 失敗
 - Firebase：已登入 / 待登入 / 未使用
 - Obsidian：已連接 / 待設定 / 失敗
+- Clasp & Netlify：已設定 / 待授權 / 未使用
+- 影片製作規範與渲染：已設定 / 待自檢 / 未使用
 - 規則檔：ANTIGRAVITY.md 已建立 / 已更新 / 未建立
 - Git 狀態：乾淨 / 有未提交變更
 - 下一步：
@@ -377,6 +462,9 @@ Obsidian vault：
 | PowerShell 擋 `npm.ps1` / `npx.ps1` | 改用 `npm.cmd` / `npx.cmd` |
 | Obsidian 找不到 vault | 搜尋含 `.obsidian` 的資料夾，請使用者確認真正使用的 vault |
 | 收工會納入太多檔案 | 先看 `git status` 與 diff，只 stage 本次相關檔案 |
+| Python 中文輸出崩潰 (CP950) | 在終端機設定 `$env:PYTHONUTF8 = "1"` 以強制 UTF-8 輸出 |
+| Playwright 在 GDrive 內安裝緩慢 | 確保 `node_modules` 位於 `%TEMP%/cvs-render/`，且將 `NODE_PATH` 指向該路徑 |
+| 合併後的 MP4 影片無聲 | 合併時 FFmpeg 必加參數 `-map 0:v:0 -map 1:a:0` 映射音軌 |
 
 ---
 
@@ -384,6 +472,7 @@ Obsidian vault：
 
 | 日期 | 版本 | 更新內容 |
 |---|---|---|
+| 2026-06-20 | v1.5 | 新增第 9 個技能 09-video-specs，整合三類影片製作規範、Edge-TTS 與 Playwright 自動渲染工作流 |
 | 2026-05-31 | v1.4 | 重新加回 Obsidian MCPVault 設定與開工/收工自動化流程，並加入獨立 Skill 目錄 |
 | 2026-05-24 | v1.2 | 移除 Obsidian MCPVault 安裝與 MCP 註冊，保留 Obsidian 作為人工專案筆記工作流 |
 | 2026-05-23 | v1.1 | 移除 NotebookLM 個人資料與成果檔定位，改正 NotebookLM OAuth、Obsidian MCP、Git 收工安全流程 |

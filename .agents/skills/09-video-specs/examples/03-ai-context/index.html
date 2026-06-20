@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>AI 上下文的祕密 — 社群科普</title>
+<style>
+  @font-face { font-family: 'GenSeki TW'; src: url('../../assets/fonts/GenSekiGothic2TW-M.otf') format('opentype'); font-weight: 500; font-display: block; }
+  @font-face { font-family: 'GenSeki TW'; src: url('../../assets/fonts/GenSekiGothic2TW-B.otf') format('opentype'); font-weight: 700; font-display: block; }
+  @font-face { font-family: 'GenSeki TW'; src: url('../../assets/fonts/GenSekiGothic2TW-H.otf') format('opentype'); font-weight: 900; font-display: block; }
+
+  :root {
+    --paper: #FAF7EE; --paper-2: #F2EDDC; --ink: #1A1A1A;
+    --teal: #0E7C7B; --coral: #E36414; --gold: #C8941F;
+    --neon: #FFD23F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; background: #000; overflow: hidden;
+    font-family: 'GenSeki TW', sans-serif; font-weight: 500; color: var(--ink);
+  }
+  .stage { position: fixed; inset: 0; background: var(--paper); }
+  .slide {
+    position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease; overflow: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .chapter {
+    position: absolute; top: 30px; left: 48px; z-index: 5;
+    font-family: 'GenSeki TW'; font-weight: 700; font-size: 22px;
+    letter-spacing: 0.16em;
+  }
+  .chapter .num {
+    background: var(--teal); color: #fff; padding: 4px 14px;
+    border-radius: 4px; font-weight: 900; margin-right: 10px;
+  }
+  .chapter.on-dark { color: rgba(255,255,255,0.85); }
+
+  /* 字幕（社群放大版 36px）*/
+  .subtitle {
+    position: absolute; left: 50%; bottom: 50px; transform: translateX(-50%);
+    max-width: 90%; padding: 18px 40px; border-radius: 12px;
+    background: rgba(26,26,26,0.92); color: #fff;
+    font-weight: 700; font-size: 36px; line-height: 1.4;
+    text-align: center; opacity: 0; transition: opacity 0.4s ease;
+    z-index: 10;
+  }
+  .subtitle.show { opacity: 1; }
+
+  /* 進度條 8px */
+  .progress {
+    position: absolute; left: 0; bottom: 0; height: 8px;
+    background: linear-gradient(90deg, var(--teal), var(--neon));
+    width: 0%; transition: width 0.2s linear; z-index: 11;
+  }
+
+  /* 開場 */
+  .start-screen {
+    position: fixed; inset: 0; background: var(--ink); color: var(--paper);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; cursor: pointer; gap: 40px;
+  }
+  .start-screen .t { font-weight: 900; font-size: 180px; letter-spacing: 0.08em; line-height: 1; }
+  .start-screen .s { font-size: 26px; color: rgba(250,247,238,0.6); font-weight: 700; }
+  .start-screen .play {
+    width: 96px; height: 96px; border: 3px solid var(--neon);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--neon); transition: all 0.3s;
+  }
+  .start-screen:hover .play { background: var(--neon); color: var(--ink); }
+  .start-screen.hidden { display: none; }
+
+  /* ===== L5 純大字 ===== */
+  .L5 { background: var(--ink); color: var(--paper);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
+  .L5 .big {
+    font-weight: 900; font-size: 200px; line-height: 1.15;
+    letter-spacing: 0.04em;
+  }
+  .L5 .accent { color: var(--neon); }
+  .L5 .small { font-size: 40px; color: rgba(250,247,238,0.7); margin-top: 40px; font-weight: 700; }
+
+  /* ===== L2 左右並列 ===== */
+  .L2 { display: grid; grid-template-columns: 1fr 1fr; }
+  .L2 .col-img {
+    background-size: cover; background-position: center;
+    position: relative;
+  }
+  .L2 .col-img::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 60%, var(--paper) 100%);
+  }
+  .L2 .col-text {
+    background: var(--paper); padding: 100px 80px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .L2 .label {
+    font-size: 24px; font-weight: 700; letter-spacing: 0.3em;
+    color: var(--coral); margin-bottom: 24px;
+  }
+  .L2 .head {
+    font-size: 120px; font-weight: 900; line-height: 1.1; color: var(--ink);
+    margin-bottom: 30px;
+  }
+  .L2 .head .hl { color: var(--teal); }
+  .L2 .body { font-size: 36px; font-weight: 700; color: #333; line-height: 1.5; }
+
+  /* ===== L1 全版照片 ===== */
+  .L1 { background-size: cover; background-position: center;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        position: relative; padding: 80px; color: #fff; text-align: center; }
+  .L1::before {
+    content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+  }
+  .L1 > * { position: relative; z-index: 1; }
+  .L1 .tag {
+    font-size: 28px; letter-spacing: 0.3em; color: var(--neon);
+    font-weight: 700; margin-bottom: 30px;
+  }
+  .L1 .head {
+    font-size: 180px; font-weight: 900; line-height: 1.05; letter-spacing: 0.04em;
+  }
+
+  /* ===== L3 圖示陣列 ===== */
+  .L3 { background: var(--paper); padding: 100px 80px 140px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .L3 h2 {
+    font-size: 96px; font-weight: 900; color: var(--ink);
+    text-align: center; margin-bottom: 60px; line-height: 1.1;
+  }
+  .L3 h2 .hl { color: var(--coral); }
+  .L3 .grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; width: 100%;
+  }
+  .L3 .item {
+    background: #fff; border: 4px solid var(--ink); border-radius: 16px;
+    padding: 40px 28px; text-align: center;
+    opacity: 0; transform: translateY(30px); transition: all 0.6s ease;
+  }
+  .L3.active .item { opacity: 1; transform: translateY(0); }
+  .L3.active .item:nth-child(1) { transition-delay: 0.5s; }
+  .L3.active .item:nth-child(2) { transition-delay: 1.2s; }
+  .L3.active .item:nth-child(3) { transition-delay: 1.9s; }
+  .L3 .item .ic { font-size: 88px; line-height: 1; }
+  .L3 .item .lb {
+    font-size: 40px; font-weight: 900; color: var(--teal); margin-top: 20px;
+  }
+  .L3 .item .desc { font-size: 26px; color: #333; margin-top: 10px; font-weight: 700; }
+
+  /* ===== L4 SVG 置中 ===== */
+  .L4 { background: var(--paper); padding: 80px 80px 140px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .L4 h2 {
+    font-size: 88px; font-weight: 900; color: var(--ink);
+    text-align: center; margin-bottom: 30px; line-height: 1.1;
+  }
+  .L4 h2 .hl { color: var(--coral); }
+  .L4 svg { display: block; }
+
+  /* ===== L6 對比並排 ===== */
+  .L6 { background: var(--paper); padding: 80px 80px 140px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .L6 h2 {
+    font-size: 88px; font-weight: 900; color: var(--ink);
+    text-align: center; margin-bottom: 50px;
+  }
+  .L6 h2 .hl { color: var(--coral); }
+  .L6 .pair { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 0; align-items: center; width: 100%; max-width: 1700px; }
+  .L6 .pair .box {
+    background: #fff; border: 4px solid var(--ink); border-radius: 16px;
+    padding: 50px; text-align: center;
+  }
+  .L6 .pair .box.before { opacity: 0.6; }
+  .L6 .pair .box .lb { font-size: 32px; font-weight: 700; color: #666; margin-bottom: 16px; }
+  .L6 .pair .box .num {
+    font-size: 160px; font-weight: 900; line-height: 1;
+  }
+  .L6 .pair .box.before .num { color: #999; }
+  .L6 .pair .box.after .num { color: var(--teal); }
+  .L6 .pair .box .unit { font-size: 28px; font-weight: 700; color: #666; }
+  .L6 .pair .arrow {
+    font-size: 80px; font-weight: 900; color: var(--coral); text-align: center;
+  }
+
+  /* ===== Slide 特定 ===== */
+  .s2 .col-img { background-image: url('assets/images/sticky-notes.jpg'); }
+  .s7 { background-image: url('assets/images/office.jpg'); }
+  .s9 .col-img { background-image: url('assets/images/library.jpg'); }
+
+  /* SVG 動畫元素 */
+  .anim { opacity: 0; transition: opacity 0.6s ease, transform 0.6s ease; }
+  .anim.in { opacity: 1; }
+
+  /* Slide 5 便利貼塞滿 - 文字溢出動畫 */
+  .overflow-text {
+    transform: translateX(0); transition: transform 1.5s ease;
+  }
+
+  /* 飄入 token 粒子（slide 1）*/
+  .tokens { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .tokens span {
+    position: absolute; color: rgba(255,210,63,0.18);
+    font-weight: 900; font-family: 'GenSeki TW';
+    animation: floatUp 6s linear infinite;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(110vh); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="startScreen">
+  <div class="t">AI 上下文</div>
+  <div class="play"><svg width="28" height="32" viewBox="0 0 24 28"><path d="M2 2 L22 14 L2 26 Z" fill="currentColor"/></svg></div>
+  <div class="s">社群科普 · 點擊開始 · 約 2:30</div>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- ===== Slide 1 — Hook L5 ===== -->
+  <div class="slide L5 s1">
+    <div class="tokens" id="tokens"></div>
+    <div style="position:relative;z-index:1;">
+      <div class="big">為什麼 AI<br>突然 <span class="accent">忘了</span>？</div>
+    </div>
+  </div>
+
+  <!-- ===== Slide 2 — L2 便利貼 ===== -->
+  <div class="slide L2 s2">
+    <div class="chapter"><span class="num">02</span> / 12 — 比喻</div>
+    <div class="col-img"></div>
+    <div class="col-text">
+      <div class="label">CONTEXT 是什麼</div>
+      <div class="head">AI 沒有記憶，<br>只有一張<br><span class="hl">便利貼</span>。</div>
+      <div class="body">這張便利貼，叫做「上下文」。</div>
+    </div>
+  </div>
+
+  <!-- ===== Slide 3 — L4 對話流 SVG ===== -->
+  <div class="slide L4 s3">
+    <div class="chapter"><span class="num">03</span> / 12 — 對話歷史</div>
+    <h2>每句話，都<span class="hl">貼上去</span></h2>
+    <svg width="1500" height="600" viewBox="0 0 1500 600">
+      <!-- 便利貼背景 -->
+      <rect x="350" y="80" width="800" height="480" fill="#FFD23F" rx="8" transform="rotate(-1.5 750 320)" stroke="#C8941F" stroke-width="2"/>
+      <!-- 對話泡 -->
+      <g class="anim" data-d="0">
+        <rect x="420" y="130" width="320" height="80" rx="12" fill="#0E7C7B"/>
+        <text x="580" y="180" text-anchor="middle" font-size="34" font-weight="700" fill="#fff" font-family="GenSeki TW">你：幫我解釋⋯</text>
+      </g>
+      <g class="anim" data-d="800">
+        <rect x="760" y="230" width="320" height="80" rx="12" fill="#fff" stroke="#1A1A1A" stroke-width="2"/>
+        <text x="920" y="280" text-anchor="middle" font-size="34" font-weight="700" fill="#1A1A1A" font-family="GenSeki TW">AI：好的，⋯</text>
+      </g>
+      <g class="anim" data-d="1600">
+        <rect x="420" y="330" width="320" height="80" rx="12" fill="#0E7C7B"/>
+        <text x="580" y="380" text-anchor="middle" font-size="34" font-weight="700" fill="#fff" font-family="GenSeki TW">你：那再⋯</text>
+      </g>
+      <g class="anim" data-d="2400">
+        <rect x="760" y="430" width="320" height="80" rx="12" fill="#fff" stroke="#1A1A1A" stroke-width="2"/>
+        <text x="920" y="480" text-anchor="middle" font-size="34" font-weight="700" fill="#1A1A1A" font-family="GenSeki TW">AI：當然⋯</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ===== Slide 4 — L4 Token ===== -->
+  <div class="slide L4 s4">
+    <div class="chapter"><span class="num">04</span> / 12 — Token</div>
+    <h2>切成 <span class="hl">token</span>，計算容量</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:40px;margin-top:20px;">
+      <svg width="1400" height="180" viewBox="0 0 1400 180">
+        <g class="anim" data-d="0"><rect x="20" y="40" width="180" height="100" fill="#0E7C7B" rx="12"/><text x="110" y="105" text-anchor="middle" font-size="42" font-weight="900" fill="#fff" font-family="GenSeki TW">Hello</text></g>
+        <g class="anim" data-d="400"><rect x="220" y="40" width="160" height="100" fill="#E36414" rx="12"/><text x="300" y="105" text-anchor="middle" font-size="42" font-weight="900" fill="#fff" font-family="GenSeki TW">,</text></g>
+        <g class="anim" data-d="800"><rect x="400" y="40" width="180" height="100" fill="#0E7C7B" rx="12"/><text x="490" y="105" text-anchor="middle" font-size="42" font-weight="900" fill="#fff" font-family="GenSeki TW">世</text></g>
+        <g class="anim" data-d="1200"><rect x="600" y="40" width="180" height="100" fill="#0E7C7B" rx="12"/><text x="690" y="105" text-anchor="middle" font-size="42" font-weight="900" fill="#fff" font-family="GenSeki TW">界</text></g>
+        <g class="anim" data-d="1600"><rect x="800" y="40" width="160" height="100" fill="#E36414" rx="12"/><text x="880" y="105" text-anchor="middle" font-size="42" font-weight="900" fill="#fff" font-family="GenSeki TW">!</text></g>
+        <g class="anim" data-d="2000"><text x="1100" y="115" font-size="100" font-weight="900" fill="#1A1A1A" font-family="GenSeki TW">= 5</text></g>
+      </svg>
+      <div style="display:flex;gap:60px;margin-top:20px;">
+        <div class="anim" data-d="2800" style="text-align:center;background:#fff;border:4px solid #1A1A1A;border-radius:16px;padding:40px 60px;">
+          <div style="font-size:32px;font-weight:700;color:#666;">GPT-4</div>
+          <div style="font-size:96px;font-weight:900;color:#0E7C7B;line-height:1;">128K</div>
+        </div>
+        <div class="anim" data-d="3400" style="text-align:center;background:#fff;border:4px solid #1A1A1A;border-radius:16px;padding:40px 60px;">
+          <div style="font-size:32px;font-weight:700;color:#666;">Claude</div>
+          <div style="font-size:96px;font-weight:900;color:#E36414;line-height:1;">200K</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Slide 5 — L4 便利貼塞滿 ===== -->
+  <div class="slide L4 s5">
+    <div class="chapter"><span class="num">05</span> / 12 — 視窗有限</div>
+    <h2>越早的，被<span class="hl">擠出去</span></h2>
+    <svg width="1400" height="550" viewBox="0 0 1400 550">
+      <!-- 便利貼 -->
+      <rect x="200" y="50" width="1000" height="450" fill="#FFD23F" rx="8" stroke="#C8941F" stroke-width="3"/>
+      <!-- 早期訊息被擠 -->
+      <g class="anim" data-d="0" id="oldMsg">
+        <rect x="60" y="100" width="280" height="60" rx="8" fill="#999"/>
+        <text x="200" y="142" text-anchor="middle" font-size="26" fill="#fff" font-family="GenSeki TW" font-weight="700">⋯被擠出去</text>
+      </g>
+      <!-- 中段訊息 -->
+      <g class="anim" data-d="600">
+        <rect x="260" y="180" width="700" height="60" rx="8" fill="#fff" stroke="#1A1A1A" stroke-width="2"/>
+        <text x="610" y="222" text-anchor="middle" font-size="28" fill="#1A1A1A" font-family="GenSeki TW" font-weight="700">舊對話</text>
+      </g>
+      <g class="anim" data-d="1200">
+        <rect x="260" y="270" width="700" height="60" rx="8" fill="#fff" stroke="#1A1A1A" stroke-width="2"/>
+        <text x="610" y="312" text-anchor="middle" font-size="28" fill="#1A1A1A" font-family="GenSeki TW" font-weight="700">舊對話</text>
+      </g>
+      <g class="anim" data-d="1800">
+        <rect x="260" y="360" width="700" height="60" rx="8" fill="#0E7C7B"/>
+        <text x="610" y="402" text-anchor="middle" font-size="28" fill="#fff" font-family="GenSeki TW" font-weight="700">新訊息來了！</text>
+      </g>
+      <!-- 箭頭表示擠出 -->
+      <g class="anim" data-d="2400">
+        <path d="M 380 130 L 200 130" stroke="#E36414" stroke-width="6" fill="none" marker-end="url(#arrowhead)"/>
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#E36414"/>
+          </marker>
+        </defs>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ===== Slide 6 — L5 反轉 ===== -->
+  <div class="slide L5 s6">
+    <div class="big">不是 AI 笨，<br>是<span class="accent">便利貼</span> 不夠大。</div>
+  </div>
+
+  <!-- ===== Slide 7 — L1 全版照片過渡 ===== -->
+  <div class="slide L1 s7">
+    <div class="chapter on-dark"><span class="num">07</span> / 12 — 解決方案</div>
+    <div class="tag">SOLUTIONS</div>
+    <div class="head">3 個破解的招式</div>
+  </div>
+
+  <!-- ===== Slide 8 — L6 對比（摘要） ===== -->
+  <div class="slide L6 s8">
+    <div class="chapter"><span class="num">08</span> / 12 — 招式 ①</div>
+    <h2><span class="hl">摘要</span>：把舊對話壓縮</h2>
+    <div class="pair">
+      <div class="box before">
+        <div class="lb">📜 原始對話</div>
+        <div class="num">5000</div>
+        <div class="unit">tokens</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="box after">
+        <div class="lb">✂️ 摘要後</div>
+        <div class="num">500</div>
+        <div class="unit">tokens</div>
+      </div>
+    </div>
+    <div style="margin-top:48px;font-size:30px;font-weight:700;color:#1A1A1A;text-align:center;">Claude Code 的 <code style="background:#1A1A1A;color:#FFD23F;padding:6px 14px;border-radius:6px;font-family:monospace;">/compact</code> 就是這個</div>
+  </div>
+
+  <!-- ===== Slide 9 — L2 圖書館 ===== -->
+  <div class="slide L2 s9">
+    <div class="chapter"><span class="num">09</span> / 12 — 招式 ②</div>
+    <div class="col-img"></div>
+    <div class="col-text">
+      <div class="label">RAG</div>
+      <div class="head"><span class="hl">外部記憶</span>：<br>需要時再撈</div>
+      <div class="body">把資訊存到檔案 / 資料庫，<br>用時才載入便利貼。</div>
+    </div>
+  </div>
+
+  <!-- ===== Slide 10 — L4 多 Agent ===== -->
+  <div class="slide L4 s10">
+    <div class="chapter"><span class="num">10</span> / 12 — 招式 ③</div>
+    <h2><span class="hl">分工</span>：子代理處理細節</h2>
+    <svg width="1400" height="520" viewBox="0 0 1400 520">
+      <!-- 主 agent -->
+      <g class="anim" data-d="0">
+        <circle cx="700" cy="100" r="80" fill="#1A1A1A"/>
+        <text x="700" y="95" text-anchor="middle" font-size="36" font-weight="900" fill="#FFD23F" font-family="GenSeki TW">主</text>
+        <text x="700" y="135" text-anchor="middle" font-size="20" fill="#fff" font-family="GenSeki TW" font-weight="700">Agent</text>
+      </g>
+      <!-- 線 -->
+      <line class="anim" data-d="800" x1="640" y1="160" x2="300" y2="320" stroke="#0E7C7B" stroke-width="6"/>
+      <line class="anim" data-d="800" x1="700" y1="180" x2="700" y2="320" stroke="#0E7C7B" stroke-width="6"/>
+      <line class="anim" data-d="800" x1="760" y1="160" x2="1100" y2="320" stroke="#0E7C7B" stroke-width="6"/>
+      <!-- 子 agents -->
+      <g class="anim" data-d="1400">
+        <circle cx="250" cy="370" r="68" fill="#0E7C7B"/>
+        <text x="250" y="370" text-anchor="middle" font-size="28" font-weight="900" fill="#fff" font-family="GenSeki TW">Sub-1</text>
+        <text x="250" y="465" text-anchor="middle" font-size="22" fill="#666" font-family="GenSeki TW" font-weight="700">搜尋</text>
+      </g>
+      <g class="anim" data-d="1700">
+        <circle cx="700" cy="370" r="68" fill="#0E7C7B"/>
+        <text x="700" y="370" text-anchor="middle" font-size="28" font-weight="900" fill="#fff" font-family="GenSeki TW">Sub-2</text>
+        <text x="700" y="465" text-anchor="middle" font-size="22" fill="#666" font-family="GenSeki TW" font-weight="700">分析</text>
+      </g>
+      <g class="anim" data-d="2000">
+        <circle cx="1150" cy="370" r="68" fill="#0E7C7B"/>
+        <text x="1150" y="370" text-anchor="middle" font-size="28" font-weight="900" fill="#fff" font-family="GenSeki TW">Sub-3</text>
+        <text x="1150" y="465" text-anchor="middle" font-size="22" fill="#666" font-family="GenSeki TW" font-weight="700">寫作</text>
+      </g>
+      <!-- 標籤 -->
+      <g class="anim" data-d="2500">
+        <text x="1100" y="100" font-size="26" font-weight="700" fill="#E36414" font-family="GenSeki TW">只收摘要 ↗</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ===== Slide 11 — L3 圖示陣列 ===== -->
+  <div class="slide L3 s11">
+    <div class="chapter"><span class="num">11</span> / 12 — 三個實用建議</div>
+    <h2>馬上能用的 <span class="hl">3 招</span></h2>
+    <div class="grid">
+      <div class="item">
+        <div class="ic">🔄</div>
+        <div class="lb">開新對話</div>
+        <div class="desc">換主題就重開</div>
+      </div>
+      <div class="item">
+        <div class="ic">✂️</div>
+        <div class="lb">/compact</div>
+        <div class="desc">適時壓縮歷史</div>
+      </div>
+      <div class="item">
+        <div class="ic">📁</div>
+        <div class="lb">外部檔案</div>
+        <div class="desc">長文交 agent 讀</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Slide 12 — L5 結語 ===== -->
+  <div class="slide L5 s12">
+    <div class="big">AI 的<span class="accent">智力</span>，<br>看它能<span class="accent">記得多少</span>。</div>
+    <div class="small">— 學會管理上下文，放大它的腦容量 —</div>
+  </div>
+
+  <div class="subtitle" id="subtitle"></div>
+</div>
+<div class="progress" id="progress"></div>
+<audio id="audio" preload="auto"></audio>
+
+<script>
+const PAGES = [
+  { i:1,  dur:7,  sub:"為什麼 AI 用一用，會突然忘了你剛剛說過什麼？" },
+  { i:2,  dur:13, sub:"AI 沒有真正的記憶，它有的是一張便利貼——這張便利貼，叫做「上下文」。" },
+  { i:3,  dur:11, sub:"你跟 AI 說的每句話，都會被一起貼上去，它才有辦法接話。" },
+  { i:4,  dur:15, sub:"便利貼的單位叫 token。GPT-4 約 128K、Claude 約 200K。聽起來很多——" },
+  { i:5,  dur:10, sub:"但對話越長，越早的內容會被擠出視窗。AI 就「忘了」前面講過什麼。" },
+  { i:6,  dur:10, sub:"所以——不是 AI 變笨，是它的便利貼塞爆了。" },
+  { i:7,  dur:7,  sub:"怎麼辦？三個破解的招式：" },
+  { i:8,  dur:13, sub:"招式 ①：摘要。把舊對話壓縮成重點，省下空間。" },
+  { i:9,  dur:12, sub:"招式 ②：外部記憶。需要時才撈回來。這叫 RAG。" },
+  { i:10, dur:14, sub:"招式 ③：分工。讓子代理處理細節，主代理只收摘要。" },
+  { i:11, dur:10, sub:"3 個建議：開新對話、適時 compact、長文件交 agent 讀。" },
+  { i:12, dur:12, sub:"AI 的智力，受限於它能記得多少。學會管理上下文，就是放大它的腦容量。" },
+];
+
+const TOTAL = PAGES.reduce((s,p)=>s+p.dur, 0);
+const slides = document.querySelectorAll('.slide');
+const audio = document.getElementById('audio');
+const sub = document.getElementById('subtitle');
+const startScreen = document.getElementById('startScreen');
+const progress = document.getElementById('progress');
+
+// Slide 1 飄入 token 粒子
+const tokens = document.getElementById('tokens');
+const TOKENS = ['token','你','AI','context','記憶','{','}','→','ctx','200K','128K'];
+for (let i=0;i<22;i++) {
+  const s = document.createElement('span');
+  s.textContent = TOKENS[Math.floor(Math.random()*TOKENS.length)];
+  s.style.left = Math.random()*100 + '%';
+  s.style.fontSize = (28 + Math.random()*60) + 'px';
+  s.style.animationDuration = (5 + Math.random()*5) + 's';
+  s.style.animationDelay = (Math.random()*5) + 's';
+  tokens.appendChild(s);
+}
+
+// 動畫觸發（依 data-d 延遲）
+function triggerAnims(slideEl) {
+  const anims = slideEl.querySelectorAll('.anim');
+  anims.forEach(el => el.classList.remove('in'));
+  anims.forEach(el => {
+    const d = parseInt(el.dataset.d || '0', 10);
+    setTimeout(() => el.classList.add('in'), d);
+  });
+}
+
+let currentSlide = 0;
+let totalElapsed = 0;
+let slideStartTime = 0;
+let rafId = null;
+
+function showSlide(i) {
+  slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+  sub.textContent = PAGES[i].sub;
+  sub.classList.add('show');
+  audio.src = `assets/narration/page-${String(PAGES[i].i).padStart(2,'0')}.mp3`;
+  audio.play().catch(()=>{});
+  triggerAnims(slides[i]);
+  slideStartTime = performance.now();
+}
+
+function tick() {
+  const now = performance.now();
+  const elapsed = (now - slideStartTime) / 1000;
+  const slideDur = PAGES[currentSlide].dur;
+  const totalProg = (totalElapsed + elapsed) / TOTAL;
+  progress.style.width = (Math.min(totalProg, 1) * 100) + '%';
+  if (elapsed >= slideDur) {
+    totalElapsed += slideDur;
+    currentSlide++;
+    if (currentSlide >= PAGES.length) {
+      cancelAnimationFrame(rafId);
+      return;
+    }
+    showSlide(currentSlide);
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+startScreen.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  setTimeout(() => {
+    showSlide(0);
+    rafId = requestAnimationFrame(tick);
+  }, 200);
+});
+</script>
+</body>
+</html>

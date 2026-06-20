@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>影片類型規範 #01 — 活動紀錄影片</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f5efe2;
+    --paper-2: #ebe4d3;
+    --gold: #c8941f;
+    --gold-soft: #e8b14a;
+    --red: #c0392b;
+    --gray: #8a8678;
+    --line: #d9d2bf;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  /* === 側邊導覽 === */
+  nav.toc {
+    position: fixed; top: 0; left: 0; width: 240px; height: 100vh;
+    background: var(--ink); color: var(--paper); padding: 32px 24px;
+    overflow-y: auto; z-index: 10;
+  }
+  nav.toc .brand {
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: 18px; letter-spacing: 0.06em; line-height: 1.3;
+    padding-bottom: 16px; border-bottom: 1px solid rgba(245,239,226,0.2);
+    margin-bottom: 20px;
+  }
+  nav.toc .brand .tag {
+    display: inline-block; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; background: var(--gold); color: var(--ink);
+    padding: 2px 8px; border-radius: 3px; letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  nav.toc a {
+    display: block; padding: 10px 12px; color: var(--paper);
+    text-decoration: none; font-size: 14px; border-radius: 4px;
+    margin-bottom: 2px; opacity: 0.7; transition: all 0.2s;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  nav.toc a:hover { opacity: 1; background: rgba(245,239,226,0.08); }
+  nav.toc a.active { opacity: 1; background: var(--gold); color: var(--ink); }
+  nav.toc a span { font-family: 'Noto Sans TC', sans-serif; margin-left: 8px; }
+
+  /* === 主內容區 === */
+  main { margin-left: 240px; padding: 0; }
+
+  section {
+    min-height: 100vh; padding: 80px 8vw; position: relative;
+    border-bottom: 1px solid var(--line);
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  section:nth-child(even) { background: var(--paper-2); }
+
+  .sec-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    letter-spacing: 0.3em; color: var(--gold); margin-bottom: 12px;
+  }
+  .sec-title {
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: clamp(40px, 5.5vw, 72px); line-height: 1.15;
+    margin-bottom: 16px; letter-spacing: 0.02em;
+  }
+  .sec-lead {
+    font-size: clamp(16px, 1.4vw, 20px); color: var(--gray);
+    margin-bottom: 40px; max-width: 720px; line-height: 1.7;
+  }
+
+  /* === 卡片網格 === */
+  .grid {
+    display: grid; gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .card {
+    background: white; border: 1px solid var(--line);
+    padding: 28px; border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); }
+  .card .k {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--gold); letter-spacing: 0.2em; margin-bottom: 10px;
+  }
+  .card .h {
+    font-family: 'Noto Serif TC', serif; font-weight: 700;
+    font-size: 24px; margin-bottom: 12px;
+  }
+  .card .b { font-size: 15px; color: #333; line-height: 1.7; }
+
+  /* === 表格 === */
+  table {
+    width: 100%; border-collapse: collapse; background: white;
+    border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    font-size: 15px;
+  }
+  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--line); }
+  th {
+    background: var(--ink); color: var(--paper);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    letter-spacing: 0.15em; font-weight: 500;
+  }
+  tr:last-child td { border-bottom: none; }
+  td code, code {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    background: var(--paper-2); padding: 2px 8px; border-radius: 3px;
+  }
+
+  /* === 敘事弧視覺化 === */
+  .arc {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+    margin: 32px 0;
+  }
+  .arc .step {
+    background: white; border-top: 4px solid var(--gold);
+    padding: 20px; border-radius: 4px; position: relative;
+  }
+  .arc .step.peak { border-top-color: var(--red); transform: translateY(-12px); }
+  .arc .step .pct {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--gold); letter-spacing: 0.2em;
+  }
+  .arc .step .name {
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: 22px; margin: 8px 0;
+  }
+  .arc .step .desc { font-size: 13px; color: #555; line-height: 1.6; }
+
+  /* === 色票 === */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+  .swatch { background: white; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+  .swatch .chip { height: 80px; }
+  .swatch .meta { padding: 12px 16px; }
+  .swatch .meta .role { font-size: 13px; color: var(--gray); }
+  .swatch .meta .hex { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
+
+  /* === Do/Don't 雙欄 === */
+  .dodont { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .dodont .col { background: white; padding: 28px; border-radius: 6px; }
+  .dodont .col.do { border-left: 4px solid #2e7d32; }
+  .dodont .col.dont { border-left: 4px solid var(--red); }
+  .dodont h3 {
+    font-family: 'Noto Serif TC', serif; font-weight: 700;
+    font-size: 22px; margin-bottom: 16px;
+  }
+  .dodont ul { list-style: none; }
+  .dodont li {
+    padding: 10px 0 10px 28px; position: relative;
+    border-bottom: 1px dashed var(--line); font-size: 15px;
+  }
+  .dodont li:last-child { border-bottom: none; }
+  .dodont .do li::before { content: "✓"; position: absolute; left: 0; color: #2e7d32; font-weight: 700; font-size: 18px; }
+  .dodont .dont li::before { content: "✕"; position: absolute; left: 0; color: var(--red); font-weight: 700; font-size: 18px; }
+
+  /* === Checklist === */
+  .checklist {
+    background: white; padding: 32px; border-radius: 6px;
+    counter-reset: step;
+  }
+  .checklist .item {
+    display: flex; gap: 20px; padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .checklist .item:last-child { border-bottom: none; }
+  .checklist .item .num {
+    flex-shrink: 0; width: 40px; height: 40px;
+    background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-family: 'JetBrains Mono', monospace;
+    font-weight: 500; font-size: 14px;
+  }
+  .checklist .item .txt { flex: 1; font-size: 15px; line-height: 1.6; padding-top: 8px; }
+
+  /* === Hero === */
+  .hero { background: var(--ink); color: var(--paper); }
+  .hero .sec-num { color: var(--gold-soft); }
+  .hero .sec-title { color: var(--paper); }
+  .hero .sec-lead { color: rgba(245,239,226,0.7); }
+  .hero .pill {
+    display: inline-block; padding: 6px 14px; background: var(--gold);
+    color: var(--ink); border-radius: 20px; font-size: 12px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.15em;
+    margin-right: 8px;
+  }
+
+  /* === 三元素視覺 === */
+  .triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+  .triad .one {
+    background: var(--paper); border: 2px solid var(--gold);
+    padding: 36px 28px; text-align: center; border-radius: 8px;
+  }
+  .triad .one .icon { font-size: 40px; margin-bottom: 12px; }
+  .triad .one .h {
+    font-family: 'Noto Serif TC', serif; font-weight: 900;
+    font-size: 26px; color: var(--ink); margin-bottom: 8px;
+  }
+  .triad .one .d { font-size: 14px; color: #555; }
+
+  /* === 文字片段 === */
+  blockquote {
+    border-left: 4px solid var(--gold); padding: 12px 20px;
+    background: white; font-style: italic; color: #444;
+    margin: 20px 0; border-radius: 0 4px 4px 0;
+  }
+
+  @media (max-width: 768px) {
+    nav.toc { position: static; width: 100%; height: auto; }
+    main { margin-left: 0; }
+    section { padding: 60px 24px; }
+    .arc, .triad, .dodont { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="brand">
+    <div class="tag">SPEC 01</div>
+    活動紀錄影片<br>規範
+  </div>
+  <a href="#sec-0" class="tnav">00 <span>封面</span></a>
+  <a href="#sec-1" class="tnav">01 <span>定位</span></a>
+  <a href="#sec-2" class="tnav">02 <span>敘事弧</span></a>
+  <a href="#sec-3" class="tnav">03 <span>視覺系統</span></a>
+  <a href="#sec-4" class="tnav">04 <span>字卡規範</span></a>
+  <a href="#sec-5" class="tnav">05 <span>口白規範</span></a>
+  <a href="#sec-6" class="tnav">06 <span>音樂規範</span></a>
+  <a href="#sec-7" class="tnav">07 <span>技術規範</span></a>
+  <a href="#sec-8" class="tnav">08 <span>Do / Don't</span></a>
+  <a href="#sec-9" class="tnav">09 <span>執行 Checklist</span></a>
+  <a href="#sec-10" class="tnav">10 <span>參考實作</span></a>
+</nav>
+
+<main>
+
+<!-- ========== 封面 ========== -->
+<section id="sec-0" class="hero">
+  <div class="sec-num">VIDEO SPEC SERIES · 01 / 03</div>
+  <h1 class="sec-title">活動紀錄影片<br>規範</h1>
+  <p class="sec-lead">把一場已發生的活動，濃縮成 60–180 秒、有情感曲線、可分享的紀錄短片。本文件為 agent 可直接執行的硬規範。</p>
+  <div>
+    <span class="pill">口白</span>
+    <span class="pill">大字卡</span>
+    <span class="pill">背景音樂 + 過場</span>
+  </div>
+</section>
+
+<!-- ========== 01 定位 ========== -->
+<section id="sec-1">
+  <div class="sec-num">01 — POSITIONING</div>
+  <h2 class="sec-title">定位</h2>
+  <p class="sec-lead">這類影片重點是「<strong>重現當下的情緒</strong>」，不是傳遞資訊。</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="k">USE CASE</div>
+      <div class="h">典型場景</div>
+      <div class="b">校外教學、研習、典禮、發表會、體育賽事、社區活動、馬拉松、畢業、結婚、運動會。</div>
+    </div>
+    <div class="card">
+      <div class="k">VS TUTORIAL</div>
+      <div class="h">不是教學片</div>
+      <div class="b">無分解步驟、無雙向細目、無 Bloom 分級。</div>
+    </div>
+    <div class="card">
+      <div class="k">VS ADVERTISING</div>
+      <div class="h">不是廣告片</div>
+      <div class="b">無 CTA、無賣點堆疊、無轉換目標。</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:48px;font-family:'Noto Serif TC';font-weight:700;font-size:24px;margin-bottom:20px;">核心三元素</h3>
+  <div class="triad">
+    <div class="one">
+      <div class="icon">🎙️</div>
+      <div class="h">口白</div>
+      <div class="d">敘事主軸，第二人稱，散文句式</div>
+    </div>
+    <div class="one">
+      <div class="icon">📝</div>
+      <div class="h">大字卡</div>
+      <div class="d">情感錨點，一頁一句，≤ 12 字</div>
+    </div>
+    <div class="one">
+      <div class="icon">🎵</div>
+      <div class="h">音樂 + 過場</div>
+      <div class="d">節奏與情緒，fade to black 分章</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 敘事弧 ========== -->
+<section id="sec-2">
+  <div class="sec-num">02 — NARRATIVE ARC</div>
+  <h2 class="sec-title">5 段式敘事弧</h2>
+  <p class="sec-lead">固定結構，每段時長依總片長等比例分配。場景數 = 總秒數 ÷ 5。</p>
+
+  <div class="arc">
+    <div class="step">
+      <div class="pct">15%</div>
+      <div class="name">Hook</div>
+      <div class="desc">醞釀。一句金句字卡 + 空鏡頭，建立期待。</div>
+    </div>
+    <div class="step">
+      <div class="pct">25%</div>
+      <div class="name">Setup</div>
+      <div class="desc">展開。活動準備、人物入場、地點建立。</div>
+    </div>
+    <div class="step peak">
+      <div class="pct">30%</div>
+      <div class="name">Peak</div>
+      <div class="desc">高光。活動主體最精彩 2–3 個瞬間。</div>
+    </div>
+    <div class="step">
+      <div class="pct">20%</div>
+      <div class="name">Turn</div>
+      <div class="desc">反差。困難、轉折、深度（或情感深化）。</div>
+    </div>
+    <div class="step">
+      <div class="pct">10%</div>
+      <div class="name">Echo</div>
+      <div class="desc">收尾。一句金句字卡 + 留白 + 音樂淡出。</div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:32px;">
+    <div class="card">
+      <div class="k">RHYTHM</div>
+      <div class="h">每張圖 ≤ 5 秒</div>
+      <div class="b">過長失去節奏，太短資訊看不到。</div>
+    </div>
+    <div class="card">
+      <div class="k">COUNT</div>
+      <div class="h">場景數 = 秒數 ÷ 5</div>
+      <div class="b">50s → 10 場景；120s → 24 場景。</div>
+    </div>
+    <div class="card">
+      <div class="k">TRANSITION</div>
+      <div class="h">章節用 fade to black 0.5s</div>
+      <div class="b">不用 wipe、不用 3D 翻、不用 carousel。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 03 視覺系統 ========== -->
+<section id="sec-3">
+  <div class="sec-num">03 — VISUAL SYSTEM</div>
+  <h2 class="sec-title">視覺設計系統</h2>
+  <p class="sec-lead">畫面比例、色彩、字體、鏡頭運動、圖片來源優先序。</p>
+
+  <h3 style="font-family:'Noto Serif TC';font-weight:700;font-size:22px;margin:24px 0 16px;">色彩</h3>
+  <div class="swatches">
+    <div class="swatch"><div class="chip" style="background:#0A0A0A"></div><div class="meta"><div class="role">主背景 / 字幕底</div><div class="hex">#0A0A0A</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#F5EFE2"></div><div class="meta"><div class="role">字卡主色（米白）</div><div class="hex">#F5EFE2</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#E8B14A"></div><div class="meta"><div class="role">強調金 / 進度條</div><div class="hex">#E8B14A</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#FFFFFF;border:1px solid #ddd"></div><div class="meta"><div class="role">口白字幕白</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="swatch"><div class="chip" style="background:rgba(0,0,0,0.6)"></div><div class="meta"><div class="role">字幕半透明底</div><div class="hex">rgba(0,0,0,.6)</div></div></div>
+  </div>
+  <blockquote>色調曲線：依情緒走「冷暖過渡」，不要全片同一色溫。建議 Hook 冷 → Peak 暖 → Echo 中性。</blockquote>
+
+  <h3 style="font-family:'Noto Serif TC';font-weight:700;font-size:22px;margin:32px 0 16px;">字體</h3>
+  <table>
+    <thead><tr><th>用途</th><th>字體</th><th>字重</th><th>字級</th></tr></thead>
+    <tbody>
+      <tr><td>大字卡</td><td>Noto Serif TC</td><td>700–900</td><td><code>clamp(40px, 6vw, 92px)</code></td></tr>
+      <tr><td>口白字幕</td><td>Noto Sans TC</td><td>400</td><td><code>clamp(18px, 2vw, 30px)</code></td></tr>
+      <tr><td>章節編號</td><td>JetBrains Mono</td><td>300</td><td>13–14px</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-family:'Noto Serif TC';font-weight:700;font-size:22px;margin:32px 0 16px;">鏡頭運動 × 圖片來源</h3>
+  <div class="grid">
+    <div class="card">
+      <div class="k">CAMERA</div>
+      <div class="h">Ken Burns 緩推</div>
+      <div class="b"><code>scale(1.0 → 1.06~1.08)</code>，linear。情緒方向：起跑往右、下沉往下、看光往光源。<br><strong>禁用</strong>：快 zoom、旋轉、3D 翻轉。</div>
+    </div>
+    <div class="card">
+      <div class="k">IMAGE</div>
+      <div class="h">圖片來源優先序</div>
+      <div class="b">① 活動實拍照片<br>② AI 補拍（缺鏡頭時用，混搭時做色調校正）<br>③ 純色 + 大字（最後備案）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 字卡 ========== -->
+<section id="sec-4">
+  <div class="sec-num">04 — TITLE CARDS</div>
+  <h2 class="sec-title">字卡規範<br><span style="font-size:0.5em;color:var(--gray);font-weight:400;">SOIL 風格</span></h2>
+
+  <div class="grid">
+    <div class="card"><div class="k">RULE 1</div><div class="h">一頁一句</div><div class="b">最多 12 個中文字。</div></div>
+    <div class="card"><div class="k">RULE 2</div><div class="h">置中或靠下 1/3</div><div class="b">永遠不貼邊。</div></div>
+    <div class="card"><div class="k">RULE 3</div><div class="h">Slow fade</div><div class="b">in 1.5s + out 1.0s。</div></div>
+    <div class="card"><div class="k">RULE 4</div><div class="h">微陰影</div><div class="b"><code>text-shadow: 0 2px 24px rgba(0,0,0,.55)</code>，僅為可讀性，不用 drop shadow。</div></div>
+    <div class="card"><div class="k">RULE 5</div><div class="h">重點字用純白</div><div class="b">對比於米白主色凸顯。</div></div>
+    <div class="card"><div class="k">禁用</div><div class="h">不要這些</div><div class="b">粗黑底色塊、彩色螢光、emoji、漸層字、描邊字。</div></div>
+  </div>
+</section>
+
+<!-- ========== 05 口白 ========== -->
+<section id="sec-5">
+  <div class="sec-num">05 — NARRATION</div>
+  <h2 class="sec-title">口白規範</h2>
+
+  <div class="grid">
+    <div class="card">
+      <div class="k">COPY</div>
+      <div class="h">文案規則</div>
+      <div class="b">每段 1–2 句、讀完 ≤ 4 秒。第二人稱「你」為主。散文句式、押韻加分。結尾留白。</div>
+    </div>
+    <div class="card">
+      <div class="k">TTS · 首推</div>
+      <div class="h">Edge-TTS（免費）</div>
+      <div class="b"><code>zh-TW-YunJheNeural</code>（男）<br><code>zh-TW-HsiaoChenNeural</code>（女）<br>預設參數：<code>--rate -10% --pitch -2Hz</code></div>
+    </div>
+    <div class="card">
+      <div class="k">TTS · 備案</div>
+      <div class="h">收費選項</div>
+      <div class="b">OpenAI <code>tts-1-hd</code>（情感佳但偶有洋腔）；ElevenLabs（最佳但訂閱制）。</div>
+    </div>
+  </div>
+
+  <h3 style="font-family:'Noto Serif TC';font-weight:700;font-size:22px;margin:32px 0 16px;">字幕呈現</h3>
+  <table>
+    <thead><tr><th>項目</th><th>規範</th></tr></thead>
+    <tbody>
+      <tr><td>位置</td><td>底部 7% 處，居中</td></tr>
+      <tr><td>底色</td><td><code>rgba(0,0,0,0.6)</code>，圓角 6px，padding 12px 24px</td></tr>
+      <tr><td>寬度</td><td>上限 80%</td></tr>
+      <tr><td>動畫</td><td>逐句出現。<strong>不要</strong>打字機、<strong>不要</strong> karaoke 高亮</td></tr>
+      <tr><td>層次</td><td>字卡與字幕<strong>永遠分層、永遠不重疊</strong></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 06 音樂 ========== -->
+<section id="sec-6">
+  <div class="sec-num">06 — MUSIC</div>
+  <h2 class="sec-title">音樂規範</h2>
+
+  <div class="grid">
+    <div class="card"><div class="k">ONE TRACK</div><div class="h">一首主旋律</div><div class="b">貫穿全片，不混搭多首。前奏對 Hook、副歌對 Peak。</div></div>
+    <div class="card"><div class="k">DUCKING</div><div class="h">有口白：壓到 30%</div><div class="b">讓出空間給人聲。無口白段落回到 100%。</div></div>
+    <div class="card"><div class="k">FADE-OUT</div><div class="h">結尾必淡出</div><div class="b">最後 5–10% 時長，volume 線性 1 → 0。</div></div>
+    <div class="card"><div class="k">FREEZE</div><div class="h">結束 freeze 末幀</div><div class="b">audio.pause() + 停在最後一張圖。</div></div>
+  </div>
+</section>
+
+<!-- ========== 07 技術規範 ========== -->
+<section id="sec-7">
+  <div class="sec-num">07 — TECHNICAL</div>
+  <h2 class="sec-title">技術規範</h2>
+
+  <h3 style="font-family:'Noto Serif TC';font-weight:700;font-size:22px;margin-bottom:16px;">專案結構</h3>
+  <pre style="background:#1a1a1a;color:#f5efe2;padding:24px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.8;overflow-x:auto;">專案名/
+├── DESIGN.md          # 本片的色彩 / 字體 / 鏡頭規範
+├── SCRIPT.md          # 旁白稿 + 字卡逐 beat 規劃
+├── STORYBOARD.md      # 分鏡（10 場景以下可省）
+├── assets/
+│   ├── images/        # 實拍 + AI 圖
+│   └── audio/         # BGM
+├── narration/         # 各 beat 的 TTS 音檔
+└── index.html         # 單檔可播放</pre>
+
+  <div class="grid" style="margin-top:32px;">
+    <div class="card">
+      <div class="k">OUTPUT · MAIN</div>
+      <div class="h">主交付</div>
+      <div class="b"><code>1920×1080</code> 16:9<br>H.264, 30fps<br><code>render --quality high --output final.mp4</code></div>
+    </div>
+    <div class="card">
+      <div class="k">OUTPUT · SOCIAL</div>
+      <div class="h">社群直式</div>
+      <div class="b"><code>1080×1920</code> 9:16<br><strong>另起重新分鏡</strong>，不裁切</div>
+    </div>
+    <div class="card">
+      <div class="k">UI ELEMENTS</div>
+      <div class="h">必備元件</div>
+      <div class="b">開場 click-to-play 遮罩、章節編號（左上）、進度條（底部金色 2px）、freeze 末幀</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 08 Do/Don't ========== -->
+<section id="sec-8">
+  <div class="sec-num">08 — RULES</div>
+  <h2 class="sec-title">Do / Don't</h2>
+
+  <div class="dodont">
+    <div class="col do">
+      <h3>✓ Do</h3>
+      <ul>
+        <li>一頁一句，留白為王</li>
+        <li>字卡與字幕分層，永遠不打架</li>
+        <li>Ken Burns 緩推，每張圖 ≤ 5 秒</li>
+        <li>章節用 fade to black 分隔</li>
+        <li>音樂結尾必淡出</li>
+        <li>第二人稱口白、散文句式</li>
+        <li>色溫隨情緒走</li>
+      </ul>
+    </div>
+    <div class="col dont">
+      <h3>✕ Don't</h3>
+      <ul>
+        <li>不要花俏轉場（wipe、3D 翻、carousel）</li>
+        <li>不要打字機 / karaoke 字幕</li>
+        <li>不要 drop shadow / emoji / 螢光底</li>
+        <li>不要單張圖超過 5 秒</li>
+        <li>不要全片同一色溫</li>
+        <li>不要字卡超過 12 字</li>
+        <li>不要混搭多首 BGM</li>
+        <li>不要 CTA 結尾（這是紀錄片不是廣告）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 09 Checklist ========== -->
+<section id="sec-9">
+  <div class="sec-num">09 — EXECUTION</div>
+  <h2 class="sec-title">執行 Checklist</h2>
+  <p class="sec-lead">收到一份「活動紀錄影片」需求時，按此順序產出。</p>
+
+  <div class="checklist">
+    <div class="item"><div class="num">01</div><div class="txt">確認 <strong>總片長</strong>（預設 50s 或 120s）→ 推導場景數</div></div>
+    <div class="item"><div class="num">02</div><div class="txt">確認 <strong>素材來源</strong>（實拍 / AI 補 / 混合）</div></div>
+    <div class="item"><div class="num">03</div><div class="txt">撰寫 <strong>5 段式敘事大綱</strong>（Hook / Setup / Peak / Turn / Echo）</div></div>
+    <div class="item"><div class="num">04</div><div class="txt">依大綱寫 <strong>逐 beat 字卡 + 旁白</strong>（字卡 ≤12 字、旁白 ≤4 秒）</div></div>
+    <div class="item"><div class="num">05</div><div class="txt">確認 <strong>BGM</strong>（或建議使用者選一首）</div></div>
+    <div class="item"><div class="num">06</div><div class="txt">建立 HF 專案結構（<code>DESIGN.md / SCRIPT.md / assets/</code>）</div></div>
+    <div class="item"><div class="num">07</div><div class="txt">生成 / 收集 <strong>每場景 1 張圖</strong></div></div>
+    <div class="item"><div class="num">08</div><div class="txt">用 Edge-TTS 合成 <strong>逐 beat narration mp3</strong></div></div>
+    <div class="item"><div class="num">09</div><div class="txt">寫 <code>index.html</code>（含 Ken Burns、字卡 fade、字幕、ducking、結尾淡出）</div></div>
+    <div class="item"><div class="num">10</div><div class="txt">給使用者預覽 → 確認後渲染 mp4</div></div>
+  </div>
+</section>
+
+<!-- ========== 10 參考實作 ========== -->
+<section id="sec-10" class="hero">
+  <div class="sec-num">10 — REFERENCE</div>
+  <h2 class="sec-title">參考實作</h2>
+  <p class="sec-lead">第一個落地樣本，可直接 fork 改寫。</p>
+
+  <div class="card" style="background:rgba(245,239,226,0.08);border:1px solid rgba(245,239,226,0.2);color:var(--paper);max-width:600px;">
+    <div class="k" style="color:var(--gold-soft);">PROJECT</div>
+    <div class="h" style="color:var(--paper);font-family:'Noto Serif TC';font-weight:700;font-size:28px;margin:8px 0;">《最後一公里的光》</div>
+    <div class="b" style="color:rgba(245,239,226,0.8);">
+      <code style="background:rgba(245,239,226,0.1);color:var(--paper);">HyperFrames/marathon-light/</code><br><br>
+      50 秒、10 場景、SOIL 字卡、音樂淡出。<br>
+      國中生第一次跑馬拉松，從訓練到衝線。
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  // 側邊導覽 active state
+  const links = document.querySelectorAll('nav.toc a.tnav');
+  const sections = [...document.querySelectorAll('main section')];
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => io.observe(s));
+</script>
+
+</body>
+</html>

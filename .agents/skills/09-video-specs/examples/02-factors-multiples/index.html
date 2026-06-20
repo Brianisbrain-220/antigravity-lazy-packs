@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>因數與倍數 — 國中數學教學影片</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+<style>
+  /* 源石黑體（粗圓） — 林長揚原則 #7：字體選黑體粗體 */
+  @font-face {
+    font-family: 'GenSeki TW';
+    src: url('../../assets/fonts/GenSekiGothic2TW-M.otf') format('opentype');
+    font-weight: 500;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'GenSeki TW';
+    src: url('../../assets/fonts/GenSekiGothic2TW-B.otf') format('opentype');
+    font-weight: 700;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'GenSeki TW';
+    src: url('../../assets/fonts/GenSekiGothic2TW-H.otf') format('opentype');
+    font-weight: 900;
+    font-display: block;
+  }
+
+  :root {
+    --paper: #FAF7EE;
+    --paper-2: #F2EDDC;
+    --ink: #1A1A1A;
+    --ink-soft: #555;
+    --teal: #0E7C7B;
+    --teal-soft: #4DA5A3;
+    --coral: #E36414;
+    --gold: #C8941F;
+    --line: #D9D2BF;
+    /* 林長揚字級黃金比例 55/34/21/13 → 1920×1080 放大為 132/96/56/24 */
+    --fs-hero: 168px;
+    --fs-title: 132px;
+    --fs-sub: 96px;
+    --fs-body: 56px;
+    --fs-note: 28px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; background: var(--ink); overflow: hidden;
+    font-family: 'GenSeki TW', sans-serif; color: var(--ink);
+    font-weight: 500;
+  }
+  .stage {
+    position: fixed; inset: 0; background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .slide {
+    position: absolute; inset: 0; padding: 56px 80px 120px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease;
+    display: flex; flex-direction: column;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .chapter {
+    position: absolute; top: 28px; left: 48px;
+    font-family: 'GenSeki TW', sans-serif; font-weight: 700;
+    font-size: 22px; letter-spacing: 0.18em; color: var(--ink-soft);
+  }
+  .chapter .num {
+    color: var(--paper); background: var(--teal);
+    padding: 4px 12px; border-radius: 4px; font-weight: 900;
+    margin-right: 8px;
+  }
+
+  h1.title {
+    font-family: 'GenSeki TW', sans-serif; font-weight: 900;
+    font-size: var(--fs-title); letter-spacing: 0.06em; line-height: 1.1;
+    color: var(--ink);
+  }
+  h2.sub {
+    font-family: 'GenSeki TW', sans-serif; font-weight: 900;
+    font-size: var(--fs-sub); color: var(--teal); letter-spacing: 0.04em;
+    line-height: 1.15; margin-bottom: 32px;
+  }
+  .lead {
+    font-size: var(--fs-body); line-height: 1.4; color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* 旁白字幕 */
+  .subtitle {
+    position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%);
+    max-width: 88%; padding: 16px 36px; border-radius: 10px;
+    background: rgba(26,26,26,0.92); color: #fff;
+    font-family: 'GenSeki TW', sans-serif; font-weight: 700;
+    font-size: 30px; line-height: 1.4; text-align: center;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .subtitle.show { opacity: 1; }
+
+  /* 開場 */
+  .start-screen {
+    position: fixed; inset: 0; background: var(--ink); color: var(--paper);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; cursor: pointer; gap: 40px;
+  }
+  .start-screen .t {
+    font-family: 'GenSeki TW', sans-serif; font-weight: 900;
+    font-size: 200px; letter-spacing: 0.12em; line-height: 1;
+  }
+  .start-screen .s { font-size: 24px; color: rgba(250,247,238,0.7); font-weight: 500; }
+  .start-screen .play {
+    width: 88px; height: 88px; border: 2px solid var(--gold);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--gold); transition: all 0.3s;
+  }
+  .start-screen:hover .play { background: var(--gold); color: var(--ink); }
+  .start-screen.hidden { display: none; }
+
+  /* 進度條 */
+  .progress {
+    position: absolute; left: 0; bottom: 0; height: 5px; background: var(--teal);
+    width: 0%; transition: width 0.2s linear;
+  }
+
+  /* ============ Slide 1 — 封面 ============ */
+  .slide-1 {
+    background: var(--ink); color: var(--paper);
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .slide-1 h1 { color: var(--paper); font-size: 260px; letter-spacing: 0.1em; }
+  .slide-1 .hook {
+    font-size: 56px; color: var(--gold); margin-top: 32px;
+    letter-spacing: 0.15em; font-weight: 900;
+  }
+  .slide-1 .tag {
+    margin-top: 60px; font-size: 28px; letter-spacing: 0.4em;
+    color: rgba(250,247,238,0.6); font-weight: 700;
+  }
+  /* 飄入數字粒子 */
+  .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .particles span {
+    position: absolute; font-family: 'GenSeki TW', sans-serif;
+    color: rgba(232,177,74,0.22); font-size: 56px; font-weight: 900;
+    animation: floatNum 8s linear infinite;
+  }
+  @keyframes floatNum {
+    0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+  }
+
+  /* ============ Slide 2 — 24 人分組 ============ */
+  .slide-2 { justify-content: flex-start; align-items: center; padding-top: 80px; }
+  .slide-2 h2 { text-align: center; }
+  .slide-2 .grid24 {
+    display: grid; gap: 18px; margin-top: 30px;
+  }
+  .person {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: var(--teal); transition: all 0.6s ease;
+  }
+  .person.group-2 { background: var(--teal); }
+  .person.group-3 { background: var(--coral); }
+  .person.group-4 { background: var(--gold); }
+  .slide-2 .grouping-label {
+    text-align: center; margin-top: 40px; font-size: 64px;
+    font-weight: 900; color: var(--teal); min-height: 80px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ============ Slide 3 — 整除性 ============ */
+  .slide-3 { justify-content: center; align-items: center; text-align: center; }
+  .slide-3 .eq-big {
+    font-size: 180px; margin: 30px 0; color: var(--ink); font-weight: 900;
+    line-height: 1;
+  }
+  .slide-3 .remark {
+    margin-top: 40px; font-size: 80px; color: var(--teal); font-weight: 900;
+    line-height: 1.3;
+  }
+  .slide-3 .arrow {
+    display: inline-block; opacity: 0; transition: opacity 1s ease 1s;
+    font-size: 80px;
+  }
+  .slide-3.active .arrow { opacity: 1; }
+
+  /* ============ Slide 4 — 因數定義 ============ */
+  .slide-4 { justify-content: center; align-items: center; text-align: center; }
+  .slide-4 .definition {
+    font-size: 64px; line-height: 1.5; color: var(--ink); max-width: 1500px;
+    font-weight: 900;
+  }
+  .slide-4 .definition b { color: var(--teal); }
+  .slide-4 .equation { font-size: 140px; margin: 50px 0; font-weight: 900; }
+  .slide-4 .factor-mark {
+    display: inline-block; padding: 8px 28px; background: var(--gold);
+    color: var(--ink); border-radius: 14px; font-weight: 900;
+    margin: 0 12px; opacity: 0; transform: scale(0.5);
+    transition: all 0.6s ease;
+  }
+  .slide-4.active .factor-mark { opacity: 1; transform: scale(1); }
+  .slide-4.active .factor-mark:nth-child(2) { transition-delay: 1.5s; }
+  .slide-4 .lead { font-size: 48px; margin-top: 16px; }
+
+  /* ============ Slide 5 — 配對找因數 ============ */
+  .slide-5 { justify-content: flex-start; align-items: center; padding-top: 80px; }
+  .slide-5 h2 { text-align: center; margin-bottom: 50px; }
+  .slide-5 .pairs {
+    display: flex; flex-direction: column; gap: 36px; align-items: center;
+  }
+  .pair-row {
+    display: flex; align-items: center; gap: 40px; font-size: 140px;
+    font-weight: 900; color: var(--ink); line-height: 1;
+    opacity: 0; transform: translateX(-40px); transition: all 0.7s ease;
+  }
+  .slide-5.active .pair-row { opacity: 1; transform: translateX(0); }
+  .slide-5.active .pair-row:nth-child(1) { transition-delay: 0.5s; }
+  .slide-5.active .pair-row:nth-child(2) { transition-delay: 2.5s; }
+  .slide-5.active .pair-row:nth-child(3) { transition-delay: 4.5s; }
+  .pair-row .num { color: var(--teal); min-width: 180px; text-align: center; }
+  .pair-row .x { color: var(--coral); font-weight: 900; }
+
+  /* ============ Slide 6 — 因數有限 ============ */
+  .slide-6 { justify-content: flex-start; align-items: center; padding-top: 80px; text-align: center; }
+  .slide-6 .factors-list {
+    display: flex; gap: 28px; margin: 30px 0; flex-wrap: nowrap; justify-content: center;
+  }
+  .factor-chip {
+    width: 180px; height: 180px; border-radius: 50%;
+    background: var(--paper-2); border: 6px solid var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 88px; color: var(--ink);
+    opacity: 0; transform: scale(0.5);
+    transition: all 0.5s ease;
+  }
+  .slide-6.active .factor-chip { opacity: 1; transform: scale(1); }
+  .slide-6.active .factor-chip:nth-child(1) { transition-delay: 1s; }
+  .slide-6.active .factor-chip:nth-child(2) { transition-delay: 1.4s; }
+  .slide-6.active .factor-chip:nth-child(3) { transition-delay: 1.8s; }
+  .slide-6.active .factor-chip:nth-child(4) { transition-delay: 2.2s; }
+  .slide-6.active .factor-chip:nth-child(5) { transition-delay: 2.6s; }
+  .slide-6.active .factor-chip:nth-child(6) { transition-delay: 3.0s; }
+
+  .slide-6 .count-big {
+    font-weight: 900;
+    font-size: 280px; color: var(--coral); line-height: 1;
+    opacity: 0; transition: opacity 1s ease 4s; margin-top: 10px;
+  }
+  .slide-6.active .count-big { opacity: 1; }
+  .slide-6 .count-label {
+    font-size: 48px; color: var(--ink); margin-top: 0; font-weight: 900;
+  }
+  .slide-6 .count-label b { color: var(--coral); }
+
+  /* ============ Slide 7 — 倍數 ============ */
+  .slide-7 { justify-content: center; align-items: center; }
+  .slide-7 h2 { text-align: center; }
+  .slide-7 svg { display: block; margin: 40px auto 0; }
+  .slide-7 .mult-tick {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .slide-7.active .mult-tick { opacity: 1; }
+  .slide-7.active .mult-tick:nth-of-type(1) { transition-delay: 1.5s; }
+  .slide-7.active .mult-tick:nth-of-type(2) { transition-delay: 2.5s; }
+  .slide-7.active .mult-tick:nth-of-type(3) { transition-delay: 3.5s; }
+  .slide-7.active .mult-tick:nth-of-type(4) { transition-delay: 4.5s; }
+  .slide-7.active .mult-tick:nth-of-type(5) { transition-delay: 5.5s; }
+  .slide-7.active .mult-tick:nth-of-type(6) { transition-delay: 6.5s; }
+  .slide-7 .tail {
+    text-align: center; margin-top: 30px; font-size: 56px;
+    color: var(--coral); font-weight: 900;
+  }
+
+  /* ============ Slide 8 — 倍數無限 ============ */
+  .slide-8 { justify-content: center; align-items: center; text-align: center; }
+  .slide-8 .infinity {
+    font-size: 480px; color: var(--coral); line-height: 0.9; margin: 0;
+    font-weight: 900;
+    animation: pulseGrow 2s ease-in-out infinite;
+  }
+  @keyframes pulseGrow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .slide-8 .compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 100px; margin-top: 20px;
+    max-width: 1300px;
+  }
+  .slide-8 .compare > div { text-align: center; }
+  .slide-8 .compare .l { font-size: 36px; color: var(--ink); letter-spacing: 0.2em; font-weight: 900; }
+  .slide-8 .compare .v { font-size: 140px; font-weight: 900; margin-top: 10px; line-height: 1; }
+  .slide-8 .compare .v.fin { color: var(--teal); }
+  .slide-8 .compare .v.inf { color: var(--coral); }
+
+  /* ============ Slide 9 — 質數 ============ */
+  .slide-9 { justify-content: flex-start; align-items: center; padding-top: 80px; }
+  .slide-9 h2 { text-align: center; margin-bottom: 50px; }
+  .slide-9 .prime-row {
+    display: flex; gap: 32px;
+  }
+  .prime-card {
+    width: 260px; height: 280px; border-radius: 24px;
+    background: var(--paper-2); border: 8px solid var(--coral);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; transform: translateY(20px);
+    transition: all 0.5s ease;
+  }
+  .slide-9.active .prime-card { opacity: 1; transform: translateY(0); }
+  .slide-9.active .prime-card:nth-child(1) { transition-delay: 1.5s; }
+  .slide-9.active .prime-card:nth-child(2) { transition-delay: 2.0s; }
+  .slide-9.active .prime-card:nth-child(3) { transition-delay: 2.5s; }
+  .slide-9.active .prime-card:nth-child(4) { transition-delay: 3.0s; }
+  .slide-9.active .prime-card:nth-child(5) { transition-delay: 3.5s; }
+  .prime-card .n { font-size: 160px; font-weight: 900; color: var(--coral); line-height: 1; }
+  .prime-card .f { font-size: 28px; color: var(--ink); margin-top: 14px; font-weight: 700; }
+
+  /* ============ Slide 10 — 合數可以拆 ============ */
+  .slide-10 { justify-content: flex-start; align-items: center; padding-top: 80px; }
+  .slide-10 h2 { text-align: center; margin-bottom: 30px; }
+  .slide-10 svg { margin: 0 auto; display: block; }
+  .decomp-text {
+    text-align: center; margin-top: 40px; font-size: 72px;
+    color: var(--teal); font-weight: 900; letter-spacing: 0.04em;
+  }
+
+  /* ============ Slide 11 — 因數樹 ============ */
+  .slide-11 { justify-content: flex-start; align-items: center; padding-top: 40px; padding-bottom: 100px; }
+  .slide-11 h2 { margin-bottom: 8px; text-align: center; font-size: 80px; }
+  .slide-11 svg { display: block; margin: 0 auto; }
+  .tree-node {
+    opacity: 0; transition: opacity 0.6s ease;
+  }
+  .tree-line {
+    opacity: 0; stroke-dasharray: 100; stroke-dashoffset: 100;
+    transition: opacity 0.4s ease, stroke-dashoffset 0.6s ease;
+  }
+  .slide-11.active .tree-node.show { opacity: 1; }
+  .slide-11.active .tree-line.show { opacity: 1; stroke-dashoffset: 0; }
+  .tree-result {
+    text-align: center; margin-top: 12px; font-size: 64px; font-weight: 900;
+    opacity: 0; transition: opacity 1s ease;
+  }
+  .slide-11.active .tree-result.show { opacity: 1; }
+
+  /* ============ Slide 12 — 知識地圖 ============ */
+  .slide-12 { justify-content: flex-start; align-items: center; padding-top: 40px; padding-bottom: 100px; }
+  .slide-12 h2 { margin-bottom: 8px; text-align: center; font-size: 80px; }
+  .slide-12 svg { display: block; margin: 0 auto; }
+  .map-node, .map-line {
+    opacity: 0; transition: opacity 0.6s ease;
+  }
+  .slide-12.active .map-node.show, .slide-12.active .map-line.show { opacity: 1; }
+
+  /* ============ Slide 13 — 帶走一句話 ============ */
+  .slide-13 {
+    background: var(--ink); color: var(--paper);
+    justify-content: center; align-items: center; text-align: center;
+  }
+  .slide-13 .quote {
+    font-weight: 900;
+    font-size: 200px; line-height: 1.35; letter-spacing: 0.06em;
+  }
+  .slide-13 .quote .a { color: var(--coral); }
+  .slide-13 .quote .b { color: var(--teal-soft); }
+  .slide-13 .quote .line {
+    opacity: 0; transform: translateY(20px);
+    transition: all 1.2s ease;
+  }
+  .slide-13.active .quote .line { opacity: 1; transform: translateY(0); }
+  .slide-13.active .quote .line:nth-child(2) { transition-delay: 1.8s; }
+
+  /* ============ Slide 14 — 結語 ============ */
+  .slide-14 {
+    background: var(--ink); color: var(--paper);
+    justify-content: center; align-items: center; text-align: center;
+  }
+  .slide-14 .end-q {
+    font-weight: 900;
+    font-size: 100px; line-height: 1.45; max-width: 1700px;
+  }
+  .slide-14 .end-q em { color: var(--gold); font-style: normal; }
+  .slide-14 .end-sig {
+    margin-top: 80px; font-size: 28px; letter-spacing: 0.5em;
+    color: rgba(250,247,238,0.55); font-weight: 700;
+  }
+
+  .slide-14 .subtitle, .slide-13 .subtitle {
+    background: rgba(250,247,238,0.95); color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="startScreen">
+  <div class="t">因數與倍數</div>
+  <div class="play"><svg width="24" height="28" viewBox="0 0 24 28"><path d="M2 2 L22 14 L2 26 Z" fill="currentColor"/></svg></div>
+  <div class="s">國中數學 · 點擊開始 · 約 4 分鐘</div>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- ====== Slide 1 ====== -->
+  <div class="slide slide-1">
+    <div class="particles" id="particles"></div>
+    <div style="position:relative;z-index:1;">
+      <h1 class="title">因數與倍數</h1>
+      <div class="hook">FACTORS &amp; MULTIPLES</div>
+      <div class="tag">國中數學 · 七年級</div>
+    </div>
+  </div>
+
+  <!-- ====== Slide 2 ====== -->
+  <div class="slide slide-2">
+    <div class="chapter"><span class="num">01</span> / 12 — 情境引入</div>
+    <h2 class="sub">二十四個人，要分組</h2>
+    <div class="grid24" id="grid24"></div>
+    <div class="grouping-label" id="grpLabel">&nbsp;</div>
+  </div>
+
+  <!-- ====== Slide 3 ====== -->
+  <div class="slide slide-3">
+    <div class="chapter"><span class="num">02</span> / 12 — 整除性</div>
+    <h2 class="sub" style="text-align:center;">什麼叫「整除」？</h2>
+    <div class="eq-big">$24 \div 6 = 4 \cdots 0$</div>
+    <div class="remark"><span class="arrow">↓</span><br>我們說：<b>6 整除 24</b></div>
+  </div>
+
+  <!-- ====== Slide 4 ====== -->
+  <div class="slide slide-4">
+    <div class="chapter"><span class="num">03</span> / 12 — 因數</div>
+    <h2 class="sub" style="text-align:center;">因數的定義</h2>
+    <div class="definition">
+      若 <b>a × 某整數 = b</b>，則 <b>a 是 b 的因數</b>
+    </div>
+    <div class="equation">
+      $24 = $
+      <span class="factor-mark">6</span>
+      $\times$
+      <span class="factor-mark">4</span>
+    </div>
+    <div class="lead" style="text-align:center;">6 和 4 都是 24 的因數</div>
+  </div>
+
+  <!-- ====== Slide 5 ====== -->
+  <div class="slide slide-5">
+    <div class="chapter"><span class="num">04</span> / 12 — 配對法</div>
+    <h2 class="sub" style="text-align:center;">12 的所有因數？</h2>
+    <div class="pairs">
+      <div class="pair-row"><span class="num">1</span><span class="x">×</span><span class="num">12</span></div>
+      <div class="pair-row"><span class="num">2</span><span class="x">×</span><span class="num">6</span></div>
+      <div class="pair-row"><span class="num">3</span><span class="x">×</span><span class="num">4</span></div>
+    </div>
+  </div>
+
+  <!-- ====== Slide 6 ====== -->
+  <div class="slide slide-6">
+    <div class="chapter"><span class="num">05</span> / 12 — 因數有限</div>
+    <h2 class="sub">12 的因數，全部就這 6 個</h2>
+    <div class="factors-list">
+      <div class="factor-chip">1</div>
+      <div class="factor-chip">2</div>
+      <div class="factor-chip">3</div>
+      <div class="factor-chip">4</div>
+      <div class="factor-chip">6</div>
+      <div class="factor-chip">12</div>
+    </div>
+    <div class="count-big">6</div>
+    <div class="count-label">因數的個數是 <b style="color:var(--coral);">有限</b> 的</div>
+  </div>
+
+  <!-- ====== Slide 7 ====== -->
+  <div class="slide slide-7">
+    <div class="chapter"><span class="num">06</span> / 12 — 倍數</div>
+    <h2 class="sub" style="text-align:center;">5 的倍數</h2>
+    <svg width="1700" height="320" viewBox="0 0 1700 320">
+      <line x1="60" y1="180" x2="1640" y2="180" stroke="#1A1A1A" stroke-width="6"/>
+      <polygon points="1640,180 1610,160 1610,200" fill="#1A1A1A"/>
+      <g class="mult-tick"><circle cx="90" cy="180" r="10" fill="#1A1A1A"/><text x="90" y="250" text-anchor="middle" font-size="40" font-weight="700" fill="#555" font-family="GenSeki TW">0</text></g>
+      <g class="mult-tick"><circle cx="310" cy="180" r="20" fill="#E36414"/><text x="310" y="130" text-anchor="middle" font-size="60" font-weight="900" fill="#E36414" font-family="GenSeki TW">5</text></g>
+      <g class="mult-tick"><circle cx="530" cy="180" r="20" fill="#E36414"/><text x="530" y="130" text-anchor="middle" font-size="60" font-weight="900" fill="#E36414" font-family="GenSeki TW">10</text></g>
+      <g class="mult-tick"><circle cx="750" cy="180" r="20" fill="#E36414"/><text x="750" y="130" text-anchor="middle" font-size="60" font-weight="900" fill="#E36414" font-family="GenSeki TW">15</text></g>
+      <g class="mult-tick"><circle cx="970" cy="180" r="20" fill="#E36414"/><text x="970" y="130" text-anchor="middle" font-size="60" font-weight="900" fill="#E36414" font-family="GenSeki TW">20</text></g>
+      <g class="mult-tick"><circle cx="1190" cy="180" r="20" fill="#E36414"/><text x="1190" y="130" text-anchor="middle" font-size="60" font-weight="900" fill="#E36414" font-family="GenSeki TW">25</text></g>
+      <g class="mult-tick"><text x="1430" y="170" text-anchor="middle" font-size="80" fill="#E36414" font-weight="900">⋯</text></g>
+    </svg>
+    <div class="tail">無止盡地往下延伸</div>
+  </div>
+
+  <!-- ====== Slide 8 ====== -->
+  <div class="slide slide-8">
+    <div class="chapter"><span class="num">07</span> / 12 — 倍數無限</div>
+    <h2 class="sub" style="text-align:center;">倍數的個數</h2>
+    <div class="infinity">∞</div>
+    <div class="compare">
+      <div><div class="l">因 數 個 數</div><div class="v fin">有限</div></div>
+      <div><div class="l">倍 數 個 數</div><div class="v inf">無限</div></div>
+    </div>
+  </div>
+
+  <!-- ====== Slide 9 ====== -->
+  <div class="slide slide-9">
+    <div class="chapter"><span class="num">08</span> / 12 — 質數</div>
+    <h2 class="sub" style="text-align:center;">質數：因數只有 1 和自己</h2>
+    <div class="prime-row">
+      <div class="prime-card"><div class="n">2</div><div class="f">{1, 2}</div></div>
+      <div class="prime-card"><div class="n">3</div><div class="f">{1, 3}</div></div>
+      <div class="prime-card"><div class="n">5</div><div class="f">{1, 5}</div></div>
+      <div class="prime-card"><div class="n">7</div><div class="f">{1, 7}</div></div>
+      <div class="prime-card"><div class="n">11</div><div class="f">{1, 11}</div></div>
+    </div>
+  </div>
+
+  <!-- ====== Slide 10 — 合數 ====== -->
+  <div class="slide slide-10">
+    <div class="chapter"><span class="num">09</span> / 12 — 合數</div>
+    <h2 class="sub" style="text-align:center;">合數可以拆</h2>
+    <svg width="900" height="480" viewBox="0 0 900 480">
+      <!-- 12 -->
+      <g class="d-step" data-step="0">
+        <circle cx="450" cy="70" r="64" fill="#0E7C7B"/>
+        <text x="450" y="88" text-anchor="middle" fill="white" font-size="54" font-weight="900" font-family="GenSeki TW">12</text>
+      </g>
+      <!-- lines from 12 to 2,6 -->
+      <line x1="420" y1="125" x2="270" y2="200" stroke="#1A1A1A" stroke-width="4" class="d-step" data-step="1"/>
+      <line x1="480" y1="125" x2="630" y2="200" stroke="#1A1A1A" stroke-width="4" class="d-step" data-step="1"/>
+      <!-- 2, 6 -->
+      <g class="d-step" data-step="1">
+        <circle cx="270" cy="250" r="56" fill="#E36414"/>
+        <text x="270" y="268" text-anchor="middle" fill="white" font-size="48" font-weight="900" font-family="GenSeki TW">2</text>
+        <circle cx="630" cy="250" r="56" fill="#0E7C7B"/>
+        <text x="630" y="268" text-anchor="middle" fill="white" font-size="48" font-weight="900" font-family="GenSeki TW">6</text>
+      </g>
+      <!-- lines from 6 to 2,3 -->
+      <line x1="610" y1="300" x2="520" y2="370" stroke="#1A1A1A" stroke-width="4" class="d-step" data-step="2"/>
+      <line x1="650" y1="300" x2="740" y2="370" stroke="#1A1A1A" stroke-width="4" class="d-step" data-step="2"/>
+      <!-- 2, 3 -->
+      <g class="d-step" data-step="2">
+        <circle cx="520" cy="415" r="50" fill="#E36414"/>
+        <text x="520" y="432" text-anchor="middle" fill="white" font-size="42" font-weight="900" font-family="GenSeki TW">2</text>
+        <circle cx="740" cy="415" r="50" fill="#E36414"/>
+        <text x="740" y="432" text-anchor="middle" fill="white" font-size="42" font-weight="900" font-family="GenSeki TW">3</text>
+      </g>
+    </svg>
+    <div class="decomp-text" id="decompText">12 = 2 × 2 × 3</div>
+  </div>
+
+  <!-- ====== Slide 11 — 因數樹 ====== -->
+  <div class="slide slide-11">
+    <div class="chapter"><span class="num">10</span> / 12 — 質因數分解</div>
+    <h2 class="sub">因數樹：拆到底，都是質數</h2>
+    <svg width="1500" height="720" viewBox="0 0 1500 720" id="treeSvg">
+      <!-- 60 (root) -->
+      <g class="tree-node" data-step="0">
+        <circle cx="750" cy="80" r="72" fill="#0E7C7B"/>
+        <text x="750" y="100" text-anchor="middle" fill="white" font-size="60" font-weight="900" font-family="GenSeki TW">60</text>
+      </g>
+      <!-- lines to 2,30 -->
+      <line x1="710" y1="140" x2="490" y2="240" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="1"/>
+      <line x1="790" y1="140" x2="1010" y2="240" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="1"/>
+      <g class="tree-node" data-step="1">
+        <circle cx="490" cy="290" r="64" fill="#E36414"/>
+        <text x="490" y="310" text-anchor="middle" fill="white" font-size="52" font-weight="900" font-family="GenSeki TW">2</text>
+        <circle cx="1010" cy="290" r="64" fill="#0E7C7B"/>
+        <text x="1010" y="310" text-anchor="middle" fill="white" font-size="52" font-weight="900" font-family="GenSeki TW">30</text>
+      </g>
+      <!-- lines from 30 to 2,15 -->
+      <line x1="970" y1="340" x2="800" y2="440" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="2"/>
+      <line x1="1050" y1="340" x2="1220" y2="440" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="2"/>
+      <g class="tree-node" data-step="2">
+        <circle cx="800" cy="490" r="60" fill="#E36414"/>
+        <text x="800" y="510" text-anchor="middle" fill="white" font-size="48" font-weight="900" font-family="GenSeki TW">2</text>
+        <circle cx="1220" cy="490" r="60" fill="#0E7C7B"/>
+        <text x="1220" y="510" text-anchor="middle" fill="white" font-size="48" font-weight="900" font-family="GenSeki TW">15</text>
+      </g>
+      <!-- lines from 15 to 3,5 -->
+      <line x1="1185" y1="540" x2="1070" y2="630" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="3"/>
+      <line x1="1255" y1="540" x2="1370" y2="630" stroke="#1A1A1A" stroke-width="5" class="tree-line" data-step="3"/>
+      <g class="tree-node" data-step="3">
+        <circle cx="1070" cy="675" r="55" fill="#E36414"/>
+        <text x="1070" y="695" text-anchor="middle" fill="white" font-size="44" font-weight="900" font-family="GenSeki TW">3</text>
+        <circle cx="1370" cy="675" r="55" fill="#E36414"/>
+        <text x="1370" y="695" text-anchor="middle" fill="white" font-size="44" font-weight="900" font-family="GenSeki TW">5</text>
+      </g>
+    </svg>
+    <div class="tree-result" data-step="4">$60 = 2 \times 2 \times 3 \times 5 = 2^2 \times 3 \times 5$</div>
+  </div>
+
+  <!-- ====== Slide 12 — 知識地圖 ====== -->
+  <div class="slide slide-12">
+    <div class="chapter"><span class="num">11</span> / 12 — 總結</div>
+    <h2 class="sub">今天的知識地圖</h2>
+    <svg width="1500" height="760" viewBox="0 0 1600 820">
+      <!-- center: 整除 -->
+      <g class="map-node" data-step="0">
+        <circle cx="800" cy="410" r="150" fill="#1A1A1A"/>
+        <text x="800" y="400" text-anchor="middle" fill="#FAF7EE" font-size="80" font-weight="900" font-family="GenSeki TW">整除</text>
+        <text x="800" y="450" text-anchor="middle" fill="#C8941F" font-size="22" letter-spacing="4" font-weight="700">DIVIDES</text>
+      </g>
+      <!-- branches -->
+      <line x1="700" y1="310" x2="420" y2="170" stroke="#0E7C7B" stroke-width="6" class="map-line" data-step="1"/>
+      <line x1="900" y1="310" x2="1180" y2="170" stroke="#0E7C7B" stroke-width="6" class="map-line" data-step="2"/>
+      <line x1="700" y1="510" x2="420" y2="650" stroke="#E36414" stroke-width="6" class="map-line" data-step="3"/>
+      <line x1="900" y1="510" x2="1180" y2="650" stroke="#E36414" stroke-width="6" class="map-line" data-step="4"/>
+      <!-- 因數 -->
+      <g class="map-node" data-step="1">
+        <rect x="200" y="80" width="440" height="180" rx="16" fill="#FAF7EE" stroke="#0E7C7B" stroke-width="6"/>
+        <text x="420" y="170" text-anchor="middle" fill="#0E7C7B" font-size="72" font-weight="900" font-family="GenSeki TW">因數</text>
+        <text x="420" y="225" text-anchor="middle" fill="#1A1A1A" font-size="28" font-weight="700" font-family="GenSeki TW">能整除 N · 有限</text>
+      </g>
+      <!-- 倍數 -->
+      <g class="map-node" data-step="2">
+        <rect x="960" y="80" width="440" height="180" rx="16" fill="#FAF7EE" stroke="#0E7C7B" stroke-width="6"/>
+        <text x="1180" y="170" text-anchor="middle" fill="#0E7C7B" font-size="72" font-weight="900" font-family="GenSeki TW">倍數</text>
+        <text x="1180" y="225" text-anchor="middle" fill="#1A1A1A" font-size="28" font-weight="700" font-family="GenSeki TW">N 的整數倍 · 無限</text>
+      </g>
+      <!-- 質數 -->
+      <g class="map-node" data-step="3">
+        <rect x="200" y="570" width="440" height="180" rx="16" fill="#FAF7EE" stroke="#E36414" stroke-width="6"/>
+        <text x="420" y="660" text-anchor="middle" fill="#E36414" font-size="72" font-weight="900" font-family="GenSeki TW">質數</text>
+        <text x="420" y="715" text-anchor="middle" fill="#1A1A1A" font-size="28" font-weight="700" font-family="GenSeki TW">因數只有 1 和自己</text>
+      </g>
+      <!-- 合數 -->
+      <g class="map-node" data-step="4">
+        <rect x="960" y="570" width="440" height="180" rx="16" fill="#FAF7EE" stroke="#E36414" stroke-width="6"/>
+        <text x="1180" y="660" text-anchor="middle" fill="#E36414" font-size="72" font-weight="900" font-family="GenSeki TW">合數</text>
+        <text x="1180" y="715" text-anchor="middle" fill="#1A1A1A" font-size="28" font-weight="700" font-family="GenSeki TW">可拆成質數乘積</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ====== Slide 13 ====== -->
+  <div class="slide slide-13">
+    <div class="quote">
+      <div class="line">拆到底，是 <span class="a">質數</span>。</div>
+      <div class="line">擴出去，是 <span class="b">倍數</span>。</div>
+    </div>
+  </div>
+
+  <!-- ====== Slide 14 ====== -->
+  <div class="slide slide-14">
+    <div class="end-q">
+      下次遇到一個數字，問問自己：<br>
+      它能被誰 <em>整除</em>？<br>
+      它能被誰 <em>拆解</em>？
+    </div>
+    <div class="end-sig">FACTORS &amp; MULTIPLES · 完</div>
+  </div>
+
+  <!-- 共用字幕條 -->
+  <div class="subtitle" id="subtitle"></div>
+</div>
+
+<div class="progress" id="progress"></div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+// ===== 旁白文字 + 時長控制 =====
+const PAGES = [
+  { i:1,  dur:14, sub:"因數與倍數。國中數學最基礎、也最常被誤會的單元。今天我們用六分鐘，把它徹底搞懂。" },
+  { i:2,  dur:25, sub:"二十四個人要分組。可以分成 2 組、3 組、4 組⋯⋯能整除 24 的數，就是 24 的因數。" },
+  { i:3,  dur:17, sub:"一個數除以另一個數，餘數是 0，就叫整除。所以 6 整除 24。" },
+  { i:4,  dur:15, sub:"如果 a × 某整數 = b，那 a 就是 b 的因數。6 和 4，都是 24 的因數。" },
+  { i:5,  dur:20, sub:"用配對法找因數：1×12、2×6、3×4，三組配對。" },
+  { i:6,  dur:15, sub:"12 的因數只有六個。因數的個數是有限的。" },
+  { i:7,  dur:16, sub:"5 的倍數：5、10、15、20⋯⋯ 無止盡地往下延伸。" },
+  { i:8,  dur:15, sub:"因數有限、倍數無限——這是兩者最大的不同。" },
+  { i:9,  dur:18, sub:"質數的因數只有 1 和自己。2、3、5、7、11⋯⋯都是質數。" },
+  { i:10, dur:20, sub:"合數可以被拆解，拆到不能再拆，剩下的都是質數。" },
+  { i:11, dur:30, sub:"因數樹：60 拆到底是 2、2、3、5。這叫質因數分解。" },
+  { i:12, dur:15, sub:"整除、因數、倍數、質數、合數——同一件事的不同看法。" },
+  { i:13, dur:10, sub:"拆到底，是質數。擴出去，是倍數。" },
+  { i:14, dur:14, sub:"下次遇到一個數字，問問自己：它能被誰整除？又能被誰拆解？" },
+];
+
+const TOTAL_DUR = PAGES.reduce((s,p)=>s+p.dur, 0);
+
+const slides = document.querySelectorAll('.slide');
+const audio = document.getElementById('audio');
+const sub = document.getElementById('subtitle');
+const startScreen = document.getElementById('startScreen');
+const progress = document.getElementById('progress');
+
+// ===== 飄入數字粒子（slide 1） =====
+const particles = document.getElementById('particles');
+const NUMS = ['1','2','3','5','7','11','13','60','12','24','∞'];
+for (let i=0;i<25;i++) {
+  const s = document.createElement('span');
+  s.textContent = NUMS[Math.floor(Math.random()*NUMS.length)];
+  s.style.left = Math.random()*100 + '%';
+  s.style.fontSize = (20 + Math.random()*30) + 'px';
+  s.style.animationDuration = (5 + Math.random()*6) + 's';
+  s.style.animationDelay = (Math.random()*5) + 's';
+  particles.appendChild(s);
+}
+
+// ===== Slide 2 動畫：24 人分組切換 =====
+const grid24 = document.getElementById('grid24');
+const grpLabel = document.getElementById('grpLabel');
+for (let i=0;i<24;i++) {
+  const d = document.createElement('div');
+  d.className = 'person';
+  grid24.appendChild(d);
+}
+const persons = grid24.querySelectorAll('.person');
+
+function setGrouping(cols, colorClass) {
+  grid24.style.gridTemplateColumns = `repeat(${cols}, 70px)`;
+  persons.forEach(p => { p.className = 'person ' + colorClass; });
+  const rows = 24 / cols;
+  grpLabel.textContent = `${rows} 組 × ${cols} 人`;
+}
+
+let s2timer = null;
+function playSlide2() {
+  if (s2timer) clearInterval(s2timer);
+  const steps = [
+    () => setGrouping(12, 'group-2'),  // 2 rows of 12
+    () => setGrouping(8,  'group-3'),  // 3 rows of 8
+    () => setGrouping(6,  'group-4'),  // 4 rows of 6
+  ];
+  let i = 0;
+  steps[i++]();
+  s2timer = setInterval(() => {
+    if (i < steps.length) steps[i++]();
+    else clearInterval(s2timer);
+  }, 6000);
+}
+
+// ===== Slide 10：合數分解逐步顯示 =====
+function playSlide10() {
+  const steps = document.querySelectorAll('.slide-10 .d-step');
+  steps.forEach(el => el.style.opacity = '0');
+  const groups = [0,1,2];
+  groups.forEach((g,idx) => {
+    setTimeout(() => {
+      document.querySelectorAll(`.slide-10 .d-step[data-step="${g}"]`)
+        .forEach(el => el.style.transition = 'opacity 0.8s ease', el => el.style.opacity = '1');
+      document.querySelectorAll(`.slide-10 .d-step[data-step="${g}"]`)
+        .forEach(el => { el.style.transition = 'opacity 0.8s ease'; el.style.opacity = '1'; });
+    }, idx * 3500);
+  });
+}
+
+// ===== Slide 11：因數樹逐步顯示 =====
+function playSlide11() {
+  const allNodes = document.querySelectorAll('.slide-11 .tree-node, .slide-11 .tree-line, .slide-11 .tree-result');
+  allNodes.forEach(el => el.classList.remove('show'));
+  for (let step = 0; step <= 4; step++) {
+    setTimeout(() => {
+      document.querySelectorAll(`.slide-11 [data-step="${step}"]`).forEach(el => el.classList.add('show'));
+      if (step === 4 && window.renderMathInElement) {
+        renderMathInElement(document.querySelector('.tree-result'), {
+          delimiters: [{left: '$', right: '$', display: false}]
+        });
+      }
+    }, step * 5500);
+  }
+}
+
+// ===== Slide 12：知識地圖逐步顯示 =====
+function playSlide12() {
+  const els = document.querySelectorAll('.slide-12 .map-node, .slide-12 .map-line');
+  els.forEach(el => el.classList.remove('show'));
+  for (let step = 0; step <= 4; step++) {
+    setTimeout(() => {
+      document.querySelectorAll(`.slide-12 [data-step="${step}"]`).forEach(el => el.classList.add('show'));
+    }, step * 2500);
+  }
+}
+
+// ===== 主播放控制器 =====
+let currentSlide = 0;
+let totalElapsed = 0;
+let slideStartTime = 0;
+let rafId = null;
+
+function showSlide(i) {
+  slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+  const p = PAGES[i];
+  sub.textContent = p.sub;
+  sub.classList.add('show');
+
+  // 載入並播放對應音檔
+  audio.src = `assets/narration/page-${String(p.i).padStart(2,'0')}.mp3`;
+  audio.play().catch(()=>{});
+
+  // 觸發頁面特定動畫
+  if (p.i === 2) playSlide2();
+  if (p.i === 10) playSlide10();
+  if (p.i === 11) playSlide11();
+  if (p.i === 12) playSlide12();
+
+  // KaTeX 重新渲染
+  if (window.renderMathInElement) {
+    renderMathInElement(slides[i], {
+      delimiters: [{left: '$', right: '$', display: false}],
+      throwOnError: false
+    });
+  }
+
+  slideStartTime = performance.now();
+}
+
+function tick() {
+  const now = performance.now();
+  const elapsed = (now - slideStartTime) / 1000;
+  const slideDur = PAGES[currentSlide].dur;
+
+  // 進度條
+  const totalProgress = (totalElapsed + elapsed) / TOTAL_DUR;
+  progress.style.width = (Math.min(totalProgress, 1) * 100) + '%';
+
+  if (elapsed >= slideDur) {
+    totalElapsed += slideDur;
+    currentSlide++;
+    if (currentSlide >= PAGES.length) {
+      cancelAnimationFrame(rafId);
+      sub.classList.remove('show');
+      return;
+    }
+    showSlide(currentSlide);
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+startScreen.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  // 等 KaTeX ready
+  setTimeout(() => {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [{left: '$', right: '$', display: false}],
+        throwOnError: false
+      });
+    }
+    showSlide(0);
+    rafId = requestAnimationFrame(tick);
+  }, 300);
+});
+</script>
+
+</body>
+</html>
