@@ -1,10 +1,12 @@
 # Anti-Gravity 懶人包 #09：服務連接與工作流程設定
 
-> 版本：v1.4
-> 更新日期：2026-05-31
+> 版本：v1.5
+> 更新日期：2026-06-20
 > 語系偏好：繁體中文（Taiwan）
 
-這份懶人包的目標，是讓 Anti-Gravity 使用者能安全連接 NotebookLM、Firebase、GitHub、Obsidian，並建立「開工 / 收工 / 新專案初始化」工作流程。本版本已重新加回了 Obsidian MCPVault 的一鍵整合設定與專屬 Skill。
+> 💡 **致謝與來源**：本懶人包改進並整合了 **三師爸** (mathruffian-dot) 無私分享的教學、說明手冊與實戰踩坑紀錄。
+
+這份懶人包的目標，是讓 Anti-Gravity 使用者能安全連接 NotebookLM、Firebase、GitHub、Obsidian、Clasp/Netlify 與自動影片生成系統，並建立「開工 / 收工 / 新專案初始化」工作流程。
 
 本文件只放可公開教學的設定流程，不放任何個人 NotebookLM 清單、筆記本 ID、研究報告、生成圖片、帳號 token 或測試專案。
 

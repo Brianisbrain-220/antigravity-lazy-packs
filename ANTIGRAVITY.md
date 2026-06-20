@@ -5,7 +5,7 @@
 專案名稱：2026Antigravity2
 專案用途：Anti-Gravity 懶人包設定與開發
 主要工作目錄：c:\2026Antigravity2
-GitHub repo：待設定
+GitHub repo：https://github.com/Brianisbrain-220/antigravity-lazy-packs
 預設 branch：main
 
 ## Obsidian 對應筆記
