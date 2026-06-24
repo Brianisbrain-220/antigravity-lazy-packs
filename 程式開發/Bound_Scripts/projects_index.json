@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Brian智慧助手",
+    "scriptId": "1Ww_hR7OAMI79yr4AgycTde_Y2nfKqntm5jjhdtwtcNhAQ-8dqYvjNIfn",
+    "localPath": "Bound_Scripts/Brian智慧助手",
+    "clonedAt": "2026-06-22T04:29:43Z"
+  },
+  {
+    "name": "Brian智慧助手_v2",
+    "scriptId": "1v1DED_p2A48JUEFIp68G2dAsjkMuePuUSnv3lTDXYds6nGyBx7g4t5wk",
+    "localPath": "Bound_Scripts/Brian智慧助手_v2",
+    "clonedAt": "2026-06-22T05:10:04Z"
+  },
+  {
+    "name": "場地租借申請系統",
+    "scriptId": "11-t3TK5vi9OP63HLjGDxOMrmr8eWs-uOETQvQ6tBeNfb3G8re8cZZOYW",
+    "localPath": "Bound_Scripts/場地租借申請系統",
+    "clonedAt": "2026-06-22T05:52:45Z"
+  },
+  {
+    "name": "請購單系統",
+    "scriptId": "1iipeCpdv1MKRMSKCK-65fNGfzRAIRW_rLKqfgqoII2gQspeEEy4g4vDM",
+    "localPath": "Bound_Scripts/請購單系統",
+    "clonedAt": "2026-06-24T03:58:04Z"
+  }
+]

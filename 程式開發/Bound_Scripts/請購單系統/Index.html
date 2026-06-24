@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請購單快速生成系統</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(30, 41, 59, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.3);
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --accent: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', 'Noto Sans TC', 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      box-shadow: var(--glass-shadow);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Background glow effects */
+    .container::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: -100px;
+      width: 250px;
+      height: 250px;
+      background: var(--primary);
+      filter: blur(120px);
+      opacity: 0.25;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container::after {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      right: -100px;
+      width: 250px;
+      height: 250px;
+      background: var(--accent);
+      filter: blur(120px);
+      opacity: 0.2;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #ffffff, #a5b4fc, #22d3ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.025em;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    /* Section styling */
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+      border-left: 4px solid var(--primary);
+      padding-left: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Forms */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, textarea, select {
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #64748b;
+    }
+
+    /* Table styling for items */
+    .table-container {
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 1rem;
+      border-bottom: 1px solid var(--glass-border);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--glass-border);
+      vertical-align: middle;
+    }
+
+    .table-input {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .table-input:focus {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .row-total {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 0.95rem;
+      text-align: right;
+      padding-right: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0.75rem 1.5rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px 0 var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 var(--primary-glow);
+      filter: brightness(1.1);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #ffffff;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.05rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      box-shadow: 0 4px 20px 0 var(--primary-glow);
+      margin-top: 1rem;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px 0 rgba(99, 102, 241, 0.6);
+    }
+
+    .btn-submit:disabled {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--glass-border);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .btn-action-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Grand Total Box */
+    .grand-total-container {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px dashed rgba(99, 102, 241, 0.3);
+    }
+
+    .grand-total-label {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .grand-total-val {
+      color: #38bdf8;
+      font-family: 'Outfit', monospace;
+      font-size: 1.5rem;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(99, 102, 241, 0.1);
+      border-top-color: var(--primary);
+      border-bottom-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-main);
+      letter-spacing: 0.05em;
+    }
+
+    .progress-bar {
+      width: 200px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 2px;
+      animation: progress-indet 1.5s infinite ease-in-out;
+    }
+
+    @keyframes progress-indet {
+      0% { left: -50%; width: 30%; }
+      50% { width: 70%; }
+      100% { left: 110%; width: 20%; }
+    }
+
+    /* Result Card */
+    .result-card {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
+      padding: 1rem 0;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .success-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid var(--success);
+      color: var(--success);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.25rem;
+      box-shadow: 0 0 20px var(--success-glow);
+      margin-bottom: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .result-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .result-text {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      max-width: 450px;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+
+    .result-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .btn-result {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .btn-pdf {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 14px 0 var(--success-glow);
+    }
+    
+    .btn-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 var(--success-glow);
+      filter: brightness(1.1);
+    }
+
+    /* Info Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid var(--glass-border);
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 100;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">正在生成請購文件並轉存 PDF...</div>
+      <div class="progress-bar"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper" id="formWrapper">
+      <h1>請購單快速生成系統</h1>
+      <p class="subtitle">輸入表單欄位，即可在雲端自動產生並下載制式請購單 PDF 進行列印</p>
+
+      <form id="purchaseForm" onsubmit="handleFormSubmit(event)">
+        <!-- Config Section -->
+        <h2 class="section-title">雲端串接設定</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="templateId">Google 文件範本 ID</label>
+            <input type="text" id="templateId" required placeholder="請貼上範本 Google Doc 的 ID">
+          </div>
+          <div class="form-group">
+            <label for="folderId">儲存雲端資料夾 ID</label>
+            <input type="text" id="folderId" required placeholder="請貼上請購單 PDF 存檔資料夾的 ID">
+          </div>
+        </div>
+
+        <!-- General Info -->
+        <h2 class="section-title">請購單基本資訊</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="date">填單日期</label>
+            <input type="date" id="date" required>
+          </div>
+          <div class="form-group">
+            <label for="fundingSource">經費來源</label>
+            <input type="text" id="fundingSource" required placeholder="例如：115年度學校經常門、一般行政設備費">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="purpose">用途說明</label>
+          <textarea id="purpose" rows="2" required placeholder="請簡短說明此筆請購之目的與用途..."></textarea>
+        </div>
+
+        <!-- Items Table -->
+        <h2 class="section-title">請購品項細節</h2>
+        <div class="table-container">
+          <table id="itemsTable">
+            <thead>
+              <tr>
+                <th style="width: 5%;">項次</th>
+                <th style="width: 25%;">品名 *</th>
+                <th style="width: 25%;">規格/型號</th>
+                <th style="width: 10%;">單位 *</th>
+                <th style="width: 10%;">數量 *</th>
+                <th style="width: 12%;">單價 *</th>
+                <th style="width: 13%; text-align: right;">金額</th>
+                <th style="width: 8%;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+              <!-- Item rows will be dynamically appended here -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="btn-action-container">
+          <button type="button" class="btn btn-secondary" onclick="addNewItemRow()">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-top: -2px;">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+            新增品項
+          </button>
+
+          <div class="grand-total-container">
+            <span class="grand-total-label">總計金額</span>
+            <span class="grand-total-val" id="grandTotalDisplay">NT$ 0</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-submit" id="submitBtn">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-top: -2px; margin-right: 4px;">
+            <path d="M15.854.146a.5.5 0 0 1 .11.525L13.007 13.5a.5.5 0 0 1-.762.307L8.5 11.013 5.792 12.75a.5.5 0 0 1-.792-.407V11l-3.5-2.5a.5.5 0 0 1 .3-.875L14.5.01a.5.5 0 0 1 .52.136zM13.524 2.157L2.11 8 5.617 10.5l6.907-6.907zm-7.9 8.243l1.89 1.353 3.63-8.528-5.52 7.175z"/>
+          </svg>
+          送出並快速生成請購單
+        </button>
+      </form>
+    </div>
+
+    <!-- Result View -->
+    <div class="result-card" id="resultCard">
+      <div class="success-icon">✓</div>
+      <h2 class="result-title">請購單已成功生成！</h2>
+      <p class="result-text" id="resultDetails">
+        您請購的文件已經寫入 Google Sheet 歷史紀錄，並成功產出 Word 與 PDF 檔案放置於您的雲端硬碟中。
+      </p>
+      
+      <div class="result-buttons">
+        <a id="btnDownloadPdf" href="#" target="_blank" class="btn btn-pdf btn-result">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+            <path d="M14 14V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM4 1a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V1z"/>
+          </svg>
+          開啟並下載/列印 PDF
+        </a>
+        <a id="btnOpenDoc" href="#" target="_blank" class="btn btn-secondary btn-result">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+          </svg>
+          檢視 Google 文件原始檔
+        </a>
+        <button type="button" class="btn btn-secondary btn-result" onclick="resetForm()" style="margin-top: 1rem;">
+          填寫下一份請購單
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">設定已自動載入</div>
+
+  <script>
+    // Initialize defaults on window load
+    window.addEventListener('load', function() {
+      // Set default date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+
+      // Load config from localStorage if available
+      if (localStorage.getItem('gas_template_id')) {
+        document.getElementById('templateId').value = localStorage.getItem('gas_template_id');
+      }
+      if (localStorage.getItem('gas_folder_id')) {
+        document.getElementById('folderId').value = localStorage.getItem('gas_folder_id');
+        showToast('已為您從本地快取載入雲端 ID 設定');
+      }
+
+      // Add one default item row
+      addNewItemRow();
+    });
+
+    // Helper to show toast message
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    // Function to dynamically add a new item row
+    function addNewItemRow() {
+      const tbody = document.getElementById('itemsTableBody');
+      const rowCount = tbody.children.length;
+      
+      const tr = document.createElement('tr');
+      tr.id = 'row_' + rowCount;
+      tr.className = 'item-row';
+      
+      tr.innerHTML = `
+        <td style="text-align: center; font-weight: 600; color: var(--text-muted);" class="row-num">${rowCount + 1}</td>
+        <td><input type="text" class="table-input item-name" placeholder="品名" required></td>
+        <td><input type="text" class="table-input item-spec" placeholder="規格/尺寸/型號"></td>
+        <td><input type="text" class="table-input item-unit" placeholder="個/批/台" required></td>
+        <td><input type="number" class="table-input item-qty" placeholder="數量" min="0.01" step="any" required oninput="calculateRowAndGrandTotal(this)"></td>
+        <td><input type="number" class="table-input item-price" placeholder="單價" min="0" step="any" required oninput="calculateRowAndGrandTotal(this)"></td>
+        <td class="row-total" id="total_${rowCount}">$ 0</td>
+        <td style="text-align: center;">
+          <button type="button" class="btn btn-danger" onclick="deleteItemRow(this)">刪除</button>
+        </td>
+      `;
+      
+      tbody.appendChild(tr);
+      updateRowNumbers();
+    }
+
+    // Delete a specific row
+    function deleteItemRow(button) {
+      const tbody = document.getElementById('itemsTableBody');
+      if (tbody.children.length <= 1) {
+        showToast('請至少保留一個品項');
+        return;
+      }
+      const tr = button.closest('tr');
+      tr.remove();
+      updateRowNumbers();
+      calculateGrandTotal();
+    }
+
+    // Update the visual sequence numbers (项次) for all rows
+    function updateRowNumbers() {
+      const rows = document.querySelectorAll('#itemsTableBody tr');
+      rows.forEach((row, idx) => {
+        row.querySelector('.row-num').innerText = idx + 1;
+        // Update IDs to maintain consistency
+        row.id = 'row_' + idx;
+        row.querySelector('.row-total').id = 'total_' + idx;
+      });
+    }
+
+    // Calculate both individual row total and grand total
+    function calculateRowAndGrandTotal(input) {
+      const row = input.closest('tr');
+      const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.item-price').value) || 0;
+      const total = qty * price;
+      
+      // Update row total text
+      row.querySelector('.row-total').innerText = '$ ' + total.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+      
+      calculateGrandTotal();
+    }
+
+    // Sum all row totals to get the Grand Total
+    function calculateGrandTotal() {
+      const rows = document.querySelectorAll('#itemsTableBody tr');
+      let grandTotal = 0;
+      
+      rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        grandTotal += qty * price;
+      });
+      
+      document.getElementById('grandTotalDisplay').innerText = 'NT$ ' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    }
+
+    // Submit form logic
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      // Save settings to localStorage
+      const templateId = document.getElementById('templateId').value.trim();
+      const folderId = document.getElementById('folderId').value.trim();
+      localStorage.setItem('gas_template_id', templateId);
+      localStorage.setItem('gas_folder_id', folderId);
+
+      // Collect item list
+      const items = [];
+      const rows = document.querySelectorAll('#itemsTableBody tr');
+      rows.forEach(row => {
+        items.push({
+          name: row.querySelector('.item-name').value.trim(),
+          spec: row.querySelector('.item-spec').value.trim(),
+          unit: row.querySelector('.item-unit').value.trim(),
+          qty: row.querySelector('.item-qty').value,
+          price: row.querySelector('.item-price').value
+        });
+      });
+
+      if (items.length === 0) {
+        showToast('錯誤：請購單必須至少有一筆品項。');
+        return;
+      }
+
+      // Prepare payload
+      const formData = {
+        templateId: templateId,
+        folderId: folderId,
+        date: document.getElementById('date').value,
+        fundingSource: document.getElementById('fundingSource').value.trim(),
+        purpose: document.getElementById('purpose').value.trim(),
+        items: items
+      };
+
+      // Show Loading Overlay
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      document.getElementById('submitBtn').disabled = true;
+
+      // Call Google Apps Script backend API
+      google.script.run
+        .withSuccessHandler(onGenerationSuccess)
+        .withFailureHandler(onGenerationFailure)
+        .createRequisition(formData);
+    }
+
+    // API Call success callback
+    function onGenerationSuccess(result) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+
+      if (result.success) {
+        // Hide form and show success card
+        document.getElementById('formWrapper').style.display = 'none';
+        document.getElementById('resultCard').style.display = 'flex';
+        
+        // Bind URLs to action buttons
+        document.getElementById('btnDownloadPdf').href = result.pdfUrl;
+        document.getElementById('btnOpenDoc').href = result.docUrl;
+      } else {
+        alert('生成請購單失敗：\n' + result.message);
+      }
+    }
+
+    // API Call failure callback
+    function onGenerationFailure(error) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      alert('系統發生嚴重錯誤：\n' + error.toString());
+    }
+
+    // Reset view to write a new one
+    function resetForm() {
+      // Show form wrapper, hide result card
+      document.getElementById('formWrapper').style.display = 'block';
+      document.getElementById('resultCard').style.display = 'none';
+      
+      // Reset text inputs
+      document.getElementById('fundingSource').value = '';
+      document.getElementById('purpose').value = '';
+      
+      // Reset items table
+      const tbody = document.getElementById('itemsTableBody');
+      tbody.innerHTML = '';
+      addNewItemRow();
+      calculateGrandTotal();
+    }
+  </script>
+</body>
+</html>

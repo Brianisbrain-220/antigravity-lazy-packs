@@ -1,0 +1,7 @@
+# Ignore everything
+**/*
+
+# Keep Apps Script files
+!Code.js
+!Index.html
+!appsscript.json
