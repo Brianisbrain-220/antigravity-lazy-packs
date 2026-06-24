@@ -129,7 +129,7 @@ function populateRequisitionTable(body, items) {
 
   for (var t = 0; t < tables.length; t++) {
     var table = tables[t];
-    for (var r = 0; r < table.getNumberOfRows(); r++) {
+    for (var r = 0; r < table.getNumRows(); r++) {
       var row = table.getRow(r);
       var text = row.getText();
       if (text.indexOf("{{品名}}") !== -1 || text.indexOf("{{項目}}") !== -1) {
@@ -147,7 +147,7 @@ function populateRequisitionTable(body, items) {
     if (tables.length > 0) {
       targetTable = tables[0];
       // Let's assume the template row is the second row (index 1) or third row
-      if (targetTable.getNumberOfRows() > 1) {
+      if (targetTable.getNumRows() > 1) {
         templateRowIndex = 1;
         templateRow = targetTable.getRow(1);
       }
@@ -164,7 +164,7 @@ function populateRequisitionTable(body, items) {
     var newRow = templateRow.copy();
 
     // Replace placeholders in each cell of the copied row
-    for (var c = 0; c < newRow.getNumberOfCells(); c++) {
+    for (var c = 0; c < newRow.getNumCells(); c++) {
       var cell = newRow.getCell(c);
       cell.replaceText("\\{\\{項次\\}\\}", (i + 1).toString());
       cell.replaceText("\\{\\{品名\\}\\}", item.name || "");
