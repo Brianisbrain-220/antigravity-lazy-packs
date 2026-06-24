@@ -100,12 +100,11 @@ function createRequisition(formData) {
     var body = doc.getBody();
 
     // Replace header details
-    body.replaceText("\\{\\{填單日期\\}\\}", date);
+    body.replaceText("\\{\\{填單日期\\}\\}", formatToROCDate(date));
     body.replaceText("\\{\\{經費來源\\}\\}", fundingSource);
     body.replaceText("\\{\\{業務計畫\\}\\}", businessPlan);
     body.replaceText("\\{\\{工作計畫\\}\\}", workPlan);
     body.replaceText("\\{\\{用途別\\}\\}", purposeCategory);
-    body.replaceText("\\{\\{用途說明\\}\\}", purpose);
     body.replaceText("\\{\\{總計\\}\\}", grandTotal.toLocaleString());
     body.replaceText("\\{\\{國字總計\\}\\}", chineseTotal);
 
@@ -114,6 +113,9 @@ function createRequisition(formData) {
 
     // 5. Populate Items Table
     populateRequisitionTable(body, items);
+
+    // Replace purpose globally (run after table population so duplicates are cleared of placeholders)
+    body.replaceText("\\{\\{用途說明\\}\\}", purpose);
 
     // Save and close doc
     doc.saveAndClose();
@@ -209,6 +211,9 @@ function populateRequisitionTable(body, items) {
       cell.replaceText("\\{\\{數量\\}\\}", item.qty ? parseFloat(item.qty).toString() : "0");
       cell.replaceText("\\{\\{單價\\}\\}", item.price ? parseFloat(item.price).toLocaleString() : "0");
       cell.replaceText("\\{\\{總價\\}\\}", item.total ? parseFloat(item.total).toLocaleString() : "0");
+      if (i > 0) {
+        cell.replaceText("\\{\\{用途說明\\}\\}", "");
+      }
     }
 
     // Insert new row before the template row
@@ -340,4 +345,23 @@ function numberToChinese(num) {
     str += "元";
   }
   return str + "整";
+}
+
+/**
+ * Formats Gregorian date (YYYY-MM-DD) to Taiwan ROC Minguo date format (YYY 年 MM 月 DD 日)
+ */
+function formatToROCDate(dateStr) {
+  if (!dateStr) return "";
+  var cleanDate = dateStr.replace(/\//g, "-");
+  var parts = cleanDate.split("-");
+  if (parts.length !== 3) return dateStr;
+  var year = parseInt(parts[0], 10);
+  var month = parseInt(parts[1], 10);
+  var day = parseInt(parts[2], 10);
+  
+  var rocYear = year - 1911;
+  var monthStr = month < 10 ? "0" + month : month.toString();
+  var dayStr = day < 10 ? "0" + day : day.toString();
+  
+  return rocYear + " 年 " + monthStr + " 月 " + dayStr + " 日";
 }

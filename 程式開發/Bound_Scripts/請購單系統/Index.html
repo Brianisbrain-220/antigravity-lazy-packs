@@ -706,7 +706,20 @@
         <td style="text-align: center; font-weight: 600; color: var(--text-muted);" class="row-num">${rowCount + 1}</td>
         <td><input type="text" class="table-input item-name" placeholder="品名" required></td>
         <td><input type="text" class="table-input item-spec" placeholder="規格/尺寸/型號"></td>
-        <td><input type="text" class="table-input item-unit" placeholder="個/批/台" required></td>
+        <td>
+          <select class="table-input item-unit-select" onchange="handleUnitChange(this)" required style="width: 100%;">
+            <option value="個">個</option>
+            <option value="張">張</option>
+            <option value="式">式</option>
+            <option value="顆">顆</option>
+            <option value="台">台</option>
+            <option value="批">批</option>
+            <option value="件">件</option>
+            <option value="本">本</option>
+            <option value="其他">其他...</option>
+          </select>
+          <input type="text" class="table-input item-unit-custom" placeholder="輸入單位" style="display: none; width: 100%; margin-top: 4px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+        </td>
         <td><input type="number" class="table-input item-qty" placeholder="數量" min="0.01" step="any" required oninput="calculateRowAndGrandTotal(this)"></td>
         <td><input type="number" class="table-input item-price" placeholder="單價" min="0" step="any" required oninput="calculateRowAndGrandTotal(this)"></td>
         <td class="row-total" id="total_${rowCount}">$ 0</td>
@@ -717,6 +730,20 @@
       
       tbody.appendChild(tr);
       updateRowNumbers();
+    }
+
+    // Toggle custom unit text input
+    function handleUnitChange(select) {
+      const customInput = select.nextElementSibling;
+      if (select.value === "其他") {
+        customInput.style.display = "block";
+        customInput.required = true;
+        customInput.focus();
+      } else {
+        customInput.style.display = "none";
+        customInput.required = false;
+        customInput.value = "";
+      }
     }
 
     // Delete a specific row
@@ -780,14 +807,18 @@
       localStorage.setItem('gas_template_id', templateId);
       localStorage.setItem('gas_folder_id', folderId);
 
-      // Collect item list
+       // Collect item list
       const items = [];
       const rows = document.querySelectorAll('#itemsTableBody tr');
       rows.forEach(row => {
+        const unitSelect = row.querySelector('.item-unit-select').value;
+        const unitCustom = row.querySelector('.item-unit-custom').value.trim();
+        const unit = unitSelect === "其他" ? unitCustom : unitSelect;
+        
         items.push({
           name: row.querySelector('.item-name').value.trim(),
           spec: row.querySelector('.item-spec').value.trim(),
-          unit: row.querySelector('.item-unit').value.trim(),
+          unit: unit,
           qty: row.querySelector('.item-qty').value,
           price: row.querySelector('.item-price').value
         });
