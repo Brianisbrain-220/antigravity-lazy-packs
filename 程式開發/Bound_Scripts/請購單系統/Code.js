@@ -45,6 +45,32 @@ function createRequisition(formData) {
 
     var chineseTotal = numberToChinese(grandTotal);
 
+    // [DEBUG LOGGING]
+    try {
+      var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      var debugSheet = activeSpreadsheet.getSheetByName("DebugLogs") || activeSpreadsheet.insertSheet("DebugLogs");
+      debugSheet.clear();
+      debugSheet.appendRow(["偵錯時間", new Date()]);
+      debugSheet.appendRow(["範本文件 ID (templateId)", templateId]);
+      debugSheet.appendRow(["存檔資料夾 ID (folderId)", folderId]);
+      
+      var tempDoc = DocumentApp.openById(templateId);
+      var tempBody = tempDoc.getBody();
+      debugSheet.appendRow(["範本文字總字數", tempBody.getText().length]);
+      debugSheet.appendRow(["範本文字前 1000 字", tempBody.getText().substring(0, 1000)]);
+      
+      var tempTables = tempBody.getTables();
+      debugSheet.appendRow(["範本表格數量", tempTables.length]);
+      for (var t = 0; t < tempTables.length; t++) {
+        debugSheet.appendRow(["表格 " + t + " 總行數", tempTables[t].getNumRows()]);
+        for (var r = 0; r < tempTables[t].getNumRows(); r++) {
+          debugSheet.appendRow(["表格 " + t + " 第 " + r + " 行文字", tempTables[t].getRow(r).getText()]);
+        }
+      }
+    } catch(debugErr) {
+      console.log("偵錯日誌寫入失敗: " + debugErr.toString());
+    }
+
     // 2. Open Target Folder
     var folder;
     try {
