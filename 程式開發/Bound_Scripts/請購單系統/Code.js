@@ -84,8 +84,7 @@ function createRequisition(formData) {
 
     // 3. Copy Template Doc
     var docNameBase = summarizePurpose(purpose);
-    var timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "HHmmss");
-    var newFileName = "請購單_" + docNameBase + "_" + date.replace(/[\/\-]/g, "") + "_" + timeStr;
+    var newFileName = "請購單_" + docNameBase;
     var templateFile;
     try {
       templateFile = DriveApp.getFileById(templateId);
