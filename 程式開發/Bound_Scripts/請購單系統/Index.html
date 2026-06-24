@@ -551,6 +551,15 @@
 
         <!-- Budget Section -->
         <h2 class="section-title">預算科目與經費來源 (選填)</h2>
+        
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label for="budgetPreset">常用預算科目與經費來源組合</label>
+          <select id="budgetPreset" onchange="applyBudgetPreset(this)">
+            <option value="custom">-- 自訂輸入 / 載入上次記憶 --</option>
+            <option value="regular">經常門組合 (532國民小學教育 / 53220000各校經常門分支計畫 / 經常門)</option>
+          </select>
+        </div>
+
         <div class="grid-2">
           <div class="form-group">
             <label for="businessPlan">業務計畫</label>
@@ -578,6 +587,12 @@
           <div class="form-group">
             <label for="date">填單日期</label>
             <input type="date" id="date" required>
+          </div>
+          <div class="form-group" style="justify-content: center; margin-bottom: 0;">
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; user-select: none; margin-top: 1rem;">
+              <input type="checkbox" id="isProcurementCard" style="width: 20px; height: 20px; accent-color: var(--primary);">
+              <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 500;">本請購案使用「採購卡支付」</span>
+            </label>
           </div>
         </div>
         <div class="form-group">
@@ -682,7 +697,21 @@
       }
       if (localStorage.getItem('gas_folder_id')) {
         document.getElementById('folderId').value = localStorage.getItem('gas_folder_id');
-        showToast('已為您從本地快取載入雲端 ID 設定');
+        showToast('已為您載入雲端 ID 與上次填寫的預算科目');
+      }
+
+      // Load last budget values from localStorage if available
+      if (localStorage.getItem('gas_business_plan')) {
+        document.getElementById('businessPlan').value = localStorage.getItem('gas_business_plan');
+      }
+      if (localStorage.getItem('gas_work_plan')) {
+        document.getElementById('workPlan').value = localStorage.getItem('gas_work_plan');
+      }
+      if (localStorage.getItem('gas_purpose_category')) {
+        document.getElementById('purposeCategory').value = localStorage.getItem('gas_purpose_category');
+      }
+      if (localStorage.getItem('gas_funding_source')) {
+        document.getElementById('fundingSource').value = localStorage.getItem('gas_funding_source');
       }
 
       // Add one default item row
@@ -813,6 +842,12 @@
       localStorage.setItem('gas_template_id', templateId);
       localStorage.setItem('gas_folder_id', folderId);
 
+      // Save budget values to localStorage
+      localStorage.setItem('gas_business_plan', document.getElementById('businessPlan').value.trim());
+      localStorage.setItem('gas_work_plan', document.getElementById('workPlan').value.trim());
+      localStorage.setItem('gas_purpose_category', document.getElementById('purposeCategory').value.trim());
+      localStorage.setItem('gas_funding_source', document.getElementById('fundingSource').value.trim());
+
        // Collect item list
       const items = [];
       const rows = document.querySelectorAll('#itemsTableBody tr');
@@ -845,6 +880,7 @@
         purposeCategory: document.getElementById('purposeCategory').value.trim(),
         fundingSource: document.getElementById('fundingSource').value.trim(),
         purpose: document.getElementById('purpose').value.trim(),
+        isProcurementCard: document.getElementById('isProcurementCard').checked,
         items: items
       };
 
@@ -897,12 +933,43 @@
       document.getElementById('purposeCategory').value = '';
       document.getElementById('fundingSource').value = '';
       document.getElementById('purpose').value = '';
+      document.getElementById('isProcurementCard').checked = false;
+      document.getElementById('budgetPreset').value = 'custom';
+      
+      // Load settings from localStorage to prepopulate
+      if (localStorage.getItem('gas_business_plan')) {
+        document.getElementById('businessPlan').value = localStorage.getItem('gas_business_plan');
+      }
+      if (localStorage.getItem('gas_work_plan')) {
+        document.getElementById('workPlan').value = localStorage.getItem('gas_work_plan');
+      }
+      if (localStorage.getItem('gas_purpose_category')) {
+        document.getElementById('purposeCategory').value = localStorage.getItem('gas_purpose_category');
+      }
+      if (localStorage.getItem('gas_funding_source')) {
+        document.getElementById('fundingSource').value = localStorage.getItem('gas_funding_source');
+      }
       
       // Reset items table
       const tbody = document.getElementById('itemsTableBody');
       tbody.innerHTML = '';
       addNewItemRow();
       calculateGrandTotal();
+    }
+
+    // Preset budget handler
+    function applyBudgetPreset(select) {
+      const val = select.value;
+      if (val === 'regular') {
+        document.getElementById('businessPlan').value = '532國民小學教育';
+        document.getElementById('workPlan').value = '53220000各校經常門分支計畫';
+        document.getElementById('fundingSource').value = '經常門';
+      } else if (val === 'custom') {
+        // Try reloading from localStorage memory
+        document.getElementById('businessPlan').value = localStorage.getItem('gas_business_plan') || '';
+        document.getElementById('workPlan').value = localStorage.getItem('gas_work_plan') || '';
+        document.getElementById('fundingSource').value = localStorage.getItem('gas_funding_source') || '';
+      }
     }
   </script>
 </body>

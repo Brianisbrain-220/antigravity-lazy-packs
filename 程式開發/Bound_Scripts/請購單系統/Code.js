@@ -22,6 +22,7 @@ function include(filename) {
  */
 function createRequisition(formData) {
   try {
+    var isProcurementCard = formData.isProcurementCard === true || formData.isProcurementCard === "true";
     var templateId = formData.templateId;
     var folderId = formData.folderId;
     var date = formData.date;
@@ -84,7 +85,8 @@ function createRequisition(formData) {
 
     // 3. Copy Template Doc
     var docNameBase = summarizePurpose(purpose);
-    var newFileName = "請購單_" + docNameBase;
+    var rocDateStr = formatToROCFNSDate(date);
+    var newFileName = rocDateStr + "請購單_" + docNameBase;
     var templateFile;
     try {
       templateFile = DriveApp.getFileById(templateId);
@@ -116,6 +118,11 @@ function createRequisition(formData) {
 
     // Replace purpose globally (run after table population so duplicates are cleared of placeholders)
     body.replaceText("\\{\\{用途說明\\}\\}", purpose);
+
+    // Apply procurement card stamp if checked
+    if (isProcurementCard) {
+      applyProcurementCardStamp(body);
+    }
 
     // Save and close doc
     doc.saveAndClose();
@@ -153,7 +160,11 @@ function createRequisition(formData) {
     }
 
     // 7. Write to Google Sheet (Log)
-    logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, copiedFile.getUrl(), docxFile ? docxFile.getUrl() : "", pdfFile.getUrl());
+    var logFundingSource = fundingSource;
+    if (isProcurementCard) {
+      logFundingSource += " (採購卡支付)";
+    }
+    logToSheet(date, businessPlan, workPlan, purposeCategory, logFundingSource, purpose, items, grandTotal, copiedFile.getUrl(), docxFile ? docxFile.getUrl() : "", pdfFile.getUrl());
 
     return {
       success: true,
@@ -399,4 +410,68 @@ function summarizePurpose(purpose) {
     return clean.substring(0, 6);
   }
   return clean || "請購項目";
+}
+
+/**
+ * Formats Gregorian date (YYYY-MM-DD) to Minguo date string without separators (e.g. YYYMMDD)
+ */
+function formatToROCFNSDate(dateStr) {
+  if (!dateStr) return "";
+  var cleanDate = dateStr.replace(/\//g, "-");
+  var parts = cleanDate.split("-");
+  if (parts.length !== 3) return "";
+  var year = parseInt(parts[0], 10);
+  var month = parseInt(parts[1], 10);
+  var day = parseInt(parts[2], 10);
+  var rocYear = year - 1911;
+  var monthStr = month < 10 ? "0" + month : month.toString();
+  var dayStr = day < 10 ? "0" + day : day.toString();
+  return rocYear + monthStr + dayStr;
+}
+
+/**
+ * Dynamically stamps "採購卡支付" vertically inside the cell that contains "憑證編號".
+ */
+function applyProcurementCardStamp(body) {
+  var tables = body.getTables();
+  for (var t = 0; t < tables.length; t++) {
+    var table = tables[t];
+    for (var r = 0; r < table.getNumRows(); r++) {
+      var row = table.getRow(r);
+      for (var c = 0; c < row.getNumCells(); c++) {
+        var cell = row.getCell(c);
+        var text = cell.getText().replace(/\s+/g, ""); // strip all spaces
+        if (text.indexOf("憑證編號") !== -1) {
+          cell.clear();
+          
+          var stampItems = [
+            { text: "採", size: 22, bold: true },
+            { text: "購", size: 22, bold: true },
+            { text: "卡", size: 22, bold: true },
+            { text: "憑證編號", size: 10, bold: false },
+            { text: "支", size: 22, bold: true },
+            { text: "第    號", size: 10, bold: false },
+            { text: "付", size: 22, bold: true }
+          ];
+          
+          for (var i = 0; i < stampItems.length; i++) {
+            var p;
+            if (i === 0) {
+              p = cell.getChild(0).asParagraph();
+              p.setText(stampItems[i].text);
+            } else {
+              p = cell.appendParagraph(stampItems[i].text);
+            }
+            p.setFontSize(stampItems[i].size);
+            p.setBold(stampItems[i].bold);
+            p.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+            p.setSpacingAfter(0);
+            p.setSpacingBefore(0);
+            p.setLineSpacing(1.0);
+          }
+          return; // Done
+        }
+      }
+    }
+  }
 }
