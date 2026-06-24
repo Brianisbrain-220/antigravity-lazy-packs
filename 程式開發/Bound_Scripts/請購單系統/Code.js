@@ -83,8 +83,9 @@ function createRequisition(formData) {
     }
 
     // 3. Copy Template Doc
-    var docNameBase = fundingSource || businessPlan || "未命名經費";
-    var newFileName = "請購單_" + docNameBase + "_" + date.replace(/[\/\-]/g, "") + "_" + Math.floor(Math.random() * 1000);
+    var docNameBase = summarizePurpose(purpose);
+    var timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "HHmmss");
+    var newFileName = "請購單_" + docNameBase + "_" + date.replace(/[\/\-]/g, "") + "_" + timeStr;
     var templateFile;
     try {
       templateFile = DriveApp.getFileById(templateId);
@@ -124,21 +125,41 @@ function createRequisition(formData) {
     var pdfBlob = copiedFile.getAs('application/pdf');
     var pdfFile = folder.createFile(pdfBlob).setName(newFileName + ".pdf");
 
+    // 6b. Generate DOCX (Word File)
+    var docxUrl = "https://docs.google.com/feeds/download/documents/export/Export?id=" + docId + "&exportFormat=docx";
+    var docxResponse = UrlFetchApp.fetch(docxUrl, {
+      headers: {
+        Authorization: "Bearer " + ScriptApp.getOAuthToken()
+      },
+      muteHttpExceptions: true
+    });
+    var docxFile;
+    if (docxResponse.getResponseCode() === 200) {
+      var docxBlob = docxResponse.getBlob().setName(newFileName + ".docx");
+      docxFile = folder.createFile(docxBlob);
+    } else {
+      console.log("Could not export DOCX. Status: " + docxResponse.getResponseCode());
+    }
+
     // Set sharing settings so anyone with link can view/print
     try {
       copiedFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      if (docxFile) {
+        docxFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
     } catch(e) {
       // Ignore if sharing settings cannot be changed (e.g. workspace restriction)
       console.log("Could not set sharing settings: " + e.message);
     }
 
     // 7. Write to Google Sheet (Log)
-    logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, copiedFile.getUrl(), pdfFile.getUrl());
+    logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, copiedFile.getUrl(), docxFile ? docxFile.getUrl() : "", pdfFile.getUrl());
 
     return {
       success: true,
       docUrl: copiedFile.getUrl(),
+      docxUrl: docxFile ? docxFile.getUrl() : "",
       pdfUrl: pdfFile.getUrl()
     };
 
@@ -227,7 +248,7 @@ function populateRequisitionTable(body, items) {
 /**
  * Log form submission details to the active sheet
  */
-function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, docUrl, pdfUrl) {
+function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, docUrl, docxUrl, pdfUrl) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   
   // Set up header if sheet is empty
@@ -243,10 +264,11 @@ function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource
       "請購品項細節", 
       "總金額", 
       "請購單文件連結", 
+      "Word下載連結",
       "PDF下載列印連結"
     ]);
     // Format header
-    sheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#e6f2ff");
+    sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#e6f2ff");
   }
 
   // Format items array into readable text for the spreadsheet row
@@ -265,6 +287,7 @@ function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource
     itemsSummary,
     grandTotal,
     docUrl,
+    docxUrl,
     pdfUrl
   ]);
 }
@@ -364,4 +387,17 @@ function formatToROCDate(dateStr) {
   var dayStr = day < 10 ? "0" + day : day.toString();
   
   return rocYear + " 年 " + monthStr + " 月 " + dayStr + " 日";
+}
+
+/**
+ * Summarizes the purpose text into a 4-6 character clean string for filename
+ */
+function summarizePurpose(purpose) {
+  if (!purpose) return "請購項目";
+  // Remove special filename characters like \ / : * ? " < > | and spaces
+  var clean = purpose.replace(/[\s\/\*:\?"<>\|\\-]/g, "");
+  if (clean.length > 6) {
+    return clean.substring(0, 6);
+  }
+  return clean || "請購項目";
 }
