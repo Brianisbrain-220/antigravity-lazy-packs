@@ -25,7 +25,10 @@ function createRequisition(formData) {
     var templateId = formData.templateId;
     var folderId = formData.folderId;
     var date = formData.date;
-    var fundingSource = formData.fundingSource;
+    var businessPlan = formData.businessPlan || "";
+    var workPlan = formData.workPlan || "";
+    var purposeCategory = formData.purposeCategory || "";
+    var fundingSource = formData.fundingSource || "";
     var purpose = formData.purpose;
     var items = formData.items; // Array of { name, spec, unit, qty, price, total }
 
@@ -80,7 +83,8 @@ function createRequisition(formData) {
     }
 
     // 3. Copy Template Doc
-    var newFileName = "請購單_" + fundingSource + "_" + date.replace(/[\/\-]/g, "") + "_" + Math.floor(Math.random() * 1000);
+    var docNameBase = fundingSource || businessPlan || "未命名經費";
+    var newFileName = "請購單_" + docNameBase + "_" + date.replace(/[\/\-]/g, "") + "_" + Math.floor(Math.random() * 1000);
     var templateFile;
     try {
       templateFile = DriveApp.getFileById(templateId);
@@ -98,9 +102,15 @@ function createRequisition(formData) {
     // Replace header details
     body.replaceText("\\{\\{填單日期\\}\\}", date);
     body.replaceText("\\{\\{經費來源\\}\\}", fundingSource);
+    body.replaceText("\\{\\{業務計畫\\}\\}", businessPlan);
+    body.replaceText("\\{\\{工作計畫\\}\\}", workPlan);
+    body.replaceText("\\{\\{用途別\\}\\}", purposeCategory);
     body.replaceText("\\{\\{用途說明\\}\\}", purpose);
     body.replaceText("\\{\\{總計\\}\\}", grandTotal.toLocaleString());
     body.replaceText("\\{\\{國字總計\\}\\}", chineseTotal);
+
+    // Replace digits grid (億, 千萬, 百萬, 十萬, 萬, 千, 百, 十, 元)
+    replaceAmountGrid(body, grandTotal);
 
     // 5. Populate Items Table
     populateRequisitionTable(body, items);
@@ -122,7 +132,7 @@ function createRequisition(formData) {
     }
 
     // 7. Write to Google Sheet (Log)
-    logToSheet(date, fundingSource, purpose, items, grandTotal, copiedFile.getUrl(), pdfFile.getUrl());
+    logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, copiedFile.getUrl(), pdfFile.getUrl());
 
     return {
       success: true,
@@ -212,7 +222,7 @@ function populateRequisitionTable(body, items) {
 /**
  * Log form submission details to the active sheet
  */
-function logToSheet(date, fundingSource, purpose, items, grandTotal, docUrl, pdfUrl) {
+function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, docUrl, pdfUrl) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   
   // Set up header if sheet is empty
@@ -220,6 +230,9 @@ function logToSheet(date, fundingSource, purpose, items, grandTotal, docUrl, pdf
     sheet.appendRow([
       "時間戳記", 
       "填單日期", 
+      "業務計畫",
+      "工作計畫",
+      "用途別",
       "經費來源", 
       "用途說明", 
       "請購品項細節", 
@@ -228,7 +241,7 @@ function logToSheet(date, fundingSource, purpose, items, grandTotal, docUrl, pdf
       "PDF下載列印連結"
     ]);
     // Format header
-    sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#e6f2ff");
+    sheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#e6f2ff");
   }
 
   // Format items array into readable text for the spreadsheet row
@@ -239,6 +252,9 @@ function logToSheet(date, fundingSource, purpose, items, grandTotal, docUrl, pdf
   sheet.appendRow([
     new Date(),
     date,
+    businessPlan,
+    workPlan,
+    purposeCategory,
     fundingSource,
     purpose,
     itemsSummary,
@@ -246,6 +262,35 @@ function logToSheet(date, fundingSource, purpose, items, grandTotal, docUrl, pdf
     docUrl,
     pdfUrl
   ]);
+}
+
+/**
+ * Splits the grand total into individual digits and replaces the placeholders
+ * in the amount grid (億, 千萬, 百萬, 十萬, 萬, 千, 百, 十, 元)
+ * and places a "$" right before the highest digit.
+ */
+function replaceAmountGrid(body, grandTotal) {
+  var digits = ["元", "十", "百", "千", "萬", "十萬", "百萬", "千萬", "億"];
+  var amountStr = Math.round(grandTotal).toString();
+  var len = amountStr.length;
+  
+  for (var i = 0; i < digits.length; i++) {
+    var placeholder = "\\{\\{" + digits[i] + "\\}\\}";
+    var replacement = "";
+    
+    if (i < len) {
+      // It is a digit (reading from right to left)
+      replacement = amountStr.charAt(len - 1 - i);
+    } else if (i === len) {
+      // This is the position immediately to the left of the highest digit -> put "$"
+      replacement = "$";
+    } else {
+      // Remaining higher positions -> empty
+      replacement = "";
+    }
+    
+    body.replaceText(placeholder, replacement);
+  }
 }
 
 /**

@@ -549,16 +549,35 @@
           </div>
         </div>
 
+        <!-- Budget Section -->
+        <h2 class="section-title">預算科目與經費來源 (選填)</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="businessPlan">業務計畫</label>
+            <input type="text" id="businessPlan" placeholder="例如：532國民小學教育">
+          </div>
+          <div class="form-group">
+            <label for="workPlan">工作計畫</label>
+            <input type="text" id="workPlan" placeholder="例如：53220000各校經常門">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="purposeCategory">用途別</label>
+            <input type="text" id="purposeCategory" placeholder="例如：1300各科消耗品">
+          </div>
+          <div class="form-group">
+            <label for="fundingSource">經費來源</label>
+            <input type="text" id="fundingSource" placeholder="例如：115年度學校經常門、一般行政設備費">
+          </div>
+        </div>
+
         <!-- General Info -->
         <h2 class="section-title">請購單基本資訊</h2>
         <div class="grid-2">
           <div class="form-group">
             <label for="date">填單日期</label>
             <input type="date" id="date" required>
-          </div>
-          <div class="form-group">
-            <label for="fundingSource">經費來源</label>
-            <input type="text" id="fundingSource" required placeholder="例如：115年度學校經常門、一般行政設備費">
           </div>
         </div>
         <div class="form-group">
@@ -784,6 +803,9 @@
         templateId: templateId,
         folderId: folderId,
         date: document.getElementById('date').value,
+        businessPlan: document.getElementById('businessPlan').value.trim(),
+        workPlan: document.getElementById('workPlan').value.trim(),
+        purposeCategory: document.getElementById('purposeCategory').value.trim(),
         fundingSource: document.getElementById('fundingSource').value.trim(),
         purpose: document.getElementById('purpose').value.trim(),
         items: items
@@ -832,6 +854,9 @@
       document.getElementById('resultCard').style.display = 'none';
       
       // Reset text inputs
+      document.getElementById('businessPlan').value = '';
+      document.getElementById('workPlan').value = '';
+      document.getElementById('purposeCategory').value = '';
       document.getElementById('fundingSource').value = '';
       document.getElementById('purpose').value = '';
       
