@@ -475,3 +475,11 @@ function applyProcurementCardStamp(body) {
     }
   }
 }
+
+/**
+ * 專門用來強制觸發 UrlFetchApp 授權的測試函數
+ */
+function triggerAuth() {
+  var response = UrlFetchApp.fetch("https://www.google.com");
+  Logger.log("連線測試成功，狀態碼：" + response.getResponseCode());
+}
