@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import SignatureCanvas from 'react-signature-canvas';
-import { seedEquipmentItems, seedClassrooms } from '../seedData'; // For dev only
+import { useAuth } from '../context/AuthContext';
+import { seedEquipmentItems, seedClassrooms, seedSettings, seedAdmin } from '../seedData';
 
 function ReporterForm() {
+  const { user } = useAuth();
+  
   const [classrooms, setClassrooms] = useState([]);
   const [equipmentItems, setEquipmentItems] = useState([]);
+  const [systemSettings, setSystemSettings] = useState({ requireSignature: true });
+  const [loadingData, setLoadingData] = useState(true);
   
   const [formData, setFormData] = useState({
     classroomId: '',
     reporterName: '',
     reporterEmail: '',
-    hasHandover: true, // Default 需交接
+    hasHandover: true,
     handoverName: '',
     handoverEmail: '',
     remarks: ''
@@ -21,26 +26,63 @@ function ReporterForm() {
   const [inventory, setInventory] = useState({});
   const [sigPad, setSigPad] = useState(null);
   
+  // Autocomplete user info
   useEffect(() => {
-    // Load classrooms and items
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        reporterEmail: user.email || '',
+        reporterName: user.displayName || prev.reporterName || ''
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
     const loadData = async () => {
-      const clsSnap = await getDocs(collection(db, 'eq_classrooms'));
-      let cls = clsSnap.docs.map(d => ({id: d.id, ...d.data()}));
-      if (cls.length === 0) {
-        // Auto seed for dev
-        await seedClassrooms();
-        await seedEquipmentItems();
-        const clsSnap2 = await getDocs(collection(db, 'eq_classrooms'));
-        cls = clsSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+      try {
+        setLoadingData(true);
+        
+        // Auto-seed admin first
+        if (user?.email) {
+          await seedAdmin(user.email);
+        }
+        await seedSettings();
+
+        // 1. Fetch classrooms
+        const clsSnap = await getDocs(collection(db, 'eq_classrooms'));
+        let cls = clsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        if (cls.length === 0) {
+          await seedClassrooms();
+          const clsSnap2 = await getDocs(collection(db, 'eq_classrooms'));
+          cls = clsSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+        }
+        setClassrooms(cls);
+        
+        // 2. Fetch items
+        const itemSnap = await getDocs(collection(db, 'eq_items'));
+        let items = itemSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        if (items.length === 0) {
+          await seedEquipmentItems();
+          const itemSnap2 = await getDocs(collection(db, 'eq_items'));
+          items = itemSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+        }
+        setEquipmentItems(items.sort((a,b) => (a.sortOrder || 50) - (b.sortOrder || 50)));
+
+        // 3. Fetch settings
+        const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
+        if (settingsSnap.exists()) {
+          setSystemSettings(settingsSnap.data());
+        }
+      } catch (err) {
+        console.error("Error loading form data:", err);
+      } finally {
+        setLoadingData(false);
       }
-      setClassrooms(cls);
-      
-      const itemSnap = await getDocs(collection(db, 'eq_items'));
-      const items = itemSnap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.sortOrder - b.sortOrder);
-      setEquipmentItems(items);
     };
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
   
   const handleItemToggle = (itemId) => {
     setInventory(prev => {
@@ -67,8 +109,9 @@ function ReporterForm() {
     if (!formData.classroomId) return alert('請選擇班級');
     
     let signatureUrl = '';
-    if (!formData.hasHandover) {
-      if (sigPad.isEmpty()) return alert('請簽名');
+    // Only check signature if required in settings
+    if (!formData.hasHandover && systemSettings.requireSignature) {
+      if (!sigPad || sigPad.isEmpty()) return alert('請在簽名區簽名以示負責');
       signatureUrl = sigPad.getTrimmedCanvas().toDataURL('image/png');
     }
 
@@ -102,7 +145,6 @@ function ReporterForm() {
     }
   };
 
-  // Group items by category
   const categories = {
     desks_chairs: '課桌椅',
     lockers: '學生置物櫃',
@@ -113,6 +155,10 @@ function ReporterForm() {
     speakers: '喇叭',
     erasers: '板擦機'
   };
+
+  if (loadingData) {
+    return <div style={{textAlign: 'center', padding: '3rem'}}>載入填報清單中...</div>;
+  }
 
   return (
     <div className="card fade-in">
@@ -140,8 +186,8 @@ function ReporterForm() {
             <input className="input-field" required value={formData.reporterName} onChange={e => setFormData({...formData, reporterName: e.target.value})} />
           </div>
           <div className="form-group" style={{flex: 1}}>
-            <label className="form-label">填報人 Email</label>
-            <input type="email" className="input-field" required value={formData.reporterEmail} onChange={e => setFormData({...formData, reporterEmail: e.target.value})} />
+            <label className="form-label">填報人 Email (唯讀)</label>
+            <input type="email" className="input-field" readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} value={formData.reporterEmail} />
           </div>
         </div>
 
@@ -154,7 +200,7 @@ function ReporterForm() {
             </label>
             <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
               <input type="radio" name="handover" checked={!formData.hasHandover} onChange={() => setFormData({...formData, hasHandover: false})} />
-              不需交接 (單人直接簽署完成)
+              不需交接 (單人直接填報完成)
             </label>
           </div>
           
@@ -235,7 +281,7 @@ function ReporterForm() {
           ></textarea>
         </div>
 
-        {!formData.hasHandover && (
+        {!formData.hasHandover && systemSettings.requireSignature && (
           <div className="form-group fade-in">
             <label className="form-label">填報人簽名 (不需交接者請直接簽名以示負責)</label>
             <div className="signature-container">

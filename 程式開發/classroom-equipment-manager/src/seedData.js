@@ -1,7 +1,7 @@
 import { db } from './firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-export const seedEquipmentItems = async () => {
+export const seedEquipmentItems = async (force = false) => {
   const items = [
     // 課桌椅 1~8
     { id: 'desk_1', category: 'desks_chairs', name: '1. 塑膠抽屜_新式', imageUrl: '/src/assets/images/equipment/page_1_1_Image21.jpg', inputType: 'checkbox_only', sortOrder: 1 },
@@ -58,15 +58,18 @@ export const seedEquipmentItems = async () => {
 
   for (const item of items) {
     const docRef = doc(db, 'eq_items', item.id);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) {
+    if (force) {
       await setDoc(docRef, item);
-      console.log('Seeded item:', item.id);
+    } else {
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        await setDoc(docRef, item);
+      }
     }
   }
 };
 
-export const seedClassrooms = async () => {
+export const seedClassrooms = async (force = false) => {
   const classrooms = [
     { id: 'room_101', name: '一年1班', category: 'regular', teacherName: '張曉明', teacherEmail: 'teacher1@example.com', status: 'pending' },
     { id: 'room_102', name: '一年2班', category: 'regular', teacherName: '李大華', teacherEmail: 'teacher2@example.com', status: 'pending' },
@@ -75,10 +78,36 @@ export const seedClassrooms = async () => {
 
   for (const rm of classrooms) {
     const docRef = doc(db, 'eq_classrooms', rm.id);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) {
+    if (force) {
       await setDoc(docRef, rm);
-      console.log('Seeded classroom:', rm.id);
+    } else {
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        await setDoc(docRef, rm);
+      }
     }
+  }
+};
+
+export const seedSettings = async () => {
+  const docRef = doc(db, 'eq_settings', 'global');
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) {
+    await setDoc(docRef, {
+      requireSignature: true,
+      googleChatWebhookUrl: ''
+    });
+  }
+};
+
+export const seedAdmin = async (email) => {
+  if (!email) return;
+  const docRef = doc(db, 'admins', email);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) {
+    await setDoc(docRef, {
+      email: email,
+      addedAt: new Date().toISOString()
+    });
   }
 };

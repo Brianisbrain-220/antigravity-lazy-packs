@@ -10,6 +10,7 @@ function HandoverConfirm() {
   const token = searchParams.get('token');
   
   const [inventory, setInventory] = useState(null);
+  const [systemSettings, setSystemSettings] = useState({ requireSignature: true });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rejectMode, setRejectMode] = useState(false);
@@ -31,6 +32,12 @@ function HandoverConfirm() {
           return;
         }
         setInventory(data);
+
+        // Fetch settings
+        const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
+        if (settingsSnap.exists()) {
+          setSystemSettings(settingsSnap.data());
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -42,16 +49,20 @@ function HandoverConfirm() {
   }, [id, token]);
 
   const handleConfirm = async () => {
-    if (sigPad.isEmpty()) return alert('請在簽名區簽名');
+    let signatureUrl = '';
+    if (systemSettings.requireSignature) {
+      if (!sigPad || sigPad.isEmpty()) return alert('請在簽名區簽名');
+      signatureUrl = sigPad.getTrimmedCanvas().toDataURL('image/png');
+    }
+
     try {
-      const signatureUrl = sigPad.getTrimmedCanvas().toDataURL('image/png');
       const docRef = doc(db, 'eq_inventories', id);
       await updateDoc(docRef, {
         status: 'completed',
         'handover.signatureUrl': signatureUrl,
         'handover.signedAt': new Date().toISOString()
       });
-      alert('已確認交接並簽名！');
+      alert('已確認交接！');
       window.location.reload();
     } catch (err) {
       alert('錯誤: ' + err.message);
@@ -93,7 +104,6 @@ function HandoverConfirm() {
 
       <div style={{marginBottom: '2rem'}}>
         <h3>申報項目摘要 (唯讀)</h3>
-        {/* Render a simple read-only list for demo purposes */}
         <ul style={{marginTop: '1rem', marginLeft: '1.5rem', lineHeight: '1.8'}}>
           {Object.entries(inventory.items).map(([itemId, data]) => (
             <li key={itemId}>
@@ -106,7 +116,7 @@ function HandoverConfirm() {
 
       {isCompleted && (
         <div style={{color: 'green', fontWeight: 'bold', padding: '1rem', background: '#ecfdf5', borderRadius: '8px'}}>
-          ✅ 您已於 {new Date(inventory.handover.signedAt).toLocaleString()} 完成確認與簽名。
+          ✅ 您已於 {new Date(inventory.handover.signedAt).toLocaleString()} 完成確認。
           {inventory.handover.signatureUrl && (
             <div style={{marginTop: '1rem'}}>
               <p>簽名存檔：</p>
@@ -142,20 +152,24 @@ function HandoverConfirm() {
             </div>
           ) : (
             <>
-              <div className="form-group fade-in">
-                <label className="form-label">請在此簽名以確認設備數量無誤：</label>
-                <div className="signature-container">
-                  <SignatureCanvas 
-                    ref={(ref) => { setSigPad(ref) }}
-                    penColor="blue"
-                    canvasProps={{className: 'sigCanvas'}}
-                  />
+              {systemSettings.requireSignature && (
+                <div className="form-group fade-in">
+                  <label className="form-label">請在此簽名以確認設備數量無誤：</label>
+                  <div className="signature-container">
+                    <SignatureCanvas 
+                      ref={(ref) => { setSigPad(ref) }}
+                      penColor="blue"
+                      canvasProps={{className: 'sigCanvas'}}
+                    />
+                  </div>
+                  <button type="button" className="btn btn-secondary" style={{marginTop: '0.5rem', fontSize: '0.8rem'}} onClick={() => sigPad.clear()}>重新簽名</button>
                 </div>
-                <button type="button" className="btn btn-secondary" style={{marginTop: '0.5rem', fontSize: '0.8rem'}} onClick={() => sigPad.clear()}>重新簽名</button>
-              </div>
+              )}
               
               <div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}>
-                <button className="btn btn-primary" style={{flex: 2}} onClick={handleConfirm}>確認無誤並簽名送出</button>
+                <button className="btn btn-primary" style={{flex: 2}} onClick={handleConfirm}>
+                  {systemSettings.requireSignature ? '確認無誤並簽名送出' : '確認無誤送出'}
+                </button>
                 <button className="btn btn-secondary" style={{flex: 1, color: 'red'}} onClick={() => setRejectMode(true)}>數量不符，退回修正</button>
               </div>
             </>
