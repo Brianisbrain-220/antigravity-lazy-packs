@@ -51,6 +51,20 @@
   .\check_status.ps1
   ```
 
+### 4. 🛡️ 密鑰防護與環境變數安全配置工具 (`skills/antigravity-secret-shield/scripts/guard.ps1`)
+- **功能**：
+  1. `Check`：一鍵掃描工作區或暫存檔案中是否含有 Google API、Gemini API、GitHub Token 等硬編碼秘密特徵。
+  2. `SetKey`：將 API 金鑰安全配置到 `.env.local` 檔案（並自動將該檔案寫入 `.gitignore`），避免憑證外洩。
+  3. `InitIgnore`：為專案快速配置基本 `.gitignore` 排除範本。
+- **執行方式**：
+  ```powershell
+  # 掃描秘密金鑰
+  powershell.exe -File .\skills\antigravity-secret-shield\scripts\guard.ps1 Check
+  
+  # 配置金鑰至 .env.local
+  powershell.exe -File .\skills\antigravity-secret-shield\scripts\guard.ps1 SetKey -Key "VITE_FIREBASE_API_KEY" -Value "AIzaSy..."
+  ```
+
 ---
 
 ## ⚡ 請 AI 自動安裝（最推薦）
