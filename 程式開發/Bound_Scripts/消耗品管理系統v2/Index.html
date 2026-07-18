@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中正國小 - 消耗品管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 50; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 摺疊面板轉場動畫 */
+        .accordion-content { transition: max-height 0.3s ease-out, padding 0.3s ease; overflow: hidden; }
+        .chevron-rotate { transition: transform 0.3s ease; }
+        .rotate-180 { transform: rotate(180deg); }
+    </style>
+</head>
+<body>
+
+    <!-- 管理員登入遮罩 -->
+    <div id="admin-login-overlay" class="fixed inset-0 bg-indigo-950/95 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-t-8 border-indigo-600 text-center">
+            <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-lock text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-gray-800 mb-2">管理員安全身分驗證</h3>
+            <p class="text-xs text-gray-500 mb-6">此頁面為系統後台，請輸入管理密碼以存取資料。</p>
+            <input type="password" id="admin-overlay-password" placeholder="請輸入後台管理密碼" class="w-full border rounded-lg p-3 text-base mb-4 outline-none focus:ring-2 focus:ring-indigo-500 text-center font-bold">
+            <button onclick="submitOverlayPassword()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors mb-3">登入驗證</button>
+            <button onclick="exitAdminMode()" class="w-full text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">返回申請前台</button>
+        </div>
+    </div>
+
+    <script>
+        const gasModeStr = "<?= mode ?>";
+        const WEB_APP_URL = "<?= webAppUrl ?>";
+        const IS_ADMIN = gasModeStr === 'admin' || new URLSearchParams(window.location.search).get('mode') === 'admin';
+        let inventoryData = [];
+        let manageData = [];
+        let cart = [];
+        let pendingFormData = null; 
+    </script>
+
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-3">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg shadow-sm">
+                            <i class="fa-solid fa-box-open"></i>
+                        </div>
+                        <span class="font-bold text-xl text-gray-800 hidden md:block" id="nav-title">消耗品管理系統</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar" id="nav-menu"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="view-apply" class="view-section hidden">
+            <div id="closed-banner" class="w-full bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded shadow-sm hidden">
+                <p class="text-sm font-bold text-yellow-800" id="closed-banner-text"></p>
+            </div>
+            
+            <div id="apply-form-container" class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1 bg-white rounded-xl shadow-sm p-5 md:p-6 border border-gray-100">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-blue-600"></i>填寫申請</h2>
+                    <form id="applyForm" onsubmit="event.preventDefault(); submitCart();">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <input type="text" id="apply-name" required placeholder="申請人姓名" class="w-full border rounded-lg p-3 text-base outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="email" id="apply-email" required placeholder="Email (需綁定LINE)" class="w-full border rounded-lg p-3 text-base outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <select id="apply-item" class="w-full border rounded-lg p-3 text-base mb-4 bg-white" onchange="updatePriceHint()"></select>
+                            <p id="item-price-hint" class="text-xs text-gray-500 mb-4 font-medium"></p>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center border rounded-lg overflow-hidden bg-white shadow-sm shrink-0">
+                                    <button type="button" onclick="changeQty(-1)" class="px-4 py-3 hover:bg-gray-100 transition-colors"><i class="fa-solid fa-minus"></i></button>
+                                    <input type="number" id="apply-qty" value="1" min="1" class="w-14 md:w-16 text-center border-x py-3 text-base outline-none bg-white">
+                                    <button type="button" onclick="changeQty(1)" class="px-4 py-3 hover:bg-gray-100 transition-colors"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                                <button type="button" onclick="addToCart()" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors">加入清單</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="w-full md:w-80 bg-white rounded-xl shadow-sm p-5 md:p-6 border border-gray-100">
+                    <h2 class="font-bold text-gray-800 mb-4 border-b pb-2">本次清單 (<span id="cart-count">0</span>)</h2>
+                    <div id="cart-items" class="min-h-[150px] mb-4 space-y-2"></div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between mb-4"><span class="font-bold">總價</span><span class="text-xl font-black">$<span id="cart-total">0</span></span></div>
+                        <button type="submit" form="applyForm" id="btn-submit-cart" class="w-full py-3.5 rounded-xl font-bold transition-all shadow-md" disabled>請先加入物品</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-inventory" class="view-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-600"></i>即時庫存</h2>
+                <button onclick="loadInventory()" class="text-gray-600 bg-white border px-4 py-2 rounded-lg font-bold shadow-sm hover:text-blue-600 transition-colors"><i class="fa-solid fa-rotate-right mr-1"></i>重整</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="inventory-grid"></div>
+        </div>
+
+        <div id="view-manage" class="view-section hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-clipboard-user text-indigo-600"></i>核發領取管理</h2>
+                <div class="w-full md:w-auto relative">
+                    <i class="fa-solid fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                    <input type="text" id="search-applicant" placeholder="搜尋姓名或單號..." onkeyup="filterManageList()" class="border px-10 py-2.5 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-indigo-500 outline-none text-base">
+                </div>
+            </div>
+            <div class="space-y-8">
+                <!-- 🔴 全部未領取區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-red-600 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block animate-pulse"></span>
+                        全部未領取 (<span id="count-all-pending">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-pending"></div>
+                </div>
+
+                <!-- 🟡 部分領取區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-orange-500 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block"></span>
+                        部分領取 (<span id="count-partial">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-partial"></div>
+                </div>
+
+                <!-- 🟢 已全部領取 / 結案區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-gray-500 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        已全部領取 / 結案 (<span id="count-fully-done">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-done"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-restock" class="view-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-boxes-packing text-blue-600"></i>批次補貨</h2>
+                <button onclick="submitBatchRestock()" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[500px]">
+                        <thead class="bg-gray-50 text-sm"><tr><th class="p-4">品名</th><th class="p-4 text-center">目前</th><th class="p-4">門檻</th><th class="p-4 text-center bg-blue-50">進貨數量</th></tr></thead>
+                        <tbody id="restock-table-body" class="text-sm border-t"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-settings" class="view-section hidden">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i class="fa-solid fa-gear text-indigo-600"></i>系統設定</h2>
+            <div class="bg-white rounded-xl shadow-sm border p-6 max-w-2xl border-gray-200">
+                <p class="text-sm text-gray-500 mb-5">設定系統環境變數與開放時間。敏感性資料（如 API 金鑰、金鑰密碼等）已自動進行遮蔽防護，若未更動遮蔽值將不會被寫入覆蓋。</p>
+                <div id="settings-form-container" class="space-y-4 mb-6">
+                    <!-- 設定項目將動態渲染於此 -->
+                </div>
+                <button onclick="saveAllSettings()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors">儲存所有設定</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="customAlert" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-t-8 border-gray-800">
+            <h3 class="font-black text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-circle-exclamation text-yellow-500"></i> 系統提示</h3>
+            <p id="alertMessage" class="text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed font-medium"></p>
+            <button onclick="document.getElementById('customAlert').classList.add('hidden')" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-xl transition-colors">我知道了</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full border-t-8 border-yellow-500">
+            <h3 class="text-xl font-black mb-3">⚠️ 確認覆蓋申請</h3>
+            <p id="confirmMessage" class="text-gray-600 mb-6 leading-relaxed"></p>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('confirmModal').classList.add('hidden')" class="w-1/2 bg-gray-100 hover:bg-gray-200 py-3.5 rounded-xl font-bold transition-colors">返回修改</button>
+                <button onclick="executeOverwrite()" class="w-1/2 bg-yellow-500 hover:bg-yellow-600 text-white py-3.5 rounded-xl font-bold shadow-md transition-colors">確認覆蓋送出</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader" class="flex flex-col gap-4">
+        <div class="spinner"></div><div class="text-white font-bold tracking-widest drop-shadow-md">系統處理中...</div>
+    </div>
+
+    <script>
+        // 🔒 安全存取 Session 權限標記 (防範 iframe sandbox 丟出 SecurityError 導致白屏)
+        let _adminAuthenticated = false;
+        function getSessionAuth() {
+            try {
+                return sessionStorage.getItem('admin_authenticated') === 'true' || _adminAuthenticated === true;
+            } catch (e) {
+                return _adminAuthenticated === true;
+            }
+        }
+        function setSessionAuth(val) {
+            const isAuth = val === 'true';
+            try {
+                sessionStorage.setItem('admin_authenticated', val);
+            } catch (e) {
+                console.warn("sessionStorage 存取受限，已改用記憶體變數保存驗證狀態。");
+            }
+            _adminAuthenticated = isAuth;
+        }
+        function clearSessionAuth() {
+            try {
+                sessionStorage.removeItem('admin_authenticated');
+            } catch (e) {}
+            _adminAuthenticated = false;
+        }
+
+        window.onload = function() {
+            setupNavigation();
+            if (IS_ADMIN) {
+                // 先隱藏導覽列與主體，避免未輸入密碼前畫面閃爍
+                const nav = document.querySelector('nav');
+                const main = document.querySelector('main');
+                if (nav) nav.classList.add('hidden');
+                if (main) main.classList.add('hidden');
+
+                // 檢查是否在當前 Session 已通過驗證
+                if (getSessionAuth()) {
+                    if (nav) nav.classList.remove('hidden');
+                    if (main) main.classList.remove('hidden');
+                    applyAdminTheme();
+                    switchTab('manage');
+                } else {
+                    // 未通過驗證，開啟全螢幕登入遮罩
+                    document.getElementById('admin-login-overlay').classList.remove('hidden');
+                    const pwInput = document.getElementById('admin-overlay-password');
+                    if (pwInput) {
+                        pwInput.focus();
+                        pwInput.addEventListener('keyup', function(e) {
+                            if (e.key === 'Enter') submitOverlayPassword();
+                        });
+                    }
+                }
+            } else {
+                document.title = "中正國小 - 消耗品申請系統";
+                const navTitle = document.getElementById('nav-title');
+                if (navTitle) navTitle.innerText = "中正國小 - 消耗品申請系統";
+                switchTab('apply');
+            }
+            
+            // 綁定輸入數量變更時的小計更新事件
+            const qtyEl = document.getElementById('apply-qty');
+            if (qtyEl) {
+                qtyEl.addEventListener('input', updatePriceHint);
+            }
+        };
+
+        function showLoader() { document.getElementById('loader').style.display = 'flex'; }
+        function hideLoader() { document.getElementById('loader').style.display = 'none'; }
+        function showAlert(msg) { document.getElementById('alertMessage').innerText = msg; document.getElementById('customAlert').classList.remove('hidden'); }
+        function handleError(error) { hideLoader(); showAlert("系統異常：\n" + error.message); }
+
+        const safeFormatDate = (val) => {
+            if (!val) return '';
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return String(val).split(' ')[0];
+            return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+        };
+
+        function applyAdminTheme() {
+            document.title = "⚙️ 消耗品系統 - 管理後台";
+            const navTitle = document.getElementById('nav-title');
+            if (navTitle) navTitle.innerText = "⚙️ 消耗品系統 - 管理後台";
+            
+            const nav = document.querySelector('nav');
+            if (nav) {
+                nav.className = "bg-indigo-900 shadow-md text-white sticky top-0 z-40 border-b border-indigo-950";
+            }
+            
+            const iconBg = document.querySelector('nav .bg-blue-600');
+            if (iconBg) {
+                iconBg.className = "bg-indigo-700 text-white p-2 rounded-lg shadow-sm";
+            }
+            
+            document.body.style.backgroundColor = '#f1f1f9';
+        }
+
+        function submitOverlayPassword() {
+            const pwdInput = document.getElementById('admin-overlay-password');
+            const pw = pwdInput.value;
+            if (!pw) return;
+            showLoader();
+            google.script.run.withSuccessHandler(res => {
+                hideLoader();
+                if (res.success) {
+                    setSessionAuth('true');
+                    document.getElementById('admin-login-overlay').classList.add('hidden');
+                    
+                    const nav = document.querySelector('nav');
+                    const main = document.querySelector('main');
+                    if (nav) nav.classList.remove('hidden');
+                    if (main) main.classList.remove('hidden');
+                    
+                    applyAdminTheme();
+                    switchTab('manage');
+                } else {
+                    showAlert(res.message);
+                    pwdInput.value = '';
+                }
+            }).withFailureHandler(handleError).verifyAdminPassword(pw);
+        }
+
+        function exitAdminMode() {
+            clearSessionAuth();
+            window.top.location.href = WEB_APP_URL;
+        }
+
+        function redirectToAdmin() {
+            window.top.location.href = WEB_APP_URL + "?mode=admin";
+        }
+
+        function setupNavigation() {
+            const menu = document.getElementById('nav-menu');
+            if (IS_ADMIN) {
+                menu.innerHTML = `
+                    <button onclick="switchTab('inventory')" id="tab-inventory" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-chart-pie"></i> 庫存</button>
+                    <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-clipboard-user"></i> 核發</button>
+                    <button onclick="switchTab('restock')" id="tab-restock" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-boxes-packing"></i> 補貨</button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-gear"></i> 設定</button>
+                `;
+            } else {
+                menu.innerHTML = `
+                    <button onclick="switchTab('apply')" id="tab-apply" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-pen-to-square"></i> 申請</button>
+                    <button onclick="switchTab('inventory')" id="tab-inventory" class="px-4 py-2 font-bold rounded-lg transition-colors text-gray-500 whitespace-nowrap shrink-0"><i class="fa-solid fa-chart-pie"></i> 庫存</button>
+                    <button onclick="redirectToAdmin()" class="p-2 text-gray-400 hover:text-gray-600 transition-colors ml-2 shrink-0" title="管理登入"><i class="fa-solid fa-gear text-lg"></i></button>
+                `;
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            const activeBg = IS_ADMIN ? 'bg-indigo-700' : 'bg-gray-800';
+            
+            document.querySelectorAll('#nav-menu button').forEach(el => {
+                el.classList.remove('bg-gray-800', 'bg-indigo-700', 'text-white', 'shadow-sm');
+                el.classList.add('text-gray-500');
+            });
+            
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            const btn = document.getElementById(`tab-${tab}`);
+            if(btn) {
+                btn.classList.remove('text-gray-500');
+                btn.classList.add(activeBg, 'text-white', 'shadow-sm');
+            }
+
+            if (tab === 'inventory') loadInventory();
+            if (tab === 'apply') { loadInventoryForSelect(); updateCartUI(); loadSettingsAndCheck(); }
+            if (tab === 'manage') loadManageList();
+            if (tab === 'restock') loadRestockTable();
+            if (tab === 'settings') loadSettings();
+        }
+
+        // --- 核心邏輯 API 串接 ---
+        function loadInventory() {
+            showLoader();
+            google.script.run.withSuccessHandler(data => { renderInventory(data); hideLoader(); }).withFailureHandler(handleError).getInventory();
+        }
+
+        function renderInventory(data) {
+            inventoryData = data;
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            data.forEach(item => {
+                const stock = parseInt(item['目前庫存'] || 0);
+                const total = parseInt(item['總庫存量'] || 0);
+                const alertLvl = parseInt(item['低庫存警示'] || 3);
+                let barColor = 'bg-blue-500', tagColor = 'text-green-600', percent = total > 0 ? (stock / total) * 100 : 0;
+                if (stock < alertLvl) { barColor = 'bg-red-500'; tagColor = 'text-red-600'; }
+                else if (percent < 50) { barColor = 'bg-yellow-500'; }
+                grid.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                        <div class="flex justify-between mb-4">
+                            <div><h3 class="font-bold text-gray-800">${item['品名']}</h3><span class="text-[10px] text-gray-400 uppercase">${item['類別']}</span></div>
+                            <div class="text-right"><div class="text-2xl font-black ${tagColor}">${stock}</div><div class="text-[10px] text-gray-400">${item['單位']}</div></div>
+                        </div>
+                        <div class="bg-gray-100 rounded-full h-1.5 overflow-hidden"><div class="${barColor} h-full" style="width: ${Math.max(0, Math.min(100, percent))}%"></div></div>
+                    </div>`;
+            });
+        }
+
+        // --- V2.4 核發管理清單渲染引擎 (響應式網格 + 單項操作) ---
+        function loadManageList() {
+            showLoader();
+            google.script.run.withSuccessHandler(data => { manageData = data; filterManageList(); hideLoader(); }).withFailureHandler(handleError).getManageList();
+        }
+
+        function filterManageList() {
+            const keyword = document.getElementById('search-applicant').value.toLowerCase();
+            
+            const gridPending = document.getElementById('manage-grid-pending');
+            const gridPartial = document.getElementById('manage-grid-partial');
+            const gridDone = document.getElementById('manage-grid-done');
+            
+            gridPending.innerHTML = '';
+            gridPartial.innerHTML = '';
+            gridDone.innerHTML = '';
+            
+            let countPending = 0;
+            let countPartial = 0;
+            let countDone = 0;
+
+            if (manageData.length === 0) {
+                const emptyMsg = `<div class="col-span-full text-center text-gray-400 py-6">尚無申請紀錄。</div>`;
+                gridPending.innerHTML = emptyMsg;
+                gridPartial.innerHTML = emptyMsg;
+                gridDone.innerHTML = emptyMsg;
+                
+                document.getElementById('count-all-pending').innerText = 0;
+                document.getElementById('count-partial').innerText = 0;
+                document.getElementById('count-fully-done').innerText = 0;
+                return;
+            }
+
+            manageData.forEach(group => {
+                if (keyword && !group.applicant.toLowerCase().includes(keyword) && !group.groupId.toLowerCase().includes(keyword)) return;
+
+                let config = { bg: 'bg-white', border: 'border-blue-500', header: 'bg-blue-50', icon: 'fa-box', opacity: 'opacity-100', defaultDisplay: 'block', arrow: 'rotate-180' };
+                let targetGrid = gridPending;
+
+                if (group.category === 'all_pending') {
+                    config = { bg: 'bg-white', border: 'border-red-500', header: 'bg-red-50', icon: 'fa-box', opacity: 'opacity-100', defaultDisplay: 'block', arrow: 'rotate-180' };
+                    targetGrid = gridPending;
+                    countPending++;
+                } else if (group.category === 'partial') {
+                    config = { bg: 'bg-white', border: 'border-orange-400', header: 'bg-orange-50', icon: 'fa-hourglass-half', opacity: 'opacity-100', defaultDisplay: 'none', arrow: '' };
+                    targetGrid = gridPartial;
+                    countPartial++;
+                } else if (group.category === 'fully_done') {
+                    config = { bg: 'bg-gray-50', border: 'border-gray-300', header: 'bg-gray-100', icon: 'fa-check-circle', opacity: 'opacity-70', defaultDisplay: 'none', arrow: '' };
+                    targetGrid = gridDone;
+                    countDone++;
+                }
+
+                let itemsHtml = group.items.map(item => {
+                    let statusHtml = '';
+                    let actionHtml = '';
+                    
+                    if (item.status === 'picked_up') {
+                        statusHtml = `<div class="text-[10px] text-gray-400">已領取: ${safeFormatDate(item.pickupTime)}</div>`;
+                        actionHtml = `<i class="fa-solid fa-circle-check text-green-500 text-lg" title="已領取"></i>`;
+                    } else if (item.status === 'pending') {
+                        statusHtml = `<div class="text-[10px] text-gray-400">狀態: 準備中</div>`;
+                        actionHtml = `
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="event.stopPropagation(); pickupSingle('${group.groupId}', ${item.rowIndex})" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 transition-colors w-7 h-7 rounded shadow-sm flex items-center justify-center" title="單項領取"><i class="fa-solid fa-check"></i></button>
+                                <button onclick="event.stopPropagation(); deleteSingle('${group.groupId}', ${item.rowIndex})" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 transition-colors w-7 h-7 rounded shadow-sm flex items-center justify-center" title="刪除作廢"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        `;
+                    } else {
+                        statusHtml = `<div class="text-[10px] text-red-400">狀態: 已作廢</div>`;
+                        actionHtml = `<span class="text-xs text-red-500 font-bold whitespace-nowrap"><i class="fa-solid fa-ban mr-1"></i>已作廢</span>`;
+                    }
+
+                    const isStrikethrough = item.status === 'picked_up' || item.status === '已作廢' || item.status === '已取消';
+
+                    return `
+                        <div class="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                            <div>
+                                <div class="text-sm font-bold ${isStrikethrough ? 'line-through text-gray-400' : 'text-gray-700'}">${item.itemName}</div>
+                                ${statusHtml}
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm font-black text-gray-500">x${item.qty}</span>
+                                ${actionHtml}
+                            </div>
+                        </div>`;
+                }).join('');
+
+                let actionBtn = '';
+                if (group.category !== 'fully_done') {
+                    actionBtn = `
+                        <div class="flex items-center gap-2">
+                            <button onclick="event.stopPropagation(); pickupAll('${group.groupId}')" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full shadow hover:bg-indigo-700 transition-colors font-bold whitespace-nowrap shrink-0"><i class="fa-solid fa-check-double mr-1"></i>一鍵全領</button>
+                            <button onclick="event.stopPropagation(); cancelGroup('${group.groupId}')" class="text-red-500 hover:text-red-700 bg-white border border-red-200 text-xs px-3 py-1.5 rounded-full shadow-sm hover:bg-red-50 transition-colors font-bold whitespace-nowrap shrink-0"><i class="fa-solid fa-xmark mr-1"></i>一鍵取消</button>
+                        </div>
+                    `;
+                } else {
+                    if (group.doneCount > 0) {
+                        actionBtn = `<span class="bg-green-100 text-green-700 text-xs px-2.5 py-1.5 rounded-full font-black whitespace-nowrap"><i class="fa-solid fa-circle-check mr-1"></i>已全領</span>`;
+                    } else {
+                        actionBtn = `<span class="bg-red-100 text-red-700 text-xs px-2.5 py-1.5 rounded-full font-black whitespace-nowrap"><i class="fa-solid fa-ban mr-1"></i>整單作廢</span>`;
+                    }
+                }
+
+                // 加入 h-fit 讓卡片在 grid 中不會被垂直硬拉扯變形
+                targetGrid.innerHTML += `
+                    <div class="rounded-2xl border border-gray-200 overflow-hidden shadow-sm transition-all hover:shadow-md ${config.opacity} ${config.bg} border-l-4 ${config.border} h-fit">
+                        <div class="px-4 py-4 cursor-pointer flex justify-between items-center ${config.header} select-none" onclick="toggleAccordion('${group.groupId}')">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="w-10 h-10 shrink-0 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-inner">
+                                    <i class="fa-solid ${config.icon}"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-black text-gray-800 leading-tight truncate">${group.applicant}</div>
+                                    <div class="text-[10px] text-gray-500 truncate mt-0.5">${group.groupId} • ${safeFormatDate(group.timestamp)}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 ml-2">
+                                ${actionBtn}
+                                <i id="arrow-${group.groupId}" class="fa-solid fa-chevron-down text-gray-400 chevron-rotate ${config.arrow}"></i>
+                            </div>
+                        </div>
+                        <div id="content-${group.groupId}" class="accordion-content px-4" style="max-height: ${config.defaultDisplay === 'block' ? '1000px' : '0px'}; padding-bottom: ${config.defaultDisplay === 'block' ? '12px' : '0px'}; padding-top: ${config.defaultDisplay === 'block' ? '12px' : '0px'};">
+                            ${itemsHtml}
+                        </div>
+                    </div>`;
+            });
+
+            // 更新計數器數字
+            document.getElementById('count-all-pending').innerText = countPending;
+            document.getElementById('count-partial').innerText = countPartial;
+            document.getElementById('count-fully-done').innerText = countDone;
+
+            // 若某個區塊沒有項目，顯示空提示
+            if (countPending === 0) gridPending.innerHTML = `<div class="col-span-full text-center text-gray-400 py-6">無待領取項目。</div>`;
+            if (countPartial === 0) gridPartial.innerHTML = `<div class="col-span-full text-center text-gray-400 py-6">無部分領取項目。</div>`;
+            if (countDone === 0) gridDone.innerHTML = `<div class="col-span-full text-center text-gray-400 py-6">無已結案項目。</div>`;
+        }
+
+        function toggleAccordion(id) {
+            const content = document.getElementById(`content-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            const isHidden = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+            
+            if (isHidden) {
+                content.style.maxHeight = '1000px';
+                content.style.paddingTop = '12px';
+                content.style.paddingBottom = '12px';
+                arrow.classList.add('rotate-180');
+            } else {
+                content.style.maxHeight = '0px';
+                content.style.paddingTop = '0px';
+                content.style.paddingBottom = '0px';
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
+        // --- 申請流程邏輯 ---
+        function addToCart() {
+            const sel = document.getElementById('apply-item');
+            const qty = parseInt(document.getElementById('apply-qty').value);
+            if (!sel.value) return;
+            const price = parseInt(sel.options[sel.selectedIndex].dataset.price);
+            const idx = cart.findIndex(c => c.name === sel.value);
+            if (idx > -1) cart[idx].qty += qty; else cart.push({ name: sel.value, qty, price });
+            sel.value = ""; 
+            document.getElementById('apply-qty').value = 1;
+            updateCartUI();
+            updatePriceHint();
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items');
+            const totalSpan = document.getElementById('cart-total');
+            const countSpan = document.getElementById('cart-count');
+            const btn = document.getElementById('btn-submit-cart');
+            let total = 0; container.innerHTML = '';
+            cart.forEach((item, i) => {
+                total += item.qty * item.price;
+                container.innerHTML += `<div class="bg-gray-50 p-3 rounded-lg flex justify-between border border-gray-100"><div><div class="text-sm font-bold">${item.name}</div><div class="text-[10px] text-gray-400 mt-1">單價: $${item.price}</div></div><div class="flex items-center gap-3"><span class="font-black text-base">x${item.qty}</span><button type="button" onclick="cart.splice(${i},1);updateCartUI();" class="text-red-400 hover:text-red-600 bg-white shadow-sm rounded px-2 py-1"><i class="fa-solid fa-xmark"></i></button></div></div>`;
+            });
+            totalSpan.innerText = total; countSpan.innerText = cart.length;
+            if(cart.length > 0) { btn.disabled = false; btn.innerText = "確認送出申請"; btn.className = "w-full py-3.5 rounded-xl font-bold bg-blue-600 text-white shadow-lg"; }
+            else { btn.disabled = true; btn.innerText = "請先加入物品"; btn.className = "w-full py-3.5 rounded-xl font-bold bg-gray-200 text-gray-400"; }
+        }
+
+        function submitCart() {
+            const name = document.getElementById('apply-name').value.trim();
+            const email = document.getElementById('apply-email').value.trim();
+            if (!name || !email || cart.length === 0) return;
+            pendingFormData = { name, email, cart, forceOverwrite: false };
+            executeProcessForm(pendingFormData);
+        }
+
+        function executeProcessForm(data) {
+            showLoader();
+            google.script.run.withSuccessHandler(res => {
+                hideLoader();
+                if (res.success) { showAlert(res.message); cart = []; updateCartUI(); document.getElementById('applyForm').reset(); }
+                else if (res.requireConfirm) { document.getElementById('confirmMessage').innerText = res.message; document.getElementById('confirmModal').classList.remove('hidden'); }
+                else showAlert(res.message);
+            }).withFailureHandler(handleError).processForm(data);
+        }
+
+        function executeOverwrite() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if(pendingFormData) { pendingFormData.forceOverwrite = true; executeProcessForm(pendingFormData); }
+        }
+
+        // --- 管理員操作 API ---
+        function pickupAll(id) {
+            if(!confirm('確認領取該單據【所有未領取】的品項？')) return;
+            const group = manageData.find(g => g.groupId === id);
+            const updates = group.items.filter(i => i.status === 'pending').map(i => ({rowIndex: i.rowIndex}));
+            showLoader();
+            google.script.run.withSuccessHandler(() => loadManageList()).withFailureHandler(handleError).updateStatus(updates);
+        }
+
+        // V2.4 新增：單項領取邏輯
+        function pickupSingle(id, row) {
+            if(!confirm('確認將此單一品項標記為「已領取」？')) return;
+            showLoader();
+            // 呼叫原本的 updateStatus (因為它本身就設計為接收陣列，所以傳入單一物件的陣列即可完美相容)
+            google.script.run.withSuccessHandler(() => loadManageList()).withFailureHandler(handleError).updateStatus([{rowIndex: row}]);
+        }
+
+        function deleteSingle(id, row) {
+            if(!confirm('確定作廢此單一品項並歸還庫存？')) return;
+            showLoader();
+            google.script.run.withSuccessHandler(res => { if(res.success) loadManageList(); else showAlert(res.message); }).withFailureHandler(handleError).deleteApplications([row]);
+        }
+
+        function deleteGroup(id) {
+            if(!confirm('確定作廢整張申請單並歸還所有庫存？')) return;
+            const group = manageData.find(g => g.groupId === id);
+            const rows = group.items.map(i => i.rowIndex);
+            showLoader();
+            google.script.run.withSuccessHandler(res => { if(res.success) loadManageList(); else showAlert(res.message); }).withFailureHandler(handleError).deleteApplications(rows);
+        }
+
+        // --- 其餘 API 邏輯 ---
+        function loadInventoryForSelect() {
+            google.script.run.withSuccessHandler(data => {
+                const sel = document.getElementById('apply-item');
+                sel.innerHTML = '<option value="">-- 選擇申請物品 --</option>';
+                data.forEach(i => {
+                    const priceVal = parseFloat(i['單價']) || 0;
+                    sel.innerHTML += `<option value="${i['品名']}" data-price="${priceVal}" data-stock="${i['目前庫存']}">${i['品名']} - $${priceVal}元 (庫存: ${i['目前庫存']})</option>`;
+                });
+                updatePriceHint();
+            }).getInventory();
+        }
+
+        function changeQty(d) {
+            const inp = document.getElementById('apply-qty');
+            inp.value = Math.max(1, parseInt(inp.value) + d);
+            updatePriceHint();
+        }
+
+        function updatePriceHint() {
+            const sel = document.getElementById('apply-item');
+            const qtyInp = document.getElementById('apply-qty');
+            const hint = document.getElementById('item-price-hint');
+            if (!sel || !sel.value) {
+                hint.innerHTML = '';
+                return;
+            }
+            const opt = sel.options[sel.selectedIndex];
+            const price = parseFloat(opt.dataset.price) || 0;
+            const stock = parseInt(opt.dataset.stock) || 0;
+            const qty = parseInt(qtyInp.value) || 1;
+            hint.innerHTML = `<span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md font-bold"><i class="fa-solid fa-coins"></i> 單價: $${price} 元 | 庫存: ${stock} | 小計: $${price * qty} 元</span>`;
+        }
+
+        function cancelGroup(id) {
+            if(!confirm('確定取消此張申請單的所有未領取項目並歸還庫存？')) return;
+            const group = manageData.find(g => g.groupId === id);
+            const pendingRows = group.items.filter(i => i.status === 'pending').map(i => i.rowIndex);
+            showLoader();
+            google.script.run.withSuccessHandler(res => {
+                if(res.success) loadManageList();
+                else showAlert(res.message);
+            }).withFailureHandler(handleError).deleteApplications(pendingRows);
+        }
+
+        function loadSettingsAndCheck() {
+            google.script.run.withSuccessHandler(res => {
+                const now = new Date();
+                let open = true;
+                if(res.start && now < new Date(res.start)) open = false;
+                if(res.end && now > new Date(res.end)) open = false;
+                document.getElementById('apply-form-container').style.display = open ? 'flex' : 'none';
+                document.getElementById('closed-banner').style.display = open ? 'none' : 'block';
+                document.getElementById('closed-banner-text').innerText = "目前非開放申請期間。";
+            }).getSystemSettings();
+        }
+
+        let originalSettings = {};
+        function loadSettings() {
+            showLoader();
+            google.script.run.withSuccessHandler(settings => {
+                originalSettings = settings;
+                const container = document.getElementById('settings-form-container');
+                container.innerHTML = '';
+                
+                const keys = Object.keys(settings).sort();
+                keys.forEach(key => {
+                    const value = settings[key] || '';
+                    let inputType = "text";
+                    if (key.includes("時間")) {
+                        inputType = "datetime-local";
+                    }
+                    
+                    container.innerHTML += `
+                        <div class="flex flex-col md:flex-row md:items-center gap-2 border-b border-gray-50 pb-4 last:border-0">
+                            <label class="w-full md:w-56 font-bold text-gray-700 text-sm">${key}</label>
+                            <input type="${inputType}" id="setting-input-${key}" value="${value}" class="flex-1 border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+                    `;
+                });
+                hideLoader();
+            }).withFailureHandler(handleError).getSystemSettingsWithMasks();
+        }
+
+        function saveAllSettings() {
+            let updates = {};
+            for (let key in originalSettings) {
+                const inputEl = document.getElementById(`setting-input-${key}`);
+                if (inputEl) {
+                    updates[key] = inputEl.value;
+                }
+            }
+            showLoader();
+            google.script.run.withSuccessHandler(() => {
+                hideLoader();
+                showAlert("所有設定已成功儲存！");
+                loadSettings();
+            }).withFailureHandler(handleError).saveAllSystemSettings(updates);
+        }
+
+        function loadRestockTable() {
+            showLoader();
+            google.script.run.withSuccessHandler(data => {
+                inventoryData = data;
+                const body = document.getElementById('restock-table-body');
+                body.innerHTML = '';
+                data.forEach(item => {
+                    body.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold min-w-[120px]">${item['品名']}</td><td class="p-4 text-center text-lg">${item['目前庫存']}</td><td class="p-4 text-gray-400 text-sm whitespace-nowrap">< ${item['低庫存警示']}</td><td class="p-4 bg-blue-50 text-center"><input type="number" id="restock-input-${item.rowIndex}" min="0" placeholder="0" class="w-full max-w-[100px] text-center border rounded-lg p-2 text-base outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-700"></td></tr>`;
+                });
+                hideLoader();
+            }).getInventory();
+        }
+
+        function submitBatchRestock() {
+            let ups = [];
+            inventoryData.forEach(i => {
+                const val = document.getElementById(`restock-input-${i.rowIndex}`).value;
+                if(val && parseInt(val) > 0) ups.push({rowIndex: i.rowIndex, qty: parseInt(val)});
+            });
+            if(ups.length === 0) { showAlert("請至少填寫一項大於 0 的進貨數量！"); return; }
+            showLoader();
+            google.script.run.withSuccessHandler(() => { loadRestockTable(); showAlert("批次補貨成功！庫存已更新。"); }).restockItemsBatch(ups);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>事務小幫手 - 系統中台 V1.9.2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+    .overlay { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.85); backdrop-filter:blur(2px); z-index:50; flex-direction:column; align-items:center; justify-content:center; }
+    .spinner { border:4px solid #f1f5f9; border-top:4px solid #3b82f6; border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; }
+    @keyframes spin { 0% { transform:rotate(0deg);} 100% { transform:rotate(360deg);} }
+    .fade-in { animation:fadeIn 0.4s ease-in forwards; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+  </style>
+</head>
+<body class="text-slate-800">
+  <div id="loader-overlay" class="overlay"><div class="text-center"><div class="spinner mx-auto mb-3"></div><p class="font-bold text-slate-800 tracking-wider" id="loader-text">資料傳送中...</p></div></div>
+
+  <div id="view-register" class="min-h-screen flex items-center justify-center p-4 fade-in block">
+    <button onclick="showLoginModal()" class="fixed top-4 right-4 w-14 h-14 bg-white/50 backdrop-blur rounded-full shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-800 transition-colors z-40"><i class="fa-solid fa-gear text-3xl animate-[spin_4s_linear_infinite]"></i></button>
+    <main class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden relative">
+      <div class="bg-slate-800 p-6 text-center text-white"><div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm"><i class="fa-solid fa-user-plus text-2xl"></i></div><h1 class="text-2xl font-bold tracking-wider">系統帳號註冊</h1><p class="text-slate-300 text-sm mt-1">中正國小 事務小幫手</p></div>
+      <div id="step-form" class="p-6 md:p-8">
+        <p class="text-sm text-slate-500 mb-6 font-medium">請填寫以下資訊，完成後系統將引導您綁定 LINE 官方帳號接收通知。</p>
+        <form id="registerForm" class="space-y-4">
+          <div><label class="block text-sm font-bold text-slate-700 mb-1">姓名 <span class="text-red-500">*</span></label><input type="text" id="reg-name" required placeholder="請輸入真實姓名" class="w-full border border-slate-300 rounded-xl p-3.5 text-base outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-sm font-bold text-slate-700 mb-1">聯絡電話 <span class="text-red-500">*</span></label><input type="tel" id="reg-phone" required pattern="^09\d{8}$" placeholder="例如：0912345678" class="w-full border border-slate-300 rounded-xl p-3.5 text-base outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-sm font-bold text-slate-700 mb-1">Email <span class="text-red-500">*</span></label><input type="email" id="reg-email" required placeholder="接收系統通知用" class="w-full border border-slate-300 rounded-xl p-3.5 text-base outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div class="pb-2"><label class="block text-sm font-bold text-slate-700 mb-1">單位 / 職稱 <span class="text-slate-400 font-normal text-xs">(選填)</span></label><input type="text" id="reg-unit" placeholder="例如：教務處、二年一班" class="w-full border border-slate-300 rounded-xl p-3.5 text-base outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div id="reg-error-msg" class="hidden bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg flex items-start gap-2"><i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0"></i><span id="reg-error-text"></span></div>
+          <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow-md transition-all active:scale-[0.98]">建立資料並前往綁定</button>
+        </form>
+      </div>
+      <div id="step-success" class="hidden p-6 md:p-8 text-center fade-in"><div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fa-solid fa-check text-4xl text-green-600"></i></div><h2 class="text-xl font-black text-slate-800 mb-3">✅ 資料建檔成功！</h2><div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-8 text-left text-slate-600 text-sm leading-relaxed"><p class="font-bold text-slate-800 mb-1">📢 接下來請完成最後一步：</p>請加入「事務小幫手」，未來事務組相關業務會整合在這裡使用喔！<br><br>加入後，請於聊天室輸入您剛才填寫的 <b class="text-blue-600">Email</b> 或 <b class="text-blue-600">手機號碼</b>，系統回覆成功即完成綁定。</div><a href="https://lin.ee/Y02Fk7z" target="_blank" rel="noopener noreferrer" class="block w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"><i class="fa-brands fa-line text-2xl"></i> 點此加入事務小幫手</a></div>
+    </main>
+  </div>
+
+  <div id="login-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4 fade-in">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-sm w-full relative">
+      <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <div class="text-center mb-6"><div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-slate-200"><i class="fa-solid fa-shield-halved text-2xl text-slate-700"></i></div><h2 class="text-xl font-black text-slate-800">管理中台登入</h2></div>
+      <form id="loginForm" class="space-y-5"><div><label class="block text-sm font-bold text-slate-700 mb-1">通關密語</label><input type="password" id="admin-pwd" required placeholder="請輸入管理員密碼" class="w-full border-2 border-slate-200 rounded-xl p-3.5 text-center text-lg tracking-[0.3em] font-mono outline-none focus:border-blue-500 focus:bg-blue-50 transition-colors"></div><div id="login-error" class="hidden text-red-500 text-sm font-bold text-center">密碼錯誤，請重新輸入。</div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"><i class="fa-solid fa-unlock"></i> 解鎖進入</button></form>
+    </div>
+  </div>
+
+  <div id="dynamic-edit-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-2xl relative">
+      <button type="button" onclick="closeDynamicEditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <h3 class="text-xl font-black text-slate-800 mb-5 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-blue-500"></i> 編修動態關鍵字</h3>
+      <form id="dynamicEditForm" class="space-y-4">
+        <input type="hidden" id="edit-dm-rowIdx">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-bold text-slate-700 mb-1">觸發關鍵字</label><input type="text" id="edit-dm-key" required class="w-full border rounded-lg p-3 outline-none focus:border-blue-500"></div>
+          <div><label class="block text-sm font-bold text-slate-700 mb-1">類型</label><select id="edit-dm-type" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500 bg-white"><option value="文字">文字</option><option value="圖片">圖片 (Google Drive 連結)</option><option value="子選單">子選單 (多按鈕)</option></select></div>
+        </div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-1">回覆內容</label><textarea id="edit-dm-content" rows="5" required class="w-full border rounded-lg p-3 outline-none focus:border-blue-500"></textarea></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-1">狀態</label><select id="edit-dm-status" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500 bg-white"><option value="啟用">啟用</option><option value="停用">停用</option></select></div>
+        <div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeDynamicEditModal()" class="px-5 py-2.5 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button><button type="submit" class="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700">儲存修改</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="view-admin" class="min-h-screen hidden flex-col">
+    <nav class="bg-slate-800 text-white sticky top-0 z-30 shadow-md"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex justify-between h-16"><div class="flex items-center gap-3"><i class="fa-solid fa-server text-blue-400 text-xl"></i><span class="font-bold text-lg hidden md:block">HUB 中台戰情室</span><span class="bg-blue-500/30 text-blue-100 text-xs px-2 py-1 rounded-md font-mono" id="admin-role-badge">Admin</span></div><div class="flex items-center space-x-1 no-scrollbar overflow-x-auto"><button type="button" data-tab="users" id="tab-users" class="admin-tab px-3 py-2 rounded-lg text-sm font-bold text-slate-300 hover:text-white whitespace-nowrap"><i class="fa-solid fa-users mr-1"></i>人員</button><button type="button" data-tab="settings" id="tab-settings" class="admin-tab px-3 py-2 rounded-lg text-sm font-bold text-slate-300 hover:text-white whitespace-nowrap"><i class="fa-solid fa-gear mr-1"></i>設定</button><button type="button" data-tab="menu" id="tab-menu" class="admin-tab px-3 py-2 rounded-lg text-sm font-bold text-slate-300 hover:text-white whitespace-nowrap"><i class="fa-solid fa-layer-group mr-1"></i>選單</button><button type="button" onclick="logout()" class="px-3 py-2 rounded-lg text-sm font-bold text-red-400 hover:bg-red-500/20 whitespace-nowrap ml-2 border border-red-500/30"><i class="fa-solid fa-right-from-bracket mr-1"></i>登出</button></div></div></div></nav>
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 fade-in">
+      <div id="tab-content-users" class="tab-content block"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-address-book text-blue-500"></i> 人員名單</h2><span class="text-sm font-bold text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-200">共 <span id="user-count" class="text-blue-600">0</span> 人</span></div><div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div></div>
+      <div id="tab-content-settings" class="tab-content hidden"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-sliders text-blue-500"></i> 系統參數</h2><button type="button" onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> 儲存變更</button></div><div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div class="bg-yellow-50 p-4 border-b border-yellow-100 flex items-start gap-3"><i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-0.5"></i><p class="text-sm text-yellow-800 font-medium leading-relaxed">請謹慎修改設定值。若欄位包含「TOKEN」或「KEY」，在此處直接填入新值後儲存，系統會自動在後台安全隱藏，畫面僅保留遮罩。</p></div><div id="settings-container" class="p-6 space-y-6"></div></div></div>
+      <div id="tab-content-menu" class="tab-content hidden">
+        <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-layer-group text-blue-500"></i> 智慧選單配置</h2>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+          <div class="bg-slate-50 p-4 font-bold text-slate-700 border-b flex justify-between items-center"><span><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>動態關鍵字 (快速新增)</span></div>
+          <div class="p-5">
+            <form id="dynamicMenuForm" class="flex flex-col md:flex-row gap-4 items-end">
+              <div class="w-full md:w-1/4"><label class="block text-xs font-bold text-slate-500 mb-1">觸發關鍵字</label><input type="text" id="dm-key" required placeholder="如：校慶" class="w-full border rounded-lg p-2.5 outline-none focus:border-blue-500 text-sm"></div>
+              <div class="w-full md:w-1/4"><label class="block text-xs font-bold text-slate-500 mb-1">類型</label><select id="dm-type" class="w-full border rounded-lg p-2.5 outline-none focus:border-blue-500 text-sm bg-white"><option value="文字">文字</option><option value="圖片">圖片 (Google Drive 連結)</option><option value="子選單">子選單 (多按鈕)</option></select></div>
+              <div class="w-full md:flex-1"><label class="block text-xs font-bold text-slate-500 mb-1">回覆內容</label><input type="text" id="dm-content" required placeholder="輸入文字或貼上連結" class="w-full border rounded-lg p-2.5 outline-none focus:border-blue-500 text-sm"></div>
+              <button type="submit" class="w-full md:w-auto bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>新增</button>
+            </form>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-slate-500 border-y"><tr><th class="p-3 pl-5">關鍵字</th><th class="p-3">類型</th><th class="p-3">內容</th><th class="p-3 text-center">狀態</th><th class="p-3 pr-5 text-center">操作</th></tr></thead>
+              <tbody id="dm-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm border border-blue-100 p-8 text-center relative overflow-hidden"><i class="fa-solid fa-table-columns absolute -right-6 -bottom-6 text-9xl text-blue-500/10"></i><h3 class="text-lg font-black text-blue-900 mb-2 relative z-10">圖文選單 (Flex Menu) 結構複雜</h3><p class="text-blue-700 text-sm mb-6 relative z-10">圖文選單包含按鈕排版、顏色代碼與表情符號。<br>為了避免設定錯誤導致選單崩潰，請直接開啟 Google 試算表進行視覺化編輯。</p><a href="#" onclick="alert('請登入您的 Google 雲端硬碟開啟該試算表。'); return false;" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:-translate-y-1 relative z-10"><i class="fa-solid fa-table mr-2"></i>前往試算表進階設定</a></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 opacity-0 translate-y-10 z-50 flex items-center gap-2 pointer-events-none"><i class="fa-solid fa-circle-check text-green-400"></i><span id="toast-msg">處理完成</span></div>
+
+  <script>
+    let sessionPwd = '';
+    let heartbeatTimer = null;
+    let adminDataCache = null;
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('registerForm').addEventListener('submit', (e) => { e.preventDefault(); submitRegister(); });
+      $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); submitAdminLogin(); });
+      $('dynamicMenuForm').addEventListener('submit', (e) => { e.preventDefault(); addDynamicMenu(); });
+      $('dynamicEditForm').addEventListener('submit', (e) => { e.preventDefault(); saveDynamicMenuEdit(); });
+      $('dm-type').addEventListener('change', updateDmPlaceholder);
+      $('edit-dm-type').addEventListener('change', updateEditDmPlaceholder);
+      document.querySelectorAll('.admin-tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+      $('users-grid').addEventListener('click', handleUsersGridClick);
+      $('dm-table-body').addEventListener('click', handleDynamicMenuTableClick);
+      updateDmPlaceholder();
+      updateEditDmPlaceholder();
+    });
+
+    function submitRegister() {
+      $('reg-error-msg').classList.add('hidden');
+      showLoader(true, '資料建檔中...');
+      const formData = { name: $('reg-name').value, phone: $('reg-phone').value, email: $('reg-email').value, unit: $('reg-unit').value };
+      google.script.run.withSuccessHandler(res => {
+        showLoader(false);
+        if (res.success) { $('step-form').classList.add('hidden'); $('step-success').classList.remove('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        else { $('reg-error-text').innerText = res.message || '送出失敗'; $('reg-error-msg').classList.remove('hidden'); }
+      }).withFailureHandler(err => {
+        showLoader(false); $('reg-error-text').innerText = '連線異常：' + (err.message || err); $('reg-error-msg').classList.remove('hidden');
+      }).SYS_RegisterUser(formData);
+    }
+
+    function showLoginModal() { const modal = $('login-modal'); modal.classList.remove('hidden'); modal.classList.add('flex'); $('admin-pwd').focus(); }
+    function closeLoginModal() { const modal = $('login-modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); $('login-error').classList.add('hidden'); $('admin-pwd').value = ''; }
+    function closeDynamicEditModal() { const modal = $('dynamic-edit-modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); $('dynamicEditForm').reset(); }
+
+    function submitAdminLogin() {
+      const pwd = $('admin-pwd').value;
+      if (!pwd) return;
+      $('login-error').classList.add('hidden');
+      showLoader(true, '驗證身分中...');
+      google.script.run.withSuccessHandler(res => {
+        showLoader(false);
+        if (res.success) {
+          sessionPwd = pwd;
+          $('admin-role-badge').innerText = res.admin.name || 'Admin';
+          closeLoginModal();
+          $('view-register').classList.replace('block', 'hidden');
+          $('view-admin').classList.remove('hidden');
+          $('view-admin').classList.add('flex');
+          switchTab('users');
+          fetchDashboardData();
+          startHeartbeat();
+        } else {
+          $('login-error').innerText = res.message || '登入失敗';
+          $('login-error').classList.remove('hidden');
+        }
+      }).withFailureHandler(err => {
+        showLoader(false); $('login-error').innerText = '系統連線錯誤：' + (err.message || err); $('login-error').classList.remove('hidden');
+      }).SYS_AdminLogin(pwd);
+    }
+
+    function logout() {
+      sessionPwd = ''; adminDataCache = null; if (heartbeatTimer) clearInterval(heartbeatTimer); heartbeatTimer = null;
+      $('view-admin').classList.replace('flex', 'hidden'); $('view-register').classList.replace('hidden', 'block'); $('step-form').classList.remove('hidden'); $('step-success').classList.add('hidden'); $('registerForm').reset(); showToast('已安全登出');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.admin-tab').forEach(el => { el.classList.remove('bg-slate-700', 'text-white'); el.classList.add('text-slate-300'); });
+      const content = $(`tab-content-${tabId}`), tab = $(`tab-${tabId}`);
+      if (content) content.classList.remove('hidden');
+      if (tab) { tab.classList.remove('text-slate-300'); tab.classList.add('bg-slate-700', 'text-white'); }
+    }
+
+    function fetchDashboardData(isSilent = false) {
+      if (!isSilent) showLoader(true, '載入大腦數據...');
+      google.script.run.withSuccessHandler(res => {
+        if (!isSilent) showLoader(false);
+        if (res.success) { adminDataCache = res; renderUsers(res.users || []); renderSettings(res.settings || []); renderDynamicMenu(res.dynamicMenu || []); }
+      }).withFailureHandler(() => {
+        if (!isSilent) { showLoader(false); alert('載入失敗，可能登入已過期。'); logout(); }
+      }).SYS_GetDashboardData(sessionPwd);
+    }
+
+    function startHeartbeat() { if (heartbeatTimer) clearInterval(heartbeatTimer); heartbeatTimer = setInterval(() => { if (sessionPwd) fetchDashboardData(true); }, 30000); }
+
+    function renderUsers(users) {
+      $('user-count').innerText = users.length; const grid = $('users-grid'); grid.innerHTML = '';
+      users.forEach((u, index) => {
+        const isBound = !!u.isBound, isPush = u.allowPush === '是';
+        const btnClass = isPush ? 'text-blue-500 hover:bg-blue-50' : 'text-slate-400 hover:bg-red-50';
+        const iconClass = isPush ? 'fa-solid fa-bell' : 'fa-solid fa-bell-slash';
+        const safeEmail = normalizeEmail(u.email);
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow relative overflow-hidden group';
+        card.innerHTML = `<div class="absolute top-0 left-0 w-1 h-full ${isBound ? 'bg-green-500' : 'bg-slate-300'}"></div><div class="flex justify-between items-baseline mb-2 pl-2"><div class="flex items-baseline gap-2 truncate"><h3 class="font-black text-lg text-slate-800">${escapeHtml(u.name)}</h3><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate">${escapeHtml(u.unit || '無')}</span></div><div class="font-mono text-sm text-slate-600 shrink-0 ml-2">${escapeHtml(u.phone || '')}</div></div><div class="flex justify-between items-center pl-2"><div class="flex items-center gap-2 min-w-0"><span class="font-mono text-xs text-slate-500 truncate">${escapeHtml(safeEmail)}</span><button type="button" data-action="copy-email" data-email="${escapeHtml(safeEmail)}" class="text-slate-400 hover:text-blue-600 shrink-0 transition-opacity"><i class="fa-regular fa-copy"></i></button></div><div class="flex items-center gap-2 shrink-0 ml-2">${isBound ? '<span class="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded font-bold">已綁定</span>' : '<span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold">未綁定</span>'}<button type="button" data-action="toggle-push" data-email="${escapeHtml(safeEmail)}" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors ${btnClass}" title="切換推播狀態"><i data-role="push-icon" class="${iconClass} text-sm"></i></button></div></div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderSettings(settings) {
+      const container = $('settings-container'); container.innerHTML = '';
+      settings.forEach(s => {
+        const isMasked = String(s.value ?? '').includes('***');
+        const valAttr = isMasked ? '' : String(s.value ?? '');
+        const phAttr = isMasked ? String(s.value) : '輸入設定值';
+        const extraClass = isMasked ? 'bg-green-50 text-green-700 font-bold border-green-200' : '';
+        const row = document.createElement('div');
+        row.className = 'flex flex-col md:flex-row md:items-center gap-2 md:gap-4 pb-4 border-b border-slate-100 last:border-0 last:pb-0';
+        row.innerHTML = `<div class="md:w-1/3"><div class="font-bold text-slate-800 text-sm">${escapeHtml(s.key)}</div><div class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(s.desc || '')}</div></div><div class="md:w-2/3"><input type="text" data-setting-key="${escapeHtml(s.key)}" value="${escapeHtml(valAttr)}" placeholder="${escapeHtml(phAttr)}" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono ${extraClass}"></div>`;
+        container.appendChild(row);
+      });
+    }
+
+    function renderDynamicMenu(rows) {
+      const tbody = $('dm-table-body'); tbody.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const statusClass = r.status === '啟用' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200';
+        tr.innerHTML = `
+          <td class="p-3 pl-5 font-bold text-slate-700 align-top">${escapeHtml(r.keyword)}</td>
+          <td class="p-3 text-slate-600 align-top whitespace-nowrap">${escapeHtml(r.type)}</td>
+          <td class="p-3 text-slate-500 align-top break-all max-w-[520px]">${escapeHtml(r.content)}</td>
+          <td class="p-3 text-center align-top"><button type="button" data-action="toggle-status" data-row="${r.rowIdx}" class="px-3 py-1 rounded-full text-xs font-bold transition-colors ${statusClass}">${escapeHtml(r.status || '停用')}</button></td>
+          <td class="p-3 pr-5 text-center align-top"><div class="flex justify-center gap-2"><button type="button" data-action="edit-dm" data-row="${r.rowIdx}" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold"><i class="fa-solid fa-pen mr-1"></i>編修</button><button type="button" data-action="delete-dm" data-row="${r.rowIdx}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-bold"><i class="fa-solid fa-trash mr-1"></i>刪除</button></div></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function handleUsersGridClick(e) {
+      const btn = e.target.closest('button[data-action]'); if (!btn) return;
+      const action = btn.dataset.action, email = normalizeEmail(btn.dataset.email || '');
+      if (action === 'copy-email') return copyToClipboard(email);
+      if (action === 'toggle-push') return togglePush(email, btn);
+    }
+
+    function handleDynamicMenuTableClick(e) {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn || !adminDataCache) return;
+      const action = btn.dataset.action, rowIdx = Number(btn.dataset.row || 0);
+      if (!rowIdx) return;
+      if (action === 'toggle-status') return toggleDynamicMenuStatus(rowIdx);
+      if (action === 'edit-dm') return openDynamicEditModal(rowIdx);
+      if (action === 'delete-dm') return deleteDynamicMenu(rowIdx);
+    }
+
+    function saveSettings() {
+      if (!adminDataCache) return;
+      const updates = {}; let hasChanges = false;
+      document.querySelectorAll('[data-setting-key]').forEach(inp => {
+        const key = inp.dataset.settingKey; const original = adminDataCache.settings.find(s => s.key === key); if (!original) return;
+        const newVal = inp.value.trim(); if (newVal && newVal !== String(original.value ?? '')) { updates[key] = newVal; hasChanges = true; }
+      });
+      if (!hasChanges) return showToast('沒有修改任何資料');
+      showLoader(true, '儲存中...');
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) { showToast('✅ ' + res.message); fetchDashboardData(); }
+        else { showLoader(false); alert('儲存失敗：' + (res.message || '未知錯誤')); }
+      }).withFailureHandler(err => { showLoader(false); alert('系統異常：' + (err.message || err)); }).SYS_SaveSettings(sessionPwd, updates);
+    }
+
+    function addDynamicMenu() {
+      const payload = { keyword: $('dm-key').value.trim(), type: $('dm-type').value, content: $('dm-content').value.trim(), status: '啟用' };
+      if (!payload.keyword || !payload.content) return;
+      showLoader(true, '寫入中...');
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) { showToast('✅ 新增成功'); $('dm-key').value = ''; $('dm-content').value = ''; updateDmPlaceholder(); fetchDashboardData(); }
+        else { showLoader(false); alert('新增失敗：' + (res.message || '未知錯誤')); }
+      }).withFailureHandler(err => { showLoader(false); alert('異常：' + (err.message || err)); }).SYS_SaveDynamicMenu(sessionPwd, payload);
+    }
+
+    function openDynamicEditModal(rowIdx) {
+      const item = (adminDataCache?.dynamicMenu || []).find(r => Number(r.rowIdx) === Number(rowIdx));
+      if (!item) return alert('找不到要編修的資料');
+      $('edit-dm-rowIdx').value = item.rowIdx;
+      $('edit-dm-key').value = item.keyword || '';
+      $('edit-dm-type').value = item.type || '文字';
+      $('edit-dm-content').value = item.content || '';
+      $('edit-dm-status').value = item.status || '停用';
+      updateEditDmPlaceholder();
+      const modal = $('dynamic-edit-modal');
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+      $('edit-dm-key').focus();
+    }
+
+    function saveDynamicMenuEdit() {
+      const rowIdx = Number($('edit-dm-rowIdx').value || 0);
+      const payload = { keyword: $('edit-dm-key').value.trim(), type: $('edit-dm-type').value, content: $('edit-dm-content').value.trim(), status: $('edit-dm-status').value };
+      if (!rowIdx || !payload.keyword || !payload.content) return alert('請完整填寫資料');
+      showLoader(true, '儲存編修中...');
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) { closeDynamicEditModal(); showToast('✅ ' + (res.message || '更新成功')); fetchDashboardData(); }
+        else { showLoader(false); alert('編修失敗：' + (res.message || '未知錯誤')); }
+      }).withFailureHandler(err => { showLoader(false); alert('系統異常：' + (err.message || err)); }).SYS_UpdateDynamicMenu(sessionPwd, rowIdx, payload);
+    }
+
+    function deleteDynamicMenu(rowIdx) {
+      const item = (adminDataCache?.dynamicMenu || []).find(r => Number(r.rowIdx) === Number(rowIdx));
+      if (!item) return alert('找不到要刪除的資料');
+      if (!confirm(`確定要刪除關鍵字「${item.keyword}」嗎？`)) return;
+      showLoader(true, '刪除中...');
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) { showToast('🗑️ ' + (res.message || '已刪除')); fetchDashboardData(); }
+        else { showLoader(false); alert('刪除失敗：' + (res.message || '未知錯誤')); }
+      }).withFailureHandler(err => { showLoader(false); alert('系統異常：' + (err.message || err)); }).SYS_DeleteDynamicMenu(sessionPwd, rowIdx);
+    }
+
+    function toggleDynamicMenuStatus(rowIdx) {
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) { showToast('✅ ' + (res.message || '狀態已更新')); fetchDashboardData(true); }
+        else alert('切換狀態失敗：' + (res.message || '未知錯誤'));
+      }).withFailureHandler(err => alert('系統異常：' + (err.message || err))).SYS_ToggleDynamicMenuStatus(sessionPwd, rowIdx);
+    }
+
+    function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast('已複製 Email')).catch(() => alert('複製失敗')); }
+
+    function togglePush(userEmail, btn) {
+      const icon = btn.querySelector('[data-role="push-icon"]'); if (!adminDataCache || !btn || !icon) return;
+      const original = icon.className; icon.className = 'fa-solid fa-spinner animate-spin text-sm text-slate-400'; btn.disabled = true; showToast('⏳ 更新推播狀態中...');
+      google.script.run.withSuccessHandler(res => {
+        btn.disabled = false;
+        if (res.success) {
+          const user = adminDataCache.users.find(u => normalizeEmail(u.email) === userEmail); if (user) user.allowPush = res.newStatus;
+          if (res.newStatus === '是') { btn.className = 'w-8 h-8 rounded-full flex items-center justify-center transition-colors text-blue-500 hover:bg-blue-50'; icon.className = 'fa-solid fa-bell text-sm'; showToast('✅ 已開啟該員通知'); }
+          else { btn.className = 'w-8 h-8 rounded-full flex items-center justify-center transition-colors text-slate-400 hover:bg-red-50'; icon.className = 'fa-solid fa-bell-slash text-sm'; showToast('🔇 已關閉該員通知'); }
+        } else { icon.className = original; alert('切換失敗：' + (res.message || '未知錯誤')); }
+      }).withFailureHandler(err => { btn.disabled = false; icon.className = original; alert('系統連線錯誤：' + (err.message || err)); }).SYS_TogglePush(sessionPwd, userEmail);
+    }
+
+    function updateDmPlaceholder() {
+      const type = $('dm-type').value, input = $('dm-content');
+      if (type === '文字') input.placeholder = '輸入文字內容';
+      else if (type === '圖片') input.placeholder = '貼上 Google Drive 圖片連結';
+      else if (type === '子選單') input.placeholder = '格式：提示詞|文字按鈕,網頁按鈕=https://... (最多13個)';
+    }
+
+    function updateEditDmPlaceholder() {
+      const type = $('edit-dm-type').value, input = $('edit-dm-content');
+      if (type === '文字') input.placeholder = '輸入文字內容';
+      else if (type === '圖片') input.placeholder = '貼上 Google Drive 圖片連結';
+      else if (type === '子選單') input.placeholder = '格式：提示詞|文字按鈕,網頁按鈕=https://... (最多13個)';
+    }
+
+    function showLoader(show, text = '處理中...') { $('loader-text').innerText = text; $('loader-overlay').style.display = show ? 'flex' : 'none'; }
+    function showToast(msg) { const toast = $('toast'); $('toast-msg').innerText = msg; toast.classList.remove('opacity-0', 'translate-y-10'); toast.classList.add('opacity-100', 'translate-y-0'); setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'translate-y-10'); }, 3000); }
+  </script>
+</body>
+</html>

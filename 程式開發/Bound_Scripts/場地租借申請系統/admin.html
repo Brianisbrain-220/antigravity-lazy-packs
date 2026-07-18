@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>總務處 - 場地自動化後台 (V8.6)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
+
+  <div id="printModal" class="fixed inset-0 bg-black/90 hidden z-50 flex flex-col p-4 sm:p-8">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-white"><i class="fa-solid fa-print"></i> 🖨️ 預覽與列印中心</h2>
+      <button onclick="closeModal()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-bold">✖ 關閉</button>
+    </div>
+    <div class="flex-1 flex flex-col md:flex-row gap-4">
+      <div class="flex-1 bg-gray-800 rounded-xl p-2 flex flex-col border border-gray-700">
+        <div class="flex justify-between items-center px-4 py-2 bg-gray-700 rounded-lg mb-2">
+          <span class="font-bold text-emerald-400">📄 內部簽呈</span>
+          <button id="btnSignPrint" onclick="window.open(this.dataset.url,'_blank')" class="bg-blue-600 px-4 py-1 rounded hover:bg-blue-500">🖨️ 直接列印</button>
+        </div>
+        <iframe id="frameSign" class="w-full flex-1 bg-white rounded-lg"></iframe>
+      </div>
+      <div id="refundPanel" class="flex-1 bg-gray-800 rounded-xl p-2 flex flex-col border border-gray-700 hidden">
+        <div class="flex justify-between items-center px-4 py-2 bg-gray-700 rounded-lg mb-2">
+          <span class="font-bold text-yellow-400">💰 退保證金申請單</span>
+          <button id="btnRefundPrint" onclick="window.open(this.dataset.url,'_blank')" class="bg-blue-600 px-4 py-1 rounded hover:bg-blue-500">🖨️ 直接列印</button>
+        </div>
+        <iframe id="frameRefund" class="w-full flex-1 bg-white rounded-lg"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- 教室編號指派 Modal -->
+  <div id="roomModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-lg">
+      <div class="flex justify-between items-center p-6 border-b border-gray-700">
+        <h2 class="text-xl font-black text-white">🏫 指派教室編號</h2>
+        <button onclick="closeRoomModal()" class="text-gray-400 hover:text-white text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-700 transition">&times;</button>
+      </div>
+      <div id="roomModalInfo" class="mx-6 mt-4 px-4 py-3 bg-gray-900/60 rounded-lg text-sm text-gray-300"></div>
+      <div id="roomModalFields" class="p-6 space-y-5"></div>
+      <div class="flex gap-3 px-6 pb-6 border-t border-gray-700 pt-4">
+        <button onclick="closeRoomModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold transition">✖ 取消</button>
+        <button onclick="confirmRoomModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold transition shadow-lg">✅ 確認指派並核准</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loginSection" class="max-w-sm mx-auto bg-gray-800 p-8 rounded-2xl shadow-2xl text-center mt-20 border border-gray-700">
+    <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🔒</div>
+    <h2 class="text-2xl font-bold mb-6 text-white">管理員登入</h2>
+    <input type="password" id="pinInput" placeholder="請輸入密碼" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-600 text-white mb-4 text-center outline-none">
+    <button onclick="login()" class="bg-emerald-600 w-full py-3 rounded-xl font-bold text-white hover:bg-emerald-500">進入系統</button>
+  </div>
+
+  <div id="adminSection" class="max-w-6xl mx-auto hidden">
+    <div class="flex justify-between items-end border-b border-gray-700 pb-4 mb-8">
+      <div><h1 class="text-3xl font-black text-white">🏫 待審核清單</h1><p class="text-emerald-400 font-bold mt-1">中正國小 場地自動化後台</p></div>
+      <button onclick="loadData()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">🔄 重新整理</button>
+    </div>
+    <div id="appList" class="space-y-6">載入中...</div>
+  </div>
+
+  <script>
+    let sysRules = [];
+    let pendingApproval = null;
+
+    function login() {
+      google.script.run.withSuccessHandler(isValid => {
+        if (isValid) { document.getElementById('loginSection').classList.add('hidden'); document.getElementById('adminSection').classList.remove('hidden'); loadData(); } 
+      }).verifyAdmin(document.getElementById('pinInput').value);
+    }
+
+    function loadData() {
+      document.getElementById('appList').innerHTML = '載入中...';
+      google.script.run.withSuccessHandler(res => { sysRules = res.rules; fetchPending(); }).getSystemData();
+    }
+
+    function fetchPending() {
+      google.script.run.withSuccessHandler(res => {
+        const container = document.getElementById('appList');
+        if (res.data.length === 0) return container.innerHTML = '<div class="p-10 bg-gray-800 rounded-2xl text-center text-gray-400 font-bold text-lg">目前無待審核案件</div>';
+        let ruleOpts = sysRules.map(r => `<option value="${r.name}" data-f="${r.feeMult}" data-c="${r.cleanMult}" data-u="${r.utilMult}" data-d="${r.depMult}" data-content="${r.content}">${r.name}</option>`).join('');
+        container.innerHTML = res.data.map(app => `
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-2xl flex flex-col md:flex-row gap-6 shadow-lg">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="font-black text-2xl text-emerald-400">${app.actName}</h3>
+                <a href="${app.appPdf}" target="_blank" class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition">📄 民眾申請表</a>
+              </div>
+              <p class="text-gray-300 font-bold mb-3">${app.unit} (申請人: ${app.manager})</p>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-gray-900/50 p-4 rounded-xl border border-gray-700 mb-3">
+                <div><span class="text-gray-500 block text-xs">聯絡電話</span><span class="font-bold text-gray-200">${app.phone}</span></div>
+                <div><span class="text-gray-500 block text-xs">參加人數</span><span class="font-bold text-gray-200">${app.participants}</span></div>
+                <div class="col-span-2"><span class="text-gray-500 block text-xs">借用場地</span><span class="font-bold text-yellow-400">${app.venues}</span></div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-xs text-gray-400 bg-gray-900/30 p-3 rounded-lg font-mono whitespace-pre-wrap"><div class="font-bold text-emerald-500 mb-1">【借用明細】</div><div id="useSlots-${app.uuid}">${app.useSlots}</div></div>
+                <div class="text-xs text-gray-400 bg-gray-900/30 p-3 rounded-lg font-mono whitespace-pre-wrap"><div class="font-bold text-yellow-500 mb-1">【計費明細】</div><div id="feeSlots-${app.uuid}">${app.feeSlots}</div></div>
+              </div>
+            </div>
+            <div class="bg-gray-900 p-5 rounded-xl border border-gray-700 w-full md:w-80 flex flex-col gap-4">
+              <div class="text-right"><span class="text-xs text-gray-500 block mb-1">保證金: NT$ ${app.depositAmt}</span><span class="text-xs text-gray-500 block">原價</span><span class="font-black text-2xl text-red-400">NT$ ${app.price}</span></div>
+              <div><label class="block text-xs text-gray-400 mb-1">折扣規則</label><select id="rule-${app.uuid}" class="bg-gray-800 border border-gray-600 text-white rounded-lg w-full p-2 mb-2" onchange="recalcFinal('${app.uuid}')">${ruleOpts}</select><div id="ruleDesc-${app.uuid}" class="text-xs text-gray-500 bg-gray-800 p-2 rounded border border-gray-700 mb-2 h-16 overflow-y-auto"></div></div>
+              <div class="p-3 bg-gray-800 rounded-lg border border-gray-600"><label class="block text-xs text-emerald-400 font-bold mb-1">🅿️ 附加停車包場</label><div class="flex items-center gap-2"><input type="number" id="parkingUnit-${app.uuid}" placeholder="單價/時段" class="w-full bg-gray-900 border border-gray-600 text-white p-2 rounded-lg text-sm outline-none" onkeyup="recalcFinal('${app.uuid}')"><span class="text-xs text-gray-400 whitespace-nowrap" id="parkingInfo-${app.uuid}">0 時段</span></div></div>
+              <div><label class="block text-xs text-gray-400 mb-1">最終實收總金額</label><input type="number" id="finalPrice-${app.uuid}" value="${app.price}" class="w-full bg-gray-800 border border-gray-600 text-white p-3 rounded-lg text-right font-black text-xl outline-none"></div>
+              <input type="hidden" id="vSub-${app.uuid}" value="${app.venueFeeSub}"><input type="hidden" id="cSub-${app.uuid}" value="${app.cleanFeeSub}"><input type="hidden" id="uSub-${app.uuid}" value="${app.acFeeSub + app.lightFeeSub + app.equipFeeSub}"><input type="hidden" id="dSub-${app.uuid}" value="${app.depositAmt}">
+              <div class="flex gap-2 mt-2"><button onclick="reject('${app.uuid}')" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold">❌ 退件</button><button onclick="approve('${app.uuid}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold">✅ 核准</button></div>
+            </div>
+          </div>
+        `).join('');
+        res.data.forEach(app => recalcFinal(app.uuid));
+      }).getPendingApplications();
+    }
+
+    function calculateUniquePeriods(useSlotsText) {
+      let intervalsByDate = {}; let lines = useSlotsText.split('\n');
+      lines.forEach(line => {
+         let match = line.match(/\[.*?\] (.*?) (\d{2}:\d{2})-(\d{2}:\d{2})/);
+         if (match) {
+            let dates = match[1].split(', ');
+            let sMin = parseInt(match[2].split(':')[0])*60 + parseInt(match[2].split(':')[1]);
+            let eMin = parseInt(match[3].split(':')[0])*60 + parseInt(match[3].split(':')[1]);
+            dates.forEach(d => { if (!intervalsByDate[d]) intervalsByDate[d] = []; intervalsByDate[d].push({start: sMin, end: eMin}); });
+         }
+      });
+      let totalMergedMinutes = 0;
+      for (let d in intervalsByDate) {
+         let arr = intervalsByDate[d]; arr.sort((a,b) => a.start - b.start);
+         let merged = [arr[0]];
+         for (let i = 1; i < arr.length; i++) {
+            let last = merged[merged.length-1];
+            if (arr[i].start < last.end) { last.end = Math.max(last.end, arr[i].end); } else { merged.push(arr[i]); }
+         }
+         merged.forEach(iv => { totalMergedMinutes += (iv.end - iv.start); });
+      }
+      return totalMergedMinutes / 120;
+    }
+
+    function recalcFinal(uuid) {
+      const select = document.getElementById(`rule-${uuid}`); const option = select.options[select.selectedIndex];
+      document.getElementById(`ruleDesc-${uuid}`).innerText = option.dataset.content || '無法規說明';
+      const fMult = parseFloat(option.dataset.f); const cMult = parseFloat(option.dataset.c); const uMult = parseFloat(option.dataset.u); const dMult = parseFloat(option.dataset.d);
+      const vSub = parseInt(document.getElementById(`vSub-${uuid}`).value); const cSub = parseInt(document.getElementById(`cSub-${uuid}`).value); const uSub = parseInt(document.getElementById(`uSub-${uuid}`).value); const dSub = parseInt(document.getElementById(`dSub-${uuid}`).value);
+      let parkingUnit = parseInt(document.getElementById(`parkingUnit-${uuid}`).value) || 0;
+      let useSlots = document.getElementById(`useSlots-${uuid}`).innerText;
+      let uniquePeriods = calculateUniquePeriods(useSlots);
+      document.getElementById(`parkingInfo-${uuid}`).innerText = `${uniquePeriods} 時段`;
+      document.getElementById(`finalPrice-${uuid}`).value = Math.round((vSub * fMult) + (cSub * cMult) + (uSub * uMult) + (dSub * dMult) + (parkingUnit * uniquePeriods));
+    }
+
+    function reject(uuid) {
+      let reason = prompt('請輸入退件原因：'); if (!reason) return;
+      google.script.run.withSuccessHandler(res => { if (res.success) { alert('✅ 退件成功。'); loadData(); } }).rejectApplication(uuid, reason);
+    }
+
+    function approve(uuid) {
+      const btn = event.target;
+      const select = document.getElementById(`rule-${uuid}`); const ruleContent = select.options[select.selectedIndex].dataset.content;
+      const finalPrice = parseInt(document.getElementById(`finalPrice-${uuid}`).value);
+      let useSlots = document.getElementById(`useSlots-${uuid}`).innerText; let feeSlots = document.getElementById(`feeSlots-${uuid}`).innerText;
+      let parkingUnit = parseInt(document.getElementById(`parkingUnit-${uuid}`).value) || 0;
+      if (parkingUnit > 0) { feeSlots += `\n🅿️ 附加停車包場：${parkingUnit} x ${calculateUniquePeriods(useSlots)} 時段 = ${parkingUnit * calculateUniquePeriods(useSlots)} 元\n`; }
+      const needsNormalRoom = useSlots.includes('普通教室') && !useSlots.includes('普通教室 (');
+      const needsSpecialRoom = useSlots.includes('專科教室') && !useSlots.includes('專科教室 (');
+      if (needsNormalRoom || needsSpecialRoom) {
+        const appCard = btn.closest('.bg-gray-800');
+        const appName = appCard ? (appCard.querySelector('h3')?.innerText || '') : '';
+        const appUnit = appCard ? (appCard.querySelector('.text-gray-300')?.innerText.split('(')[0].trim() || '') : '';
+        pendingApproval = { uuid, ruleContent, finalPrice, useSlots, feeSlots, btn };
+        openRoomModal(appName, appUnit, useSlots, needsNormalRoom, needsSpecialRoom);
+      } else {
+        executeApproval(uuid, ruleContent, finalPrice, useSlots, feeSlots, btn);
+      }
+    }
+
+    function openRoomModal(appName, appUnit, useSlots, needsNormal, needsSpecial) {
+      document.getElementById('roomModalInfo').innerHTML = `<span class="font-bold text-white">${appName}</span> <span class="text-gray-400">/ ${appUnit}</span>`;
+      let fields = '';
+      if (needsNormal) {
+        const qtyMatch = useSlots.match(/\[普通教室\].*?\((\d+)間/); const qty = qtyMatch ? qtyMatch[1] : '1';
+        fields += `<div><label class="block text-sm font-bold text-emerald-400 mb-1">📚 普通教室（申請 ${qty} 間）</label><p class="text-xs text-gray-500 mb-2">請輸入教室編號，多間用逗號分隔（例如：301, 302）</p><input type="text" id="normalRoomInput" placeholder="例如：301, 302" class="w-full bg-gray-900 border border-gray-600 text-white p-3 rounded-lg outline-none focus:border-emerald-500 transition"></div>`;
+      }
+      if (needsSpecial) {
+        const qtyMatch = useSlots.match(/\[專科教室\].*?\((\d+)間/); const qty = qtyMatch ? qtyMatch[1] : '1';
+        fields += `<div><label class="block text-sm font-bold text-yellow-400 mb-1">🔬 專科教室（申請 ${qty} 間）</label><p class="text-xs text-gray-500 mb-2">請輸入教室名稱或編號（例如：語文教室）</p><input type="text" id="specialRoomInput" placeholder="例如：語文教室" class="w-full bg-gray-900 border border-gray-600 text-white p-3 rounded-lg outline-none focus:border-yellow-500 transition"></div>`;
+      }
+      document.getElementById('roomModalFields').innerHTML = fields;
+      document.getElementById('roomModal').classList.remove('hidden');
+      const firstInput = document.querySelector('#roomModalFields input');
+      if (firstInput) setTimeout(() => firstInput.focus(), 50);
+    }
+
+    function confirmRoomModal() {
+      if (!pendingApproval) return;
+      let { uuid, ruleContent, finalPrice, useSlots, feeSlots, btn } = pendingApproval;
+      const normalInput = document.getElementById('normalRoomInput');
+      const specialInput = document.getElementById('specialRoomInput');
+      if (normalInput && normalInput.value.trim()) {
+        const r = normalInput.value.trim();
+        useSlots = useSlots.replace(/\[普通教室\]/g, `[普通教室 (${r})]`);
+        feeSlots = feeSlots.replace(/\[普通教室\]/g, `[普通教室 (${r})]`);
+      }
+      if (specialInput && specialInput.value.trim()) {
+        const r = specialInput.value.trim();
+        useSlots = useSlots.replace(/\[專科教室\]/g, `[專科教室 (${r})]`);
+        feeSlots = feeSlots.replace(/\[專科教室\]/g, `[專科教室 (${r})]`);
+      }
+      closeRoomModal();
+      executeApproval(uuid, ruleContent, finalPrice, useSlots, feeSlots, btn);
+    }
+
+    function closeRoomModal() {
+      document.getElementById('roomModal').classList.add('hidden');
+      pendingApproval = null;
+    }
+
+    function executeApproval(uuid, ruleContent, finalPrice, useSlots, feeSlots, btn) {
+      if (btn) { btn.innerHTML = `⏳ 產製中...`; btn.disabled = true; }
+      google.script.run.withSuccessHandler(res => { if(res.success) { showPrintModal(res.signPdf, res.refundPdf); loadData(); } }).approveApplication(uuid, ruleContent, finalPrice, useSlots, feeSlots);
+    }
+
+    function showPrintModal(signUrl, refundUrl) {
+      document.getElementById('printModal').classList.remove('hidden');
+      document.getElementById('frameSign').src = signUrl.replace(/\/view.*$/, '/preview');
+      document.getElementById('btnSignPrint').dataset.url = signUrl;
+      if(refundUrl && refundUrl !== "") {
+        document.getElementById('refundPanel').classList.remove('hidden');
+        document.getElementById('frameRefund').src = refundUrl.replace(/\/view.*$/, '/preview');
+        document.getElementById('btnRefundPrint').dataset.url = refundUrl;
+      }
+    }
+    function closeModal() { document.getElementById('printModal').classList.add('hidden'); document.getElementById('frameSign').src = ''; document.getElementById('frameRefund').src = ''; }
+  </script>
+</body>
+</html>

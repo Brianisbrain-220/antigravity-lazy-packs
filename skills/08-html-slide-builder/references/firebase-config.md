@@ -4,7 +4,7 @@
 
 ```js
 const firebaseConfig = {
-  apiKey: "AIzaSyAYQhNavPSce17XtvDC5xnXyl9iUhW9KjA",
+  apiKey: "AIzaSyYOUR_DUMMY_FIREBASE_API_KEY_HERE",
   authDomain: "teacherstudy-109ef.firebaseapp.com",
   projectId: "teacherstudy-109ef",
   storageBucket: "teacherstudy-109ef.firebasestorage.app",

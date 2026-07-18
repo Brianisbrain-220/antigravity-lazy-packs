@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* 🟩🟩🟩 【動態閃爍星空背景】 🟩🟩🟩 */
+    body { 
+      background-color: #020408; /* 極深黑底 */
+      margin: 0;
+      padding: 20px;
+      font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
+      color: #cfd8dc;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 星空層基礎樣式 */
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background-image: 
+        radial-gradient(1.5px 1.5px at 20px 30px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 160px 120px, #fff, rgba(0,0,0,0));
+      background-size: 200px 200px;
+    }
+
+    /* 第一層星光：慢速閃爍 */
+    body::before {
+      animation: twinkle 4s ease-in-out infinite;
+      opacity: 0.3;
+    }
+
+    /* 第二層星光：快速閃爍且偏移 */
+    body::after {
+      background-position: 100px 100px;
+      animation: twinkle 2.5s ease-in-out infinite reverse;
+      opacity: 0.2;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    /* 標題霓虹感 */
+    h3 { 
+      font-weight: 800; 
+      color: #fff; 
+      text-shadow: 0 0 20px rgba(0, 210, 255, 0.6), 0 0 40px rgba(0, 210, 255, 0.2); 
+      margin-bottom: 40px;
+    }
+
+    .cosmic-header { color: #607d8b; margin-top: 50px; margin-bottom: 25px; letter-spacing: 2px; }
+
+    /* 🚀 【懸浮隕石卡片 - 強化區隔感】 🚀 */
+    .card { 
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+      cursor: pointer; 
+      border-radius: 20px; 
+      /* 強化邊框亮度 */
+      border: 1px solid rgba(0, 210, 255, 0.3); 
+      background: rgba(13, 17, 23, 0.92); /* 提高不透明度以隔絕背景星光 */
+      backdrop-filter: blur(10px); /* 增加後方模糊感 */
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8); /* 深邃陰影 */
+      color: #eceff1;
+      overflow: hidden;
+    }
+    
+    /* 懸停時：卡片浮起並產生藍色動力光暈 */
+    .card:hover { 
+      transform: translateY(-12px); 
+      border-color: rgba(0, 210, 255, 0.8);
+      box-shadow: 0 15px 45px rgba(0, 210, 255, 0.3); 
+      background: rgba(22, 27, 34, 0.98);
+    }
+
+    .card-read { opacity: 0.4; filter: grayscale(100%); }
+
+    /* 🔘 【大號勾選框 - 能源顯示器樣式】 🔘 */
+    .big-check { 
+      transform: scale(2.3); 
+      cursor: pointer; 
+      margin-left: 10px;
+      margin-right: 30px; 
+      accent-color: #00e5ff;
+    }
+
+    /* 🛰️ 【頂部工具列】 🛰️ */
+    .top-toolbar {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .btn-space-blue { background: linear-gradient(to bottom, #1e88e5, #1565c0); border: none; color: white; font-weight: 600; }
+    .btn-space-green { color: #00e676; border: 1px solid #00e676; font-weight: 600; background: rgba(0, 230, 118, 0.05); }
+    .btn-space-green:hover { background: #00e676; color: #000; }
+
+    .card-title { font-size: 1.1rem; line-height: 1.5; color: #ffffff; letter-spacing: 0.5px; }
+    .tag { 
+      font-size: 0.75rem; 
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      color: #80deea;
+      padding: 3px 12px; 
+      border-radius: 8px; 
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3 class="text-center">🧠 🪐 Brian 數位大腦 🚀</h3>
+    
+    <div id="loading" class="text-center my-5">
+      <div class="spinner-border text-info" style="width: 3rem; height: 3rem;" role="status"></div>
+      <div class="mt-3 text-info">正在穿越小行星帶... ✨</div>
+    </div>
+    
+    <div id="activeList" class="row"></div>
+    
+    <hr class="my-5">
+    <h6 class="cosmic-header text-center">📁 封存空間站 👩‍🚀</h6>
+    <div id="archivedList" class="row"></div>
+  </div>
+
+  <script>
+    function loadData() {
+      google.script.run.withSuccessHandler(render).getKnowledgeData();
+    }
+
+    function render(data) {
+      document.getElementById('loading').style.display = 'none';
+      const active = document.getElementById('activeList');
+      const archived = document.getElementById('archivedList');
+      active.innerHTML = ''; archived.innerHTML = '';
+
+      data.reverse().forEach(item => {
+        const cardHtml = `
+          <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 ${item.status == 1 ? 'card-read' : ''}" onclick="toggle(${item.id})">
+              <div class="top-toolbar">
+                <a href="${item.url}" target="_blank" class="btn btn-sm btn-space-blue px-3" onclick="event.stopPropagation();">🌐 開啟連結</a>
+                <button onclick="toTask(event, ${item.id})" class="btn btn-sm btn-space-green px-3">🚀 轉為任務</button>
+              </div>
+              
+              <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                  <input type="checkbox" class="big-check" ${item.status == 1 ? 'checked' : ''} 
+                         onclick="handleCheck(event, ${item.id}, ${item.status})">
+                  <div class="card-title fw-bold">${item.title}</div>
+                </div>
+                
+                <div style="font-size: 0.85rem; color: #90a4ae; margin-bottom: 12px;">
+                  🛸 ${item.category} | 📅 ${item.time}
+                </div>
+                
+                <div class="mb-3">
+                  ${item.tags.map(t => `<span class="tag">#${t}</span>`).join('')}
+                </div>
+
+                <div id="detail-${item.id}" style="display:none;" class="mt-3">
+                  <div class="pt-3 border-top" style="border-color: rgba(255,255,255,0.1) !important;">
+                    <p class="small mb-3" style="color: #b0bec5; line-height: 1.6;">☄️ 任務簡報：${item.summary}</p>
+                    ${item.thumb ? `<img src="${item.thumb}" style="width:100%; border-radius:12px; border: 1px solid rgba(255,255,255,0.1);">` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        
+        if(item.status == 0) active.innerHTML += cardHtml;
+        else archived.innerHTML += cardHtml;
+      });
+    }
+
+    function toggle(id) {
+      const el = document.getElementById(`detail-${id}`);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function handleCheck(e, id, currentStatus) {
+      e.stopPropagation();
+      const newStatus = currentStatus == 0 ? 1 : 0;
+      google.script.run.withSuccessHandler(loadData).updateStatus(id, newStatus);
+    }
+
+    function toTask(e, id) {
+      e.stopPropagation();
+      if(confirm('確定要將此能量塊🚀轉入待辦清單並封存嗎？')) {
+        google.script.run.withSuccessHandler(loadData).convertToTaskFromWeb(id);
+      }
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>

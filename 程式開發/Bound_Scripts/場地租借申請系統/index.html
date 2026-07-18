@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>場地借用申請 (中正國小)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #ecfdf5; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #34d399; border-radius: 4px; }
+    .whitespace-pre-wrap { white-space: pre-wrap !important; }
+    input:invalid { border-color: #ef4444; }
+    input:focus:invalid { outline-color: #ef4444; }
+  </style>
+</head>
+<body class="bg-[#f0fdf4] min-h-screen p-4 sm:p-8 font-sans text-gray-800">
+  
+  <div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-emerald-100">
+    <div class="bg-emerald-600 p-6 sm:p-8 text-white text-center shadow-inner relative">
+      <h1 id="mainTitle" class="text-3xl font-bold tracking-wide">載入中...</h1>
+      <p id="subTitle" class="mt-2 text-emerald-100 text-sm">正在同步設定...</p>
+      <button onclick="document.getElementById('quickLoginModal').classList.remove('hidden');setTimeout(function(){document.getElementById('quickLoginPin').focus();},80)" title="總務後台" class="absolute top-2 right-2 text-emerald-200 hover:text-white opacity-25 hover:opacity-80 transition-all duration-300 p-2 rounded-full hover:bg-white/20"><i class="fa-solid fa-gear text-sm"></i></button>
+    </div>
+
+    <div id="sysErrorMsg" class="hidden m-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded font-bold shadow-sm"></div>
+
+    <form id="appForm" class="p-6 sm:p-10 space-y-8">
+      
+      <div class="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100">
+        <h2 class="text-lg font-bold text-emerald-800 mb-4 flex items-center"><span class="w-2 h-6 bg-emerald-500 rounded mr-2"></span>申請資料</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1">申請活動名稱 *</label>
+            <input type="text" id="activityName" required class="w-full border-gray-300 rounded-lg p-2.5 border">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">參加人數 *</label>
+            <input type="number" id="participants" min="1" required class="w-full border-gray-300 rounded-lg p-2.5 border">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">申請單位 (選填)</label>
+            <input type="text" id="unit" class="w-full border-gray-300 rounded-lg p-2.5 border bg-gray-50" placeholder="個人借用可免填">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">統一編號 (選填)</label>
+            <input type="text" id="vat" class="w-full border-gray-300 rounded-lg p-2.5 border bg-gray-50" pattern="[0-9]{8}" title="請輸入 8 位數字統編">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">申請人姓名 *</label>
+            <input type="text" id="manager" required class="w-full border-gray-300 rounded-lg p-2.5 border">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">申請人身分證字號 *</label>
+            <input type="text" id="idNum" required 
+                   class="w-full border-gray-300 rounded-lg p-2.5 border uppercase" 
+                   pattern="[A-Z][1289][0-9]{8}" 
+                   title="請輸入正確的身分證格式 (例: A123456789)"
+                   oninput="this.value = this.value.toUpperCase()">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">聯絡電話 (手機) *</label>
+            <input type="tel" id="phone" required 
+                   class="w-full border-gray-300 rounded-lg p-2.5 border" 
+                   placeholder="0912345678" 
+                   pattern="09[0-9]{8}" 
+                   title="請輸入 09 開頭的 10 位數字手機號碼">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">聯絡 Email *</label>
+            <input type="email" id="email" required class="w-full border-gray-300 rounded-lg p-2.5 border">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">申請人住址 *</label>
+            <input type="text" id="address" required minlength="5" class="w-full border-gray-300 rounded-lg p-2.5 border">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-emerald-800 flex items-center"><span class="w-2 h-6 bg-emerald-500 rounded mr-2"></span>借用明細 <span class="text-xs text-gray-500 ml-2 font-normal">(可選多天)</span></h2>
+          <button type="button" id="addSlotBtn" class="bg-emerald-600 text-white hover:bg-emerald-700 px-4 py-2 rounded-lg text-sm font-bold shadow transition"><i class="fa-solid fa-plus"></i> 新增明細</button>
+        </div>
+        <div id="slotsContainer" class="space-y-4"></div>
+      </div>
+
+      <div class="bg-[#fffbeb] border-2 border-yellow-200 p-6 rounded-2xl shadow-sm">
+        <h3 class="font-bold text-yellow-800 mb-3 border-b border-yellow-300 pb-2">計費明細與保證金</h3>
+        <div id="breakdownPanel" class="mb-4 space-y-2 min-h-[40px] text-gray-700 font-mono text-sm leading-relaxed">請先新增借用明細...</div>
+        <input type="hidden" id="breakdownText">
+        <input type="hidden" id="venueFeeSub" value="0">
+        <input type="hidden" id="cleanFeeSub" value="0">
+        <input type="hidden" id="acFeeSub" value="0">
+        <input type="hidden" id="lightFeeSub" value="0">
+        <input type="hidden" id="equipFeeSub" value="0">
+        <input type="hidden" id="depositAmt" value="0">
+        <div class="flex justify-between items-end pt-3 border-t border-yellow-300">
+          <span class="text-gray-700">總計時段: <span id="totalPeriods" class="font-bold text-xl text-gray-900">0</span> 單位</span>
+          <div class="text-right">
+            <span class="text-sm text-gray-500 font-bold block">預估總費用(原價)</span>
+            <span class="font-black text-3xl text-red-600">NT$ <span id="totalPrice" data-val="0">0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-2">場地借用規範</label>
+        <div id="termsBox" class="h-80 overflow-y-scroll bg-gray-50 border-2 border-gray-200 rounded-xl p-6 text-sm text-gray-600 mb-3 leading-relaxed shadow-inner whitespace-pre-wrap">載入中...</div>
+        <div class="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <input type="checkbox" id="agree" disabled class="w-5 h-5 text-emerald-600 rounded disabled:cursor-not-allowed">
+          <label for="agree" id="agreeLabel" class="text-sm font-bold text-gray-400">請滑到底部以解鎖同意</label>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" disabled class="w-full bg-gray-300 text-gray-500 py-4 rounded-xl text-lg font-black tracking-widest cursor-not-allowed shadow-md">請先同意注意事項</button>
+      <div id="msg" class="text-center mt-4 hidden"></div>
+    </form>
+  </div>
+
+  <!-- 忪ignore: 快速後台登入 Modal -->
+  <div id="quickLoginModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-8 text-center">
+      <div class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🔒</div>
+      <h3 class="text-lg font-black text-gray-800 mb-5">總務後台登入</h3>
+      <input type="password" id="quickLoginPin" placeholder="請輸入管理密碼"
+             class="w-full border-2 border-gray-200 rounded-xl p-3 text-center text-gray-800 mb-2 outline-none focus:border-emerald-500 transition"
+             onkeydown="if(event.key==='Enter') quickLogin()">
+      <p id="quickLoginMsg" class="text-red-500 text-sm mb-3 hidden">❌ 密碼錯誤，請再試一次</p>
+      <div class="flex gap-3">
+        <button onclick="document.getElementById('quickLoginModal').classList.add('hidden');document.getElementById('quickLoginPin').value='';document.getElementById('quickLoginMsg').classList.add('hidden');"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition text-sm">取消</button>
+        <button onclick="quickLogin()"
+                class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition text-sm">進入後台</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let sysData = {};
+
+    google.script.run
+      .withFailureHandler(err => {
+        document.getElementById('sysErrorMsg').innerText = "系統連線失敗: " + err; 
+        document.getElementById('sysErrorMsg').classList.remove('hidden');
+      })
+      .withSuccessHandler(res => {
+        if (!res.success) {
+          document.getElementById('sysErrorMsg').innerText = "資料讀取異常 (請確認已執行 V8.6 資料庫初始化！)"; 
+          document.getElementById('sysErrorMsg').classList.remove('hidden'); return;
+        }
+        sysData = res; 
+        document.getElementById('mainTitle').innerText = res.settings['網頁大標題'] || '場地借用申請';
+        document.getElementById('subTitle').innerText = res.settings['網頁副標題'] || '請詳實填寫下方明細';
+        document.getElementById('termsBox').innerHTML = res.settings['注意事項'] || '無特別規定。'; 
+        addTimeSlot(); 
+      }).getSystemData();
+
+    const termsBox = document.getElementById('termsBox'); const agreeCheck = document.getElementById('agree'); const submitBtn = document.getElementById('submitBtn');
+    termsBox.addEventListener('scroll', function() {
+      if (termsBox.scrollHeight - termsBox.scrollTop <= termsBox.clientHeight + 5) {
+        agreeCheck.disabled = false; document.getElementById('agreeLabel').className = "text-sm font-bold text-emerald-700 cursor-pointer select-none"; document.getElementById('agreeLabel').innerText = "我已詳閱並同意上述規範";
+      }
+    });
+    agreeCheck.addEventListener('change', function() {
+      if(this.checked) { submitBtn.disabled = false; submitBtn.className = "w-full bg-emerald-600 text-white py-4 rounded-xl text-lg font-black shadow-md"; submitBtn.innerText = "🚀 確認無誤，送出申請"; } 
+      else { submitBtn.disabled = true; submitBtn.className = "w-full bg-gray-300 text-gray-500 py-4 rounded-xl text-lg font-black cursor-not-allowed shadow-md"; submitBtn.innerText = "請先同意注意事項"; }
+    });
+
+    function addTimeSlot() {
+      if (!sysData.times) return;
+      const id = Date.now();
+      let vOptions = '<option value="">選擇場地</option>' + sysData.venues.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+      let tOptions = sysData.times.map(t => `<option value="${t}">${t}</option>`).join('');
+      
+      const row = `
+        <div id="slot-${id}" class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-4 border rounded-xl shadow-sm items-end relative">
+          <div class="md:col-span-2">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">場地</label>
+            <select class="slot-venue w-full border-gray-300 rounded-lg p-2 bg-emerald-50" required onchange="updateQtySelect(this); calcTotal();">${vOptions}</select>
+          </div>
+          <div class="md:col-span-1">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">數量</label>
+            <select class="slot-qty w-full border-gray-300 rounded-lg p-2 bg-gray-100" required disabled onchange="calcTotal()"><option value="1">1</option></select>
+          </div>
+          <div class="md:col-span-1 flex items-center justify-center pb-2">
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" class="slot-ac w-4 h-4 text-emerald-600 rounded" onchange="calcTotal()">
+              <span class="text-xs font-bold text-blue-600">❄️冷氣</span>
+            </label>
+          </div>
+          <div class="md:col-span-2 hidden pc-qty-container">
+            <label class="text-xs font-bold text-blue-500 mb-1 block">💻 電腦台數</label>
+            <input type="number" class="slot-pc-qty w-full border-blue-300 rounded-lg p-2 bg-blue-50" min="0" value="0" onchange="calcTotal()">
+          </div>
+          <div class="md:col-span-2 date-container">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">日期 (可多選)</label>
+            <input type="text" class="slot-dates w-full border-gray-300 rounded-lg p-2 bg-white cursor-pointer" placeholder="點擊選日" required>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">開始</label>
+            <select class="slot-start w-full border-gray-300 rounded-lg p-2" onchange="calcTotal()">${tOptions}</select>
+          </div>
+          <div class="md:col-span-2 flex gap-2">
+            <div class="flex-1">
+              <label class="text-xs font-bold text-gray-500 mb-1 block">結束</label>
+              <select class="slot-end w-full border-gray-300 rounded-lg p-2" onchange="calcTotal()">${tOptions}</select>
+            </div>
+            <button type="button" onclick="document.getElementById('slot-${id}').remove(); calcTotal();" class="mt-5 text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+      document.getElementById('slotsContainer').insertAdjacentHTML('beforeend', row);
+      flatpickr(document.getElementById(`slot-${id}`).querySelector('.slot-dates'), { mode: "multiple", locale: "zh_tw", dateFormat: "Y-m-d", onChange: calcTotal });
+    }
+    document.getElementById('addSlotBtn').addEventListener('click', addTimeSlot);
+
+    function updateQtySelect(venueSelect) {
+      const parent = venueSelect.closest('[id^="slot-"]');
+      const qSelect = parent.querySelector('.slot-qty');
+      const pcContainer = parent.querySelector('.pc-qty-container');
+      const pcInput = parent.querySelector('.slot-pc-qty');
+      const vData = sysData.venues.find(v => v.name === venueSelect.value);
+      qSelect.innerHTML = '';
+      if(vData) {
+        qSelect.disabled = false; qSelect.className = "slot-qty w-full border-gray-300 rounded-lg p-2 bg-white";
+        for(let i=1; i<=vData.qty; i++) qSelect.insertAdjacentHTML('beforeend', `<option value="${i}">${i}</option>`);
+        if (vData.name === '資訊教室') { pcContainer.classList.remove('hidden'); } else { pcContainer.classList.add('hidden'); pcInput.value = 0; }
+      }
+    }
+
+    function checkHoliday(dateStr) {
+      const dObj = new Date(dateStr);
+      const special = sysData.holidays.find(h => h.date === dateStr);
+      if (special) return special.type === '放假日';
+      return (dObj.getDay() === 0 || dObj.getDay() === 6);
+    }
+
+    function toMinguoStr(dateStr) {
+      const d = new Date(dateStr);
+      if(d.getFullYear() === sysData.currentYear) return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+      return `${d.getFullYear()-1911}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function calcTotal() {
+      let totalAmt = 0; let totalPeriods = 0; 
+      let vFeeSub = 0; let cFeeSub = 0; let acFeeSub = 0; let lightFeeSub = 0; let equipFeeSub = 0; let depSum = 0;
+      let uniqueVenues = new Set();
+      let html = ''; let txt = '';
+
+      document.querySelectorAll('[id^="slot-"]').forEach(row => {
+        const venue = row.querySelector('.slot-venue').value;
+        const qty = parseInt(row.querySelector('.slot-qty').value) || 1;
+        const pcQty = parseInt(row.querySelector('.slot-pc-qty').value) || 0;
+        const needAC = row.querySelector('.slot-ac').checked;
+        const startH = row.querySelector('.slot-start').value.split(':');
+        const endH = row.querySelector('.slot-end').value.split(':');
+        const datesStr = row.querySelector('.slot-dates').value;
+        
+        if(!venue || !datesStr) return;
+        const vData = sysData.venues.find(v => v.name === venue);
+        uniqueVenues.add(venue);
+
+        const sTime = parseInt(startH[0]) + (parseInt(startH[1])/60);
+        const eTime = parseInt(endH[0]) + (parseInt(endH[1])/60);
+        if (eTime <= sTime) return;
+        const periods = (eTime - sTime) / 2;
+
+        let datesArr = datesStr.split(', ');
+        let fmtDates = datesArr.map(d => toMinguoStr(d)).join(', ');
+        let acTxt = needAC ? '加冷氣' : '無冷氣';
+        let pcTxt = pcQty > 0 ? `, ${pcQty}台電腦` : '';
+
+        html += `<div class="bg-emerald-50/50 p-3 rounded border border-emerald-100"><div class="font-bold text-emerald-800 border-b pb-1 mb-2">${venue} (${qty}間, ${acTxt}${pcTxt})</div>`;
+
+        let rowVFee = 0; let rowCFee = 0; let rowAcFee = 0; let rowLightFee = 0; let rowEquipFee = 0;
+
+        datesArr.forEach(d => {
+          const isHol = checkHoliday(d);
+          totalPeriods += periods * qty;
+          rowVFee += vData.fee * periods * qty;
+          rowAcFee += needAC ? (vData.ac * periods * qty) : 0;
+          rowLightFee += vData.light * periods * qty;
+          rowEquipFee += vData.equip * periods * pcQty;
+          rowCFee += isHol ? (vData.clean * periods * qty) : (vData.clean * qty);
+        });
+
+        vFeeSub += rowVFee; cFeeSub += rowCFee; 
+        acFeeSub += rowAcFee; lightFeeSub += rowLightFee; equipFeeSub += rowEquipFee;
+        let rowTotal = rowVFee + rowCFee + rowAcFee + rowLightFee + rowEquipFee;
+        totalAmt += rowTotal;
+
+        let detailStr = `場地=${rowVFee}, 清潔=${rowCFee}, 冷氣=${rowAcFee}, 照明=${rowLightFee}`;
+        if(rowEquipFee > 0) detailStr += `, 設備=${rowEquipFee}`;
+
+        html += `<div class="flex justify-between text-gray-600 text-xs"><span>├ ${detailStr}</span><span class="font-bold">NT$ ${rowTotal}</span></div></div>`;
+        txt += `[${venue}] (${qty}間, ${acTxt}${pcTxt}) | ${detailStr} ➡️ 小計=${rowTotal}元\n`;
+      });
+
+      uniqueVenues.forEach(vName => {
+        const vData = sysData.venues.find(v => v.name === vName);
+        if(vData && vData.deposit > 0) {
+          depSum += vData.deposit;
+          html += `<div class="flex justify-between border-b border-yellow-200 py-2 text-sm text-orange-600 font-bold"><span>${vName} 保證金</span><span>NT$ ${vData.deposit.toLocaleString()}</span></div>`;
+          txt += `【${vName}】保證金 = ${vData.deposit} 元\n`;
+        }
+      });
+      totalAmt += depSum;
+
+      document.getElementById('breakdownPanel').innerHTML = html || '請先新增借用明細...';
+      document.getElementById('breakdownText').value = txt;
+      document.getElementById('venueFeeSub').value = vFeeSub;
+      document.getElementById('cleanFeeSub').value = cFeeSub;
+      document.getElementById('acFeeSub').value = acFeeSub;
+      document.getElementById('lightFeeSub').value = lightFeeSub;
+      document.getElementById('equipFeeSub').value = equipFeeSub;
+      document.getElementById('depositAmt').value = depSum;
+      document.getElementById('totalPeriods').innerText = totalPeriods;
+      document.getElementById('totalPrice').innerText = totalAmt.toLocaleString();
+      document.getElementById('totalPrice').dataset.val = totalAmt;
+    }
+
+    document.getElementById('appForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      const msgBox = document.getElementById('msg');
+      msgBox.className = "text-center mt-6 p-4 rounded-xl font-bold bg-yellow-50 text-yellow-700 block animate-pulse";
+      msgBox.innerText = "🔄 系統產製中，請稍候...";
+
+      let timeSlots = [];
+      document.querySelectorAll('[id^="slot-"]').forEach(row => {
+        let datesVal = row.querySelector('.slot-dates').value;
+        if(datesVal) timeSlots.push({ 
+          venue: row.querySelector('.slot-venue').value, qty: row.querySelector('.slot-qty').value, 
+          needAC: row.querySelector('.slot-ac').checked, pcQty: row.querySelector('.slot-pc-qty').value,
+          dates: datesVal.split(', '), start: row.querySelector('.slot-start').value, end: row.querySelector('.slot-end').value 
+        });
+      });
+
+      const payload = {
+        activityName: document.getElementById('activityName').value, unit: document.getElementById('unit').value, manager: document.getElementById('manager').value,
+        vat: document.getElementById('vat').value, idNum: document.getElementById('idNum').value, phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value, address: document.getElementById('address').value, participants: document.getElementById('participants').value,
+        timeSlots: timeSlots, totalPeriods: document.getElementById('totalPeriods').innerText, originalPrice: document.getElementById('totalPrice').dataset.val,
+        venueFeeSub: document.getElementById('venueFeeSub').value, cleanFeeSub: document.getElementById('cleanFeeSub').value, 
+        acFeeSub: document.getElementById('acFeeSub').value, lightFeeSub: document.getElementById('lightFeeSub').value, equipFeeSub: document.getElementById('equipFeeSub').value,
+        depositAmt: document.getElementById('depositAmt').value, breakdownText: document.getElementById('breakdownText').value
+      };
+
+      google.script.run.withSuccessHandler(res => {
+          if(res.success) {
+            msgBox.className = "text-center mt-6 p-6 rounded-2xl font-bold bg-emerald-50 text-emerald-800 border-2 border-emerald-200 block";
+            msgBox.innerHTML = `<div class="text-2xl mb-2">🎉 申請已送出！</div><a href="${res.pdfUrl}" target="_blank" class="mt-2 inline-block bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-md">📄 下載申請表 PDF</a>`;
+          } else { msgBox.className = "text-center mt-6 p-4 rounded-xl font-bold bg-red-50 text-red-700 block"; msgBox.innerText = res.error; submitBtn.disabled = false; }
+        }).submitApplication(payload);
+    });
+
+    function quickLogin() {
+      const pin = document.getElementById('quickLoginPin').value;
+      const msg = document.getElementById('quickLoginMsg');
+      if (!pin) return;
+      msg.classList.add('hidden');
+      google.script.run
+        .withSuccessHandler(function(isValid) {
+          if (isValid) {
+            window.top.location.href = '<?= scriptUrl ?>?action=admin';
+          } else {
+            msg.classList.remove('hidden');
+            document.getElementById('quickLoginPin').value = '';
+            setTimeout(function() { document.getElementById('quickLoginPin').focus(); }, 50);
+          }
+        })
+        .verifyAdmin(pin);
+    }
+  </script>
+</body>
+</html>

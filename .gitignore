@@ -47,5 +47,9 @@ tmp/
 0620教學檔案/
 classroom-hub/
 japan-card-tracker/
-程式開發/
 .tmp.driveupload/
+
+# Allow tracking 程式開發 except node_modules/dist
+!程式開發/
+程式開發/ac-card-manager/node_modules/
+程式開發/ac-card-manager/dist/
