@@ -42,3 +42,10 @@ notebooks.json
 temp/
 tmp/
 *.bak
+
+# User private projects (excluded from general lazy packs repository)
+0620教學檔案/
+classroom-hub/
+japan-card-tracker/
+程式開發/
+.tmp.driveupload/

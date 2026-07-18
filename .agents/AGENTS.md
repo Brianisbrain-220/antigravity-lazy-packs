@@ -154,16 +154,17 @@ Anti-Gravity 的 MCP 設定檔位置請以實際產品文件或 UI 為準。設�
 ---
 
 ### 找到 vault
-請先確認 Obsidian vault 的實體路徑。常見位置：
+尋找 Obsidian vault 的實體路徑時，AI 應遵循以下優先順序以實現自動識別，避免向使用者發問：
 
-```text
-C:\Users\<你>\OneDrive\文件\Secondbrain
-C:\Users\<你>\Documents\<vault 名稱>
-G:\我的雲端硬碟\<vault 名稱>
-```
+1. **讀取全域 MCP 設定檔（最推薦）**：讀取 `C:\Users\<使用者>\.gemini\config\mcp_config.json`，尋找 `"obsidian"` 區塊中的 `"args"` 參數，第一個參數即為目前已連線的 Vault 實體路徑。
+2. **讀取專案規則檔**：讀取專案根目錄下 `ANTIGRAVITY.md` 中的 `Obsidian vault：` 所填寫的路徑。
+3. **檢查本機常見同步目錄**：
+   - `C:\Users\<使用者>\SynologyDrive\Secondbrain` (Synology Drive 同步路徑)
+   - `C:\Users\<使用者>\OneDrive\文件\Secondbrain`
+   - `C:\Users\<使用者>\Documents\<vault 名稱>`
+   - `G:\我的雲端硬碟\<vault 名稱>`
 
 確認條件：
-
 - 資料夾存在
 - 裡面有 `.obsidian`
 - 是你平常真正使用的那個 vault

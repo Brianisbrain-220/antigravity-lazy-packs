@@ -8,7 +8,7 @@
 
 ## 📦 9 大技能 (Skills) 一覽
 
-本懶人包收錄於專案的 [.agents/skills/](file:///.agents/skills/) 目錄下，包含以下功能：
+本懶人包收錄於專案的 [skills/](file:///skills/) 目錄下，包含以下功能：
 
 | 編號 | 技能名稱 | 說明 |
 | :--- | :--- | :--- |
@@ -25,17 +25,43 @@
 
 ---
 
-## 🛠️ 使用與安裝方式
+## 🛠️ 自動化開發助手與安裝方式
 
-### ⚡ 方式一：請 AI 自動安裝（最推薦）
-您可以直接將此儲存庫網址提供給 Anti-Gravity，並貼上以下指令：
+為了解決 Windows 環境下安裝技能時容易產生巢狀嵌套資料夾的 Bug，以及解決各 CLI 連線長路徑與認證過期痛點，專案內建了三款一鍵自動化 PowerShell 腳本工具：
+
+### 1. ⚙️ 環境變數修復工具 (`setup_env.ps1`)
+- **功能**：自動偵測 `git.exe`、`gh.exe`、`nlm.exe`、`firebase.cmd` 本機安裝路徑。若未加入 PATH，會自動將其加入您的 User 環境變數中。
+- **好處**：執行並重啟編輯器後，您或 AI 可以直接輸入簡短命令（如 `nlm login` / `firebase login`），無須手動尋找長路徑。
+- **執行方式**：在 PowerShell 中執行：
+  ```powershell
+  .\setup_env.ps1
+  ```
+
+### 2. 🚀 一鍵安全技能安裝器 (`install.ps1`)
+- **功能**：自動清除全域舊 Skills 資料夾，並將 `skills/` 下所有技能乾淨複製到您的全域目錄下（`$Home\.gemini\config\skills\`），**徹底解決 Windows 的巢狀重複資料夾複製 Bug**。
+- **執行方式**：在 PowerShell 中執行：
+  ```powershell
+  .\install.ps1
+  ```
+
+### 3. 🔍 服務認證狀態診斷器 (`check_status.ps1`)
+- **功能**：一鍵檢測 Git、GitHub、NotebookLM、Firebase 以及 Obsidian 的登入與時效狀態，並給出 Token 免互動登入的提示。
+- **執行方式**：在 PowerShell 中執行：
+  ```powershell
+  .\check_status.ps1
+  ```
+
+---
+
+## ⚡ 請 AI 自動安裝（最推薦）
+您也可以直接將此儲存庫網址提供給 Anti-Gravity，並貼上以下指令：
 ```text
 這是我的 Anti-Gravity 懶人包：https://github.com/Brianisbrain-220/antigravity-lazy-packs
 請讀取這個 repo，並依據根目錄 SKILL.md 指引，列出所有可用技能，並幫我一次安裝全部。
 ```
-AI 會讀取根目錄的 `SKILL.md`，列出可用技能，並依序將它們下載、註冊到您本地的工作區目錄下（`.agents/skills/`）。
+AI 會自動讀取 `SKILL.md`，並藉由內建的自動化腳本為您將技能安全安裝至全域目錄下。
 
-### 📝 方式二：手動閱讀設定
+### 📝 手動閱讀設定
 您可以直接開啟本機的 [09-AntiGravity專屬懶人包.md](file:///09-AntiGravity專屬懶人包.md) 檔案，將文件內容交給 AI 助理，依據手冊的指示分步完成環境檢查、OAuth 授權以及 MCP 設定。
 
 ---

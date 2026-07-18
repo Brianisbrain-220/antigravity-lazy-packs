@@ -30,7 +30,7 @@ description: AntiGravity 懶人包 — 服務連接與工作流程設定。說�
 
 對選取的每個 skill：
 ```bash
-npx skills add mathruffian-dot/antigravity-lazy-pack --skill <skill名稱> -g -y
+npx skills add Brianisbrain-220/antigravity-lazy-packs --skill <skill名稱> -g -y
 ```
 
 若 `npx skills add` 無法使用，改為手動：讀取 `skills/<名稱>/SKILL.md` 內容並執行。
