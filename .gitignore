@@ -55,6 +55,8 @@ japan-card-tracker/
 程式開發/ac-card-manager/node_modules/
 程式開發/ac-card-manager/dist/
 .env.local
+**/.firebase/
+.agents/skills/
 dist/
 .env.development.local
 .env.test.local
