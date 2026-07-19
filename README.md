@@ -65,6 +65,13 @@
   powershell.exe -File .\skills\antigravity-secret-shield\scripts\guard.ps1 SetKey -Key "VITE_FIREBASE_API_KEY" -Value "AIzaSy..."
   ```
 
+### 5. 🔄 電腦遷移設定路徑修復器 (`migrate_paths.ps1`)
+- **功能**：當您需要將 Anti-Gravity 設定移至新電腦時，若新電腦的 Windows 使用者名稱與舊電腦不同，此工具會自動掃描並將 `mcp_config.json` 設定檔中的所有舊使用者路徑替換為新電腦上的實體路徑。
+- **執行方式**：在 PowerShell 中執行：
+  ```powershell
+  .\migrate_paths.ps1
+  ```
+
 ---
 
 ## ⚡ 請 AI 自動安裝（最推薦）
