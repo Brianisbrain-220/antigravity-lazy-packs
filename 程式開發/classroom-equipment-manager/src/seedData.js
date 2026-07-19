@@ -1,4 +1,4 @@
-﻿import { db } from './firebase';
+import { db } from './firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export const DEFAULT_CATEGORIES = {
@@ -14,20 +14,20 @@ export const DEFAULT_CATEGORIES = {
 
 export const seedEquipmentItems = async (force = false) => {
   const items = [
-    { id: 'desk_1', category: 'desks_chairs', name: '1. 塑膠抽屜_新式', imageUrl: '/images/equipment/page_1_1_Image21.jpg', inputType: 'checkbox_only', sortOrder: 1 },
-    { id: 'desk_2', category: 'desks_chairs', name: '2. 鐵製抽屜_新式', imageUrl: '/images/equipment/page_1_2_Image22.jpg', inputType: 'checkbox_only', sortOrder: 2 },
-    { id: 'desk_3', category: 'desks_chairs', name: '3. 木頭桌椅', imageUrl: '/images/equipment/page_1_3_Image23.jpg', inputType: 'checkbox_only', sortOrder: 3 },
-    { id: 'desk_4', category: 'desks_chairs', name: '4. 局補助_可調式', imageUrl: '/images/equipment/page_1_4_Image24.jpg', inputType: 'checkbox_only', sortOrder: 4 },
-    { id: 'desk_5', category: 'desks_chairs', name: '5. 舊款_可調式', imageUrl: '/images/equipment/page_1_5_Image25.jpg', inputType: 'checkbox_only', sortOrder: 5 },
-    { id: 'desk_6', category: 'desks_chairs', name: '6. 桌椅樣式 6', imageUrl: '/images/equipment/page_1_6_Image26.jpg', inputType: 'checkbox_only', sortOrder: 6 },
-    { id: 'desk_7', category: 'desks_chairs', name: '7. 圓凳樣式 7', imageUrl: '/images/equipment/page_1_7_Image27.jpg', inputType: 'checkbox_only', sortOrder: 7 },
-    { id: 'desk_8', category: 'desks_chairs', name: '8. 圓凳樣式 8', imageUrl: '/images/equipment/page_1_8_Image28.jpg', inputType: 'checkbox_only', sortOrder: 8 },
+    { id: 'desk_1', category: 'desks_chairs', name: '1. 塑膠抽屜_新式', imageUrl: '/images/equipment/page_1_1_Image21.jpg', inputType: 'checkbox_with_quantity', sortOrder: 1 },
+    { id: 'desk_2', category: 'desks_chairs', name: '2. 鐵製抽屜_新式', imageUrl: '/images/equipment/page_1_2_Image22.jpg', inputType: 'checkbox_with_quantity', sortOrder: 2 },
+    { id: 'desk_3', category: 'desks_chairs', name: '3. 木頭桌椅', imageUrl: '/images/equipment/page_1_3_Image23.jpg', inputType: 'checkbox_with_quantity', sortOrder: 3 },
+    { id: 'desk_4', category: 'desks_chairs', name: '4. 局補助_可調式', imageUrl: '/images/equipment/page_1_4_Image24.jpg', inputType: 'checkbox_with_quantity', sortOrder: 4 },
+    { id: 'desk_5', category: 'desks_chairs', name: '5. 舊款_可調式', imageUrl: '/images/equipment/page_1_5_Image25.jpg', inputType: 'checkbox_with_quantity', sortOrder: 5 },
+    { id: 'desk_6', category: 'desks_chairs', name: '6. 桌椅樣式 6', imageUrl: '/images/equipment/page_1_6_Image26.jpg', inputType: 'checkbox_with_quantity', sortOrder: 6 },
+    { id: 'desk_7', category: 'desks_chairs', name: '7. 圓凳樣式 7', imageUrl: '/images/equipment/page_1_7_Image27.jpg', inputType: 'checkbox_with_quantity', sortOrder: 7 },
+    { id: 'desk_8', category: 'desks_chairs', name: '8. 圓凳樣式 8', imageUrl: '/images/equipment/page_1_8_Image28.jpg', inputType: 'checkbox_with_quantity', sortOrder: 8 },
     { id: 'locker_none', category: 'lockers', name: '無置物櫃', imageUrl: '', inputType: 'checkbox_only', sortOrder: 10 },
-    { id: 'locker_1', category: 'lockers', name: '紅藍樣式', imageUrl: '/images/equipment/page_1_9_Image29.jpg', inputType: 'checkbox_only', sortOrder: 11 },
-    { id: 'locker_2', category: 'lockers', name: '塑膠抽屜', imageUrl: '/images/equipment/page_1_10_Image30.jpg', inputType: 'checkbox_only', sortOrder: 12 },
-    { id: 'locker_3', category: 'lockers', name: '深綠', imageUrl: '/images/equipment/page_1_11_Image31.jpg', inputType: 'checkbox_only', sortOrder: 13 },
-    { id: 'locker_4', category: 'lockers', name: '淺綠', imageUrl: '/images/equipment/page_1_12_Image32.jpg', inputType: 'checkbox_only', sortOrder: 14 },
-    { id: 'locker_5', category: 'lockers', name: '不鏽鋼', imageUrl: '/images/equipment/page_1_13_Image33.jpg', inputType: 'checkbox_only', sortOrder: 15 },
+    { id: 'locker_1', category: 'lockers', name: '紅藍樣式', imageUrl: '/images/equipment/page_1_9_Image29.jpg', inputType: 'checkbox_with_quantity', sortOrder: 11 },
+    { id: 'locker_2', category: 'lockers', name: '塑膠抽屜', imageUrl: '/images/equipment/page_1_10_Image30.jpg', inputType: 'checkbox_with_quantity', sortOrder: 12 },
+    { id: 'locker_3', category: 'lockers', name: '深綠', imageUrl: '/images/equipment/page_1_11_Image31.jpg', inputType: 'checkbox_with_quantity', sortOrder: 13 },
+    { id: 'locker_4', category: 'lockers', name: '淺綠', imageUrl: '/images/equipment/page_1_12_Image32.jpg', inputType: 'checkbox_with_quantity', sortOrder: 14 },
+    { id: 'locker_5', category: 'lockers', name: '不鏽鋼', imageUrl: '/images/equipment/page_1_13_Image33.jpg', inputType: 'checkbox_with_quantity', sortOrder: 15 },
     { id: 'office_desk_1', category: 'office_desks', name: '辦公桌樣式 1', imageUrl: '/images/equipment/page_1_14_Image34.jpg', inputType: 'checkbox_with_quantity', sortOrder: 21 },
     { id: 'office_desk_2', category: 'office_desks', name: '辦公桌樣式 2', imageUrl: '/images/equipment/page_1_15_Image35.jpg', inputType: 'checkbox_with_quantity', sortOrder: 22 },
     { id: 'office_desk_3', category: 'office_desks', name: '辦公桌樣式 3', imageUrl: '/images/equipment/page_1_16_Image36.jpg', inputType: 'checkbox_with_quantity', sortOrder: 23 },
