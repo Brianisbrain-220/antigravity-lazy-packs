@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '../context/AuthContext';
-import { seedEquipmentItems, seedClassrooms, seedSettings, seedAdmin } from '../seedData';
+import { seedEquipmentItems, seedClassrooms, seedSettings } from '../seedData';
 
 function ReporterForm() {
   const { user } = useAuth();
@@ -42,10 +42,6 @@ function ReporterForm() {
       try {
         setLoadingData(true);
         
-        // Auto-seed admin first
-        if (user?.email) {
-          await seedAdmin(user.email);
-        }
         await seedSettings();
 
         // 1. Fetch classrooms
@@ -180,7 +176,7 @@ function ReporterForm() {
           </select>
         </div>
         
-        <div style={{display: 'flex', gap: '1rem'}}>
+        <div className="responsive-form-row">
           <div className="form-group" style={{flex: 1}}>
             <label className="form-label">填報人姓名</label>
             <input className="input-field" required value={formData.reporterName} onChange={e => setFormData({...formData, reporterName: e.target.value})} />
@@ -205,7 +201,7 @@ function ReporterForm() {
           </div>
           
           {formData.hasHandover && (
-            <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}} className="fade-in">
+            <div className="responsive-form-row fade-in" style={{marginTop: '1rem'}}>
               <div style={{flex: 1}}>
                 <label className="form-label">交接人姓名</label>
                 <input className="input-field" required value={formData.handoverName} onChange={e => setFormData({...formData, handoverName: e.target.value})} />

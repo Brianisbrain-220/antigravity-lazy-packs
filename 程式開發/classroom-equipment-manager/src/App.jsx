@@ -6,7 +6,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { LogOut } from 'lucide-react';
 
 function AppContent() {
-  const { user, loading, login, logout } = useAuth();
+  const { user, isAdmin, loading, login, logout } = useAuth();
 
   if (loading) {
     return (
@@ -43,11 +43,13 @@ function AppContent() {
             </svg>
             教室設備清點系統
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>{user.email}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} className="header-actions">
+            <span className="user-email-label" style={{ fontSize: '0.9rem', color: '#64748b' }}>{user.email}</span>
             <nav style={{ display: 'flex', gap: '0.5rem' }}>
               <a href="/" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>填報端</a>
-              <a href="/admin" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台</a>
+              {isAdmin && (
+                <a href="/admin" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台</a>
+              )}
             </nav>
             <button className="btn btn-secondary" style={{ padding: '0.4rem', color: '#ef4444' }} onClick={logout} title="登出">
               <LogOut size={18} />
@@ -59,7 +61,19 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<ReporterForm />} />
             <Route path="/confirm/:id" element={<HandoverConfirm />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={
+              isAdmin ? (
+                <AdminDashboard />
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                  <div className="card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center', padding: '3rem 2rem', borderColor: 'red' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+                    <h2 style={{ marginBottom: '1.5rem', color: '#ef4444' }}>存取遭拒</h2>
+                    <p style={{ color: '#64748b' }}>帳號 <strong>{user?.email}</strong> 尚未被授權為管理員。請聯絡系統管理員。</p>
+                  </div>
+                </div>
+              )
+            } />
           </Routes>
         </main>
       </div>

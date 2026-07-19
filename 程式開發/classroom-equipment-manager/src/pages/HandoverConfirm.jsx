@@ -145,7 +145,7 @@ function HandoverConfirm() {
                 onChange={e => setRejectReason(e.target.value)}
                 placeholder="例如：少了一把辦公椅..."
               ></textarea>
-              <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
+              <div className="responsive-form-row" style={{marginTop: '1rem'}}>
                 <button className="btn btn-secondary" onClick={() => setRejectMode(false)}>取消</button>
                 <button className="btn btn-primary" style={{background: 'red', borderColor: 'red'}} onClick={handleReject}>確認退回</button>
               </div>
@@ -166,7 +166,7 @@ function HandoverConfirm() {
                 </div>
               )}
               
-              <div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}>
+              <div className="responsive-form-row" style={{marginTop: '2rem'}}>
                 <button className="btn btn-primary" style={{flex: 2}} onClick={handleConfirm}>
                   {systemSettings.requireSignature ? '確認無誤並簽名送出' : '確認無誤送出'}
                 </button>

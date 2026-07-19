@@ -286,7 +286,8 @@ function AdminDashboard() {
           </div>
           <div className="card">
             <h3>近期填報紀錄明細</h3>
-            <table style={{ width: '100%', marginTop: '1rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="table-responsive">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead><tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '0.75rem' }}>班級</th><th style={{ padding: '0.75rem' }}>填報人</th>
                 <th style={{ padding: '0.75rem' }}>日期</th><th style={{ padding: '0.75rem' }}>模式</th>
@@ -310,12 +311,13 @@ function AdminDashboard() {
                 {inventories.length === 0 && <tr><td colSpan="6" style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>尚無填報紀錄</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
 
       {activeTab === 'classrooms' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+        <div className="grid-admin-1-2">
           <div>
             <div className="card" style={{ marginBottom: '1rem' }}>
               <h3>{classroomForm.id ? '修改班級/空間' : '新增班級/空間'}</h3>
@@ -360,7 +362,7 @@ function AdminDashboard() {
           </div>
           <div className="card">
             <h3>空間列表與交接進度</h3>
-            <div style={{ maxHeight: '600px', overflowY: 'auto', marginTop: '1rem' }}>
+            <div className="table-responsive" style={{ maxHeight: '600px', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead><tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                   <th style={{ padding: '0.5rem' }}>空間名稱</th><th style={{ padding: '0.5rem' }}>負責教師</th>
@@ -399,7 +401,7 @@ function AdminDashboard() {
               ⚠️ 還原/重灌預設的 35 個設備與圖片項目
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+          <div className="grid-admin-1-2">
             <div>
               <div className="card" style={{ marginBottom: '1rem' }}>
                 <h3>{editingItem ? '修改設備項目' : '新增設備項目'}</h3>
@@ -455,7 +457,7 @@ function AdminDashboard() {
             </div>
             <div className="card">
               <h3>設備項目列表</h3>
-              <div style={{ maxHeight: '700px', overflowY: 'auto', marginTop: '1rem' }}>
+              <div className="table-responsive" style={{ maxHeight: '700px', overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead><tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '0.5rem' }}>排序</th><th style={{ padding: '0.5rem' }}>圖片</th>
@@ -487,7 +489,7 @@ function AdminDashboard() {
       )}
 
       {activeTab === 'settings' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div className="grid-admin-1-1">
           <div className="card" style={{ height: 'fit-content' }}>
             <h3>系統與通知設定</h3>
             <form onSubmit={handleSaveSettings} style={{ marginTop: '1.5rem' }}>
