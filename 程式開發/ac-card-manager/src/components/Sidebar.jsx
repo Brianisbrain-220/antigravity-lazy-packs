@@ -14,11 +14,11 @@ const NAV = [
   { key: 'settings', icon: '⚙️', label: '系統設定' }
 ];
 
-export default function Sidebar({ page, onNavigate }) {
+export default function Sidebar({ page, onNavigate, isOpen, onClose }) {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
       <div className="sidebar-logo">
         <h1>❄️ 冷氣卡借用管理</h1>
         <p>苓雅區中正國小</p>

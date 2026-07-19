@@ -12,11 +12,18 @@ import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Sidebar from './components/Sidebar';
+import BottomNav from './components/BottomNav';
 import './index.css';
 
 function AppInner() {
   const { user, adminVerified, loading } = useAuth();
   const [page, setPage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleNavigate = (key) => {
+    setPage(key);
+    setSidebarOpen(false);
+  };
 
   if (loading) return (
     <div className="loading-screen">
@@ -73,12 +80,36 @@ function AppInner() {
     settings: <SettingsPage />
   };
 
+
   return (
     <div className="app-layout">
-      <Sidebar page={page} onNavigate={setPage} />
-      <main className="main-content">
-        {pages[page] || <DashboardPage />}
-      </main>
+      {/* Overlay for mobile when sidebar is open */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <Sidebar
+        page={page}
+        onNavigate={handleNavigate}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      <div className="main-wrapper">
+        {/* Mobile top bar with hamburger */}
+        <div className="mobile-topbar">
+          <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
+            ☰
+          </button>
+          <span className="mobile-title">❄️ 冷氣卡借用管理</span>
+        </div>
+
+        <main className="main-content">
+          {pages[page] || <DashboardPage />}
+        </main>
+
+        <BottomNav page={page} onNavigate={handleNavigate} />
+      </div>
     </div>
   );
 }

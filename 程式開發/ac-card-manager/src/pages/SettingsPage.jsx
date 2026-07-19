@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 border: '1px solid var(--border-subtle)'
               }}>
                 <span style={{ fontSize: '18px' }}>👤</span>
-                <span style={{ flex: 1, fontSize: '13.5px' }}>{a.email}</span>
+                <span style={{ flex: 1, fontSize: '13.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{a.email}</span>
                 {a.email === user?.email && <span className="badge badge-blue">目前登入</span>}
                 <button
                   className="btn btn-sm btn-danger"
