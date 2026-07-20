@@ -13,11 +13,19 @@ function doGet(e) {
   
   if (page === 'admin') {
     if (!isAdminUser()) {
+      var userEmail = "";
+      try {
+        var activeUser = Session.getActiveUser();
+        if (activeUser) {
+          userEmail = activeUser.getEmail();
+        }
+      } catch (err) {}
+      
       return HtmlService.createHtmlOutput(
         "<div style='font-family: sans-serif; text-align: center; margin-top: 5rem; color: #1e293b;'>" +
         "<h2>🚫 權限不足</h2>" +
         "<p>您無權存取系統管理後台。請確認您已登入正確的學校管理員帳號。</p>" +
-        "<p style='color: #64748b; font-size: 0.9rem;'>當前登入帳號: " + (Session.getActiveUser().getEmail() || "未登入/無法讀取") + "</p>" +
+        "<p style='color: #64748b; font-size: 0.9rem;'>當前登入帳號: " + (userEmail || "未登入/無法讀取") + "</p>" +
         "</div>"
       ).setTitle("權限不足 " + VERSION);
     }
@@ -755,7 +763,8 @@ function analyzeQuotation(base64Data, mimeType) {
  */
 function isAdminUser() {
   try {
-    var userEmail = Session.getActiveUser().getEmail();
+    var activeUser = Session.getActiveUser();
+    var userEmail = activeUser ? activeUser.getEmail() : "";
     if (!userEmail) {
       // 在「執行身份：我」但「存取權限：任何人」且為外部/匿名使用者存取時，
       // getEmail() 會為空值。為安全起見，若無法識別 Email，一律不給後台權限。
