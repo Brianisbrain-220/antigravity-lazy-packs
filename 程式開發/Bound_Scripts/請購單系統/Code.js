@@ -12,29 +12,20 @@ function doGet(e) {
   var title = '請購單快速生成系統 ' + VERSION;
   
   if (page === 'admin') {
-    if (!isAdminUser()) {
-      var userEmail = "";
-      try {
-        var activeUser = Session.getActiveUser();
-        if (activeUser) {
-          userEmail = activeUser.getEmail();
-        }
-      } catch (err) {}
-      
-      return HtmlService.createHtmlOutput(
-        "<div style='font-family: sans-serif; text-align: center; margin-top: 5rem; color: #1e293b;'>" +
-        "<h2>🚫 權限不足</h2>" +
-        "<p>您無權存取系統管理後台。請確認您已登入正確的學校管理員帳號。</p>" +
-        "<p style='color: #64748b; font-size: 0.9rem;'>當前登入帳號: " + (userEmail || "未登入/無法讀取") + "</p>" +
-        "</div>"
-      ).setTitle("權限不足 " + VERSION);
-    }
+    // Admin page uses password authentication (handled client-side in Admin.html)
     templateName = 'Admin';
     title = '系統管理後台 ' + VERSION;
   }
   
-  return HtmlService.createTemplateFromFile(templateName)
-    .evaluate()
+  // Get the real /exec URL from server side (immune to iframe sandbox URL confusion)
+  var template = HtmlService.createTemplateFromFile(templateName);
+  try {
+    template.webAppUrl = ScriptApp.getService().getUrl();
+  } catch(err) {
+    template.webAppUrl = '';
+  }
+  
+  return template.evaluate()
     .setTitle(title)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -759,24 +750,36 @@ function analyzeQuotation(base64Data, mimeType) {
     }
 
 /**
- * 檢查當前登入的使用者是否屬於管理員
+ * 驗證後台管理密碼
+ * @param {string} inputPassword 使用者輸入的密碼
+ * @returns {boolean} 密碼正確回傳 true
  */
-function isAdminUser() {
+function verifyAdminPassword(inputPassword) {
   try {
-    var activeUser = Session.getActiveUser();
-    var userEmail = activeUser ? activeUser.getEmail() : "";
-    if (!userEmail) {
-      // 在「執行身份：我」但「存取權限：任何人」且為外部/匿名使用者存取時，
-      // getEmail() 會為空值。為安全起見，若無法識別 Email，一律不給後台權限。
-      return false;
-    }
-    
+    if (!inputPassword || inputPassword.trim() === '') return false;
     var props = PropertiesService.getScriptProperties();
-    var adminsStr = props.getProperty("adminEmails") || "brianhung@gm.ccps.kh.edu.tw";
-    var admins = adminsStr.split(",").map(function(e) { return e.trim().toLowerCase(); });
-    
-    return admins.indexOf(userEmail.toLowerCase()) !== -1;
+    // 預設密碼為 admin1234，管理員可在後台修改
+    var storedPassword = props.getProperty('adminPassword') || 'admin1234';
+    return inputPassword.trim() === storedPassword;
   } catch (e) {
     return false;
+  }
+}
+
+/**
+ * 變更後台管理密碼（需先通過舊密碼驗證）
+ */
+function changeAdminPassword(oldPassword, newPassword) {
+  try {
+    if (!verifyAdminPassword(oldPassword)) {
+      return { success: false, message: '舊密碼錯誤，無法變更。' };
+    }
+    if (!newPassword || newPassword.trim().length < 6) {
+      return { success: false, message: '新密碼長度至少需要 6 個字元。' };
+    }
+    PropertiesService.getScriptProperties().setProperty('adminPassword', newPassword.trim());
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.toString() };
   }
 }

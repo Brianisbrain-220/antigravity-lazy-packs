@@ -4,4 +4,5 @@
 # Keep Apps Script files
 !Code.js
 !Index.html
+!Admin.html
 !appsscript.json

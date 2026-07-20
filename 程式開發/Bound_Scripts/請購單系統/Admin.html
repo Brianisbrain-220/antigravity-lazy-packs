@@ -294,11 +294,47 @@
       transform: translateY(0);
       opacity: 1;
     }
-  </style>
+</style>
 </head>
 <body>
 
-  <div class="container">
+  <!-- Password Login Overlay -->
+  <div id="loginOverlay" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 1.5rem; padding: 2rem;
+  ">
+    <div style="text-align: center; margin-bottom: 1rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
+      <h1 style="font-size: 1.6rem; font-weight: 700; color: #f8fafc; margin: 0;">請購系統管理後台</h1>
+      <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">請輸入管理員密碼以繼續</p>
+    </div>
+    <div style="
+      background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 2rem; width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 1rem;
+    ">
+      <input type="password" id="loginPasswordInput"
+        placeholder="輸入管理員密碼"
+        style="
+          width: 100%; padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+          color: #f8fafc; font-size: 1rem; font-family: inherit; outline: none;
+        "
+        onkeydown="if(event.key==='Enter') submitLogin()"
+      >
+      <div id="loginError" style="color: #ef4444; font-size: 0.85rem; display: none; text-align: center;"></div>
+      <button onclick="submitLogin()" style="
+        padding: 0.85rem; background: linear-gradient(135deg, #c084fc, #a855f7);
+        border: none; border-radius: 10px; color: white; font-size: 1rem;
+        font-weight: 600; cursor: pointer; font-family: inherit;
+      ">進入後台</button>
+    </div>
+    <p style="color: #475569; font-size: 0.8rem;">預設密碼：admin1234（請登入後立即修改）</p>
+  </div>
+
+  <div class="container" id="mainContent" style="display: none;">
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
       <div class="spinner"></div>
@@ -308,6 +344,7 @@
     <div class="content-wrapper">
       <h1>請購系統管理後台<span class="version-tag">v3.0.0</span></h1>
       <p class="subtitle">設定全校集中管理參數，設定儲存後前台使用者將會自動套用</p>
+
 
       <!-- Auth Status -->
       <div class="auth-status-box">
@@ -357,11 +394,20 @@
           <textarea id="departments" rows="3" placeholder="例如：總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"></textarea>
         </div>
 
-        <!-- Admin Accounts -->
-        <h2 class="section-title">系統管理人員設定</h2>
+        <!-- Admin Password Change -->
+        <h2 class="section-title">管理員密碼設定</h2>
         <div class="form-group">
-          <label for="adminEmails">管理員電子信箱 (多個帳號請以英文半形逗號分開)</label>
-          <input type="text" id="adminEmails" required placeholder="例如：brianhung@gm.ccps.kh.edu.tw,admin2@gm.ccps.kh.edu.tw">
+          <label for="oldPassword">舊密碼</label>
+          <input type="password" id="oldPassword" placeholder="輸入目前使用中的密碼">
+        </div>
+        <div class="form-group">
+          <label for="newPassword">新密碼（至少 6 個字元）</label>
+          <input type="password" id="newPassword" placeholder="輸入新密碼">
+        </div>
+        <div class="btn-container" style="margin-top: 0;">
+          <button type="button" class="btn btn-secondary" onclick="handleChangePassword()">
+            🔑 變更密碼
+          </button>
         </div>
 
         <!-- Actions -->
@@ -376,30 +422,58 @@
       </form>
     </div>
   </div>
+  <!-- end mainContent -->
 
   <div class="toast" id="toast">設定已更新</div>
 
   <script>
-    window.addEventListener('load', function() {
-      // 1. Set back to form URL
+    // === Login Flow ===
+    function submitLogin() {
+      const pw = document.getElementById('loginPasswordInput').value;
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      if (!pw) {
+        errEl.innerText = '請輸入密碼';
+        errEl.style.display = 'block';
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(isValid) {
+          if (isValid) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            loadAdminPanel();
+          } else {
+            errEl.innerText = '❌ 密碼錯誤，請再試一次';
+            errEl.style.display = 'block';
+          }
+        })
+        .withFailureHandler(function(err) {
+          errEl.innerText = '連線失敗：' + err.toString();
+          errEl.style.display = 'block';
+        })
+        .verifyAdminPassword(pw);
+    }
+
+    function loadAdminPanel() {
+      // Set back to form URL
       const currentUrl = window.location.href;
-      // Strip ?page=admin from url
       const backUrl = currentUrl.replace(/[\?&]page=admin/g, '');
       document.getElementById('btnBackToForm').href = backUrl;
 
-      // 2. Load settings from backend Script Properties
+      // Load settings from backend Script Properties
       showLoading('正在讀取系統設定...');
       google.script.run
         .withSuccessHandler(onLoadSettingsSuccess)
         .withFailureHandler(onActionFailure)
         .getSystemSettings();
 
-      // 3. Test script auth status
+      // Test script auth status
       google.script.run
         .withSuccessHandler(onAuthCheckSuccess)
         .withFailureHandler(onActionFailure)
         .checkAuthStatus();
-    });
+    }
 
     function showLoading(text) {
       document.getElementById('loadingOverlay').style.display = 'flex';
@@ -427,7 +501,6 @@
       document.getElementById('geminiKey').value = settings.geminiKey || '';
       document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-1.5-flash';
       document.getElementById('departments').value = settings.departments || '';
-      document.getElementById('adminEmails').value = settings.adminEmails || 'brianhung@gm.ccps.kh.edu.tw';
     }
 
     function onAuthCheckSuccess(result) {
@@ -454,7 +527,6 @@
       google.script.run
         .withSuccessHandler(function() {
           showToast('已觸發授權檢測！若沒反應，請於後端執行一次 triggerAuth');
-          // Re-check
           google.script.run
             .withSuccessHandler(onAuthCheckSuccess)
             .withFailureHandler(onActionFailure)
@@ -474,8 +546,7 @@
         spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
         geminiKey: document.getElementById('geminiKey').value.trim(),
         geminiModel: document.getElementById('geminiModel').value.trim(),
-        departments: document.getElementById('departments').value.trim(),
-        adminEmails: document.getElementById('adminEmails').value.trim()
+        departments: document.getElementById('departments').value.trim()
       };
 
       google.script.run
@@ -491,6 +562,29 @@
       } else {
         alert('儲存失敗：' + result.message);
       }
+    }
+
+    function handleChangePassword() {
+      const oldPw = document.getElementById('oldPassword').value;
+      const newPw = document.getElementById('newPassword').value;
+      if (!oldPw || !newPw) {
+        alert('請填寫舊密碼和新密碼');
+        return;
+      }
+      showLoading('正在變更密碼...');
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideLoading();
+          if (result.success) {
+            showToast('✅ 密碼已成功變更！');
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+          } else {
+            alert('變更失敗：' + result.message);
+          }
+        })
+        .withFailureHandler(onActionFailure)
+        .changeAdminPassword(oldPw, newPw);
     }
 
     function onActionFailure(error) {
