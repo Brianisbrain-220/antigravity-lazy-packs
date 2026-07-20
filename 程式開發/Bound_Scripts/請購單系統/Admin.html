@@ -357,6 +357,13 @@
           <textarea id="departments" rows="3" placeholder="例如：總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"></textarea>
         </div>
 
+        <!-- Admin Accounts -->
+        <h2 class="section-title">系統管理人員設定</h2>
+        <div class="form-group">
+          <label for="adminEmails">管理員電子信箱 (多個帳號請以英文半形逗號分開)</label>
+          <input type="text" id="adminEmails" required placeholder="例如：brianhung@gm.ccps.kh.edu.tw,admin2@gm.ccps.kh.edu.tw">
+        </div>
+
         <!-- Actions -->
         <div class="btn-container">
           <a href="#" id="btnBackToForm" class="btn btn-secondary">
@@ -420,6 +427,7 @@
       document.getElementById('geminiKey').value = settings.geminiKey || '';
       document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-1.5-flash';
       document.getElementById('departments').value = settings.departments || '';
+      document.getElementById('adminEmails').value = settings.adminEmails || 'brianhung@gm.ccps.kh.edu.tw';
     }
 
     function onAuthCheckSuccess(result) {
@@ -466,7 +474,8 @@
         spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
         geminiKey: document.getElementById('geminiKey').value.trim(),
         geminiModel: document.getElementById('geminiModel').value.trim(),
-        departments: document.getElementById('departments').value.trim()
+        departments: document.getElementById('departments').value.trim(),
+        adminEmails: document.getElementById('adminEmails').value.trim()
       };
 
       google.script.run

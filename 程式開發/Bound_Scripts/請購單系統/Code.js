@@ -1,10 +1,33 @@
 /**
  * Serving the HTML Web Application
  */
-function doGet() {
-  return HtmlService.createTemplateFromFile('Index')
+var VERSION = "v3.0.0";
+
+/**
+ * Serving the HTML Web Application
+ */
+function doGet(e) {
+  var page = e && e.parameter && e.parameter.page;
+  var templateName = 'Index';
+  var title = '請購單快速生成系統 ' + VERSION;
+  
+  if (page === 'admin') {
+    if (!isAdminUser()) {
+      return HtmlService.createHtmlOutput(
+        "<div style='font-family: sans-serif; text-align: center; margin-top: 5rem; color: #1e293b;'>" +
+        "<h2>🚫 權限不足</h2>" +
+        "<p>您無權存取系統管理後台。請確認您已登入正確的學校管理員帳號。</p>" +
+        "<p style='color: #64748b; font-size: 0.9rem;'>當前登入帳號: " + (Session.getActiveUser().getEmail() || "未登入/無法讀取") + "</p>" +
+        "</div>"
+      ).setTitle("權限不足 " + VERSION);
+    }
+    templateName = 'Admin';
+    title = '系統管理後台 ' + VERSION;
+  }
+  
+  return HtmlService.createTemplateFromFile(templateName)
     .evaluate()
-    .setTitle('請購單快速生成系統')
+    .setTitle(title)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -523,13 +546,24 @@ function triggerAuth() {
  */
 function getSystemSettings() {
   var props = PropertiesService.getScriptProperties().getProperties();
+  var defaultSpreadsheetId = "";
+  try {
+    var activeSs = SpreadsheetApp.getActiveSpreadsheet();
+    if (activeSs) {
+      defaultSpreadsheetId = activeSs.getId();
+    }
+  } catch (e) {
+    console.log("無法獲取活動試算表 ID: " + e.toString());
+  }
+  
   return {
     templateId: props.templateId || "",
     folderId: props.folderId || "",
-    spreadsheetId: props.spreadsheetId || SpreadsheetApp.getActiveSpreadsheet().getId(),
+    spreadsheetId: props.spreadsheetId || defaultSpreadsheetId,
     geminiKey: props.geminiKey || "",
     geminiModel: props.geminiModel || "gemini-1.5-flash",
-    departments: props.departments || "總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"
+    departments: props.departments || "總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室",
+    adminEmails: props.adminEmails || "brianhung@gm.ccps.kh.edu.tw"
   };
 }
 
@@ -544,6 +578,7 @@ function saveSystemSettings(settings) {
   props.setProperty("geminiKey", settings.geminiKey || "");
   props.setProperty("geminiModel", settings.geminiModel || "gemini-1.5-flash");
   props.setProperty("departments", settings.departments || "");
+  props.setProperty("adminEmails", settings.adminEmails || "brianhung@gm.ccps.kh.edu.tw");
   return { success: true };
 }
 
@@ -714,3 +749,25 @@ function analyzeQuotation(base64Data, mimeType) {
         return { success: false, message: "AI 辨識發生錯誤: " + e.toString() };
       }
     }
+
+/**
+ * 檢查當前登入的使用者是否屬於管理員
+ */
+function isAdminUser() {
+  try {
+    var userEmail = Session.getActiveUser().getEmail();
+    if (!userEmail) {
+      // 在「執行身份：我」但「存取權限：任何人」且為外部/匿名使用者存取時，
+      // getEmail() 會為空值。為安全起見，若無法識別 Email，一律不給後台權限。
+      return false;
+    }
+    
+    var props = PropertiesService.getScriptProperties();
+    var adminsStr = props.getProperty("adminEmails") || "brianhung@gm.ccps.kh.edu.tw";
+    var admins = adminsStr.split(",").map(function(e) { return e.trim().toLowerCase(); });
+    
+    return admins.indexOf(userEmail.toLowerCase()) !== -1;
+  } catch (e) {
+    return false;
+  }
+}
