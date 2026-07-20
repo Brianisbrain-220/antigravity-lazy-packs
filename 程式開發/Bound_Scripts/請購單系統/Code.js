@@ -23,18 +23,21 @@ function include(filename) {
 function createRequisition(formData) {
   try {
     var isProcurementCard = formData.isProcurementCard === true || formData.isProcurementCard === "true";
-    var templateId = formData.templateId;
-    var folderId = formData.folderId;
+    var settings = getSystemSettings();
+    var templateId = settings.templateId;
+    var folderId = settings.folderId;
     var date = formData.date;
     var businessPlan = formData.businessPlan || "";
     var workPlan = formData.workPlan || "";
     var purposeCategory = formData.purposeCategory || "";
     var fundingSource = formData.fundingSource || "";
     var purpose = formData.purpose;
+    var vendor = formData.vendor || "";
+    var department = formData.department || "總務處";
     var items = formData.items; // Array of { name, spec, unit, qty, price, total }
 
     if (!templateId || !folderId) {
-      throw new Error("請提供正確的範本文件 ID 與存檔資料夾 ID。");
+      throw new Error("系統未進行初始化設定！請聯絡管理員至後台（網址後方加上 ?page=admin）設定「文件範本 ID」與「存檔資料夾 ID」。");
     }
 
     // 1. Calculate totals
@@ -75,18 +78,30 @@ function createRequisition(formData) {
       console.log("偵錯日誌寫入失敗: " + debugErr.toString());
     }
 
-    // 2. Open Target Folder
-    var folder;
+    // 2. Open Target Folder and Find/Create Department Subfolder
+    var parentFolder;
     try {
-      folder = DriveApp.getFolderById(folderId);
+      parentFolder = DriveApp.getFolderById(folderId);
     } catch(e) {
-      throw new Error("無法存取指定的雲端硬碟資料夾，請檢查資料夾 ID 是否正確且具備權限。");
+      throw new Error("無法存取指定的雲端硬碟主資料夾，請檢查資料夾 ID 是否正確。");
     }
 
-    // 3. Copy Template Doc
-    var docNameBase = summarizePurpose(purpose);
+    var targetFolder = parentFolder;
+    if (department) {
+      var subfolders = parentFolder.getFoldersByName(department);
+      if (subfolders.hasNext()) {
+        targetFolder = subfolders.next();
+      } else {
+        targetFolder = parentFolder.createFolder(department);
+      }
+    }
+
+    // 3. Copy Template Doc (naming rule: 請購年月日 + 用途說明前10個字)
+    var cleanPurpose = purpose.replace(/[\s\/\*:\?"<>\|\\-]/g, "");
+    var purposeSnippet = cleanPurpose.substring(0, 10) || "請購項目";
     var rocDateStr = formatToROCFNSDate(date);
-    var newFileName = rocDateStr + "請購單_" + docNameBase;
+    var newFileName = rocDateStr + purposeSnippet;
+    
     var templateFile;
     try {
       templateFile = DriveApp.getFileById(templateId);
@@ -94,7 +109,7 @@ function createRequisition(formData) {
       throw new Error("無法讀取請購單範本文件，請確認範本 ID 是否正確。");
     }
     
-    var copiedFile = templateFile.makeCopy(newFileName, folder);
+    var copiedFile = templateFile.makeCopy(newFileName, targetFolder);
     var docId = copiedFile.getId();
 
     // 4. Open copied document and replace fields
@@ -129,7 +144,7 @@ function createRequisition(formData) {
 
     // 6. Generate PDF
     var pdfBlob = copiedFile.getAs('application/pdf');
-    var pdfFile = folder.createFile(pdfBlob).setName(newFileName + ".pdf");
+    var pdfFile = targetFolder.createFile(pdfBlob).setName(newFileName + ".pdf");
 
     // 6b. Generate DOCX (Word File)
     var docxUrl = "https://docs.google.com/feeds/download/documents/export/Export?id=" + docId + "&exportFormat=docx";
@@ -142,7 +157,7 @@ function createRequisition(formData) {
     var docxFile;
     if (docxResponse.getResponseCode() === 200) {
       var docxBlob = docxResponse.getBlob().setName(newFileName + ".docx");
-      docxFile = folder.createFile(docxBlob);
+      docxFile = targetFolder.createFile(docxBlob);
     } else {
       console.log("Could not export DOCX. Status: " + docxResponse.getResponseCode());
     }
@@ -164,7 +179,7 @@ function createRequisition(formData) {
     if (isProcurementCard) {
       logFundingSource += " (採購卡支付)";
     }
-    logToSheet(date, businessPlan, workPlan, purposeCategory, logFundingSource, purpose, items, grandTotal, copiedFile.getUrl(), docxFile ? docxFile.getUrl() : "", pdfFile.getUrl());
+    logToSheet(department, date, businessPlan, workPlan, purposeCategory, logFundingSource, purpose, vendor, items, grandTotal, copiedFile.getUrl(), docxFile ? docxFile.getUrl() : "", pdfFile.getUrl());
 
     return {
       success: true,
@@ -258,8 +273,23 @@ function populateRequisitionTable(body, items) {
 /**
  * Log form submission details to the active sheet
  */
-function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, items, grandTotal, docUrl, docxUrl, pdfUrl) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+/**
+ * Log form submission details to the active sheet for the specific department
+ */
+function logToSheet(department, date, businessPlan, workPlan, purposeCategory, fundingSource, purpose, vendor, items, grandTotal, docUrl, docxUrl, pdfUrl) {
+  var settings = getSystemSettings();
+  var ss;
+  try {
+    ss = SpreadsheetApp.openById(settings.spreadsheetId);
+  } catch (e) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+  
+  var sheetName = department + "_Log";
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
   
   // Set up header if sheet is empty
   if (sheet.getLastRow() === 0) {
@@ -271,14 +301,16 @@ function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource
       "用途別",
       "經費來源", 
       "用途說明", 
+      "廠商名稱", 
       "請購品項細節", 
       "總金額", 
       "請購單文件連結", 
       "Word下載連結",
-      "PDF下載列印連結"
+      "PDF下載列印連結",
+      "請購品項JSON"
     ]);
     // Format header
-    sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#e6f2ff");
+    sheet.getRange(1, 1, 1, 14).setFontWeight("bold").setBackground("#e6f2ff");
   }
 
   // Format items array into readable text for the spreadsheet row
@@ -294,11 +326,13 @@ function logToSheet(date, businessPlan, workPlan, purposeCategory, fundingSource
     purposeCategory,
     fundingSource,
     purpose,
+    vendor,
     itemsSummary,
     grandTotal,
     docUrl,
     docxUrl,
-    pdfUrl
+    pdfUrl,
+    JSON.stringify(items)
   ]);
 }
 
@@ -483,3 +517,200 @@ function triggerAuth() {
   var response = UrlFetchApp.fetch("https://www.google.com");
   Logger.log("連線測試成功，狀態碼：" + response.getResponseCode());
 }
+
+/**
+ * Get system settings from Script Properties
+ */
+function getSystemSettings() {
+  var props = PropertiesService.getScriptProperties().getProperties();
+  return {
+    templateId: props.templateId || "",
+    folderId: props.folderId || "",
+    spreadsheetId: props.spreadsheetId || SpreadsheetApp.getActiveSpreadsheet().getId(),
+    geminiKey: props.geminiKey || "",
+    geminiModel: props.geminiModel || "gemini-1.5-flash",
+    departments: props.departments || "總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"
+  };
+}
+
+/**
+ * Save system settings to Script Properties
+ */
+function saveSystemSettings(settings) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty("templateId", settings.templateId || "");
+  props.setProperty("folderId", settings.folderId || "");
+  props.setProperty("spreadsheetId", settings.spreadsheetId || "");
+  props.setProperty("geminiKey", settings.geminiKey || "");
+  props.setProperty("geminiModel", settings.geminiModel || "gemini-1.5-flash");
+  props.setProperty("departments", settings.departments || "");
+  return { success: true };
+}
+
+/**
+ * Check if the script has all required authorization permissions
+ */
+function checkAuthStatus() {
+  try {
+    DriveApp.getRootFolder();
+    SpreadsheetApp.getActiveSpreadsheet();
+    return { success: true, authorized: true };
+  } catch (e) {
+    return { success: false, authorized: false, message: e.toString() };
+  }
+}
+
+/**
+ * Search historical records only for the user's specific department
+ * @param {string} query The query string
+ * @param {string} department The department to search in
+ * @return {Array} List of matching records
+ */
+function searchHistory(query, department) {
+  try {
+    if (!department) return [];
+    var settings = getSystemSettings();
+    var ss;
+    try {
+      ss = SpreadsheetApp.openById(settings.spreadsheetId);
+    } catch (e) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+    
+    var sheetName = department + "_Log";
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() <= 1) {
+      return [];
+    }
+    
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var numCols = Math.max(13, lastCol);
+    var data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    var results = [];
+    var queryClean = (query || "").toLowerCase().trim();
+    
+    for (var i = data.length - 1; i >= 0; i--) {
+      var row = data[i];
+      var dateStr = row[1] ? row[1].toString() : "";
+      var businessPlan = row[2] ? row[2].toString() : "";
+      var workPlan = row[3] ? row[3].toString() : "";
+      var purposeCategory = row[4] ? row[4].toString() : "";
+      var fundingSource = row[5] ? row[5].toString() : "";
+      var purpose = row[6] ? row[6].toString() : "";
+      var vendor = row[7] ? row[7].toString() : "";
+      var itemsText = row[8] ? row[8].toString() : "";
+      var total = row[9] ? row[9].toString() : "";
+      var docUrl = row[10] ? row[10].toString() : "";
+      var docxUrl = row[11] ? row[11].toString() : "";
+      var pdfUrl = row[12] ? row[12].toString() : "";
+      var itemsJson = (numCols >= 14 && row[13]) ? row[13].toString() : "";
+      
+      var match = false;
+      if (queryClean === "") {
+        match = true;
+      } else {
+        if (purpose.toLowerCase().indexOf(queryClean) !== -1 ||
+            vendor.toLowerCase().indexOf(queryClean) !== -1 ||
+            itemsText.toLowerCase().indexOf(queryClean) !== -1 ||
+            fundingSource.toLowerCase().indexOf(queryClean) !== -1) {
+          match = true;
+        }
+      }
+      
+      if (match) {
+        results.push({
+          date: dateStr,
+          businessPlan: businessPlan,
+          workPlan: workPlan,
+          purposeCategory: purposeCategory,
+          fundingSource: fundingSource,
+          purpose: purpose,
+          vendor: vendor,
+          total: total,
+          itemsJson: itemsJson,
+          itemsText: itemsText
+        });
+        
+        if (results.length >= 15) {
+          break;
+        }
+      }
+    }
+    return results;
+  } catch (e) {
+    console.log("搜尋歷史出錯: " + e.toString());
+    return [];
+  }
+}
+
+/**
+ * Analyze quotation image or PDF using Gemini API
+ * @param {string} base64Data Base64 representation of the file
+ * @param {string} mimeType File MIME type
+ * @return {Object} Response object with items or error message
+ */
+function analyzeQuotation(base64Data, mimeType) {
+  try {
+    var settings = getSystemSettings();
+    var apiKey = settings.geminiKey;
+    var model = settings.geminiModel || "gemini-1.5-flash";
+    
+    if (!apiKey) {
+      return { success: false, message: "請先由管理員進入後台設定 Gemini API Key 才能使用 AI 辨識功能。" };
+    }
+    
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+    
+    var prompt = "你是一個學校會計助理。請精準讀取此估價單/報價單。請分析並擷取出其中的所有購買品項清單，必須回傳一個 JSON 陣列。每個品項物件需有以下屬性：\n" +
+                 "- name: 品名\n" +
+                 "- spec: 規格、型號或尺寸（若無請留空，不要寫無）\n" +
+                 "- unit: 單位（如個、張、式、組、顆、台、包等）\n" +
+                 "- qty: 數量（請轉換為數值）\n" +
+                 "- price: 單價（請轉換為數值）\n" +
+                 "請精準讀取每一行。若品名包含規格，請將規格拆出至 spec。";
+                 
+        var payload = {
+          "contents": [
+            {
+              "parts": [
+                { "text": prompt },
+                {
+                  "inlineData": {
+                    "mimeType": mimeType,
+                    "data": base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          "generationConfig": {
+            "responseMimeType": "application/json"
+          }
+        };
+        
+        var options = {
+          "method": "post",
+          "contentType": "application/json",
+          "payload": JSON.stringify(payload),
+          "muteHttpExceptions": true
+        };
+        
+        var response = UrlFetchApp.fetch(url, options);
+        var resCode = response.getResponseCode();
+        var resText = response.getContentText();
+        
+        if (resCode !== 200) {
+          return { success: false, message: "Gemini API 呼叫失敗 (" + resCode + "): " + resText };
+        }
+        
+        var resJson = JSON.parse(resText);
+        var contentText = resJson.candidates[0].content.parts[0].text;
+        
+        var items = JSON.parse(contentText);
+        return { success: true, items: items };
+        
+      } catch (e) {
+        return { success: false, message: "AI 辨識發生錯誤: " + e.toString() };
+      }
+    }

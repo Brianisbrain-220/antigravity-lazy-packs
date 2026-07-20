@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請購單系統 - 管理後台 v3.0.0</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(30, 41, 59, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #c084fc;
+      --primary-hover: #a855f7;
+      --primary-glow: rgba(192, 132, 252, 0.4);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.3);
+      --danger: #ef4444;
+      --accent: #22d3ee;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', 'Noto Sans TC', 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      box-shadow: var(--glass-shadow);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: -100px;
+      width: 250px;
+      height: 250px;
+      background: var(--primary);
+      filter: blur(120px);
+      opacity: 0.2;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #ffffff, #c084fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.025em;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    .version-tag {
+      font-size: 0.8rem;
+      background: rgba(192, 132, 252, 0.2);
+      color: var(--primary);
+      border: 1px solid rgba(192, 132, 252, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+      vertical-align: middle;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+      border-left: 4px solid var(--primary);
+      padding-left: 0.75rem;
+      letter-spacing: 0.05em;
+      margin-top: 1.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, textarea, select {
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #4b5563;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0.75rem 1.5rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px 0 var(--primary-glow);
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 var(--primary-glow);
+      filter: brightness(1.1);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn-container {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .auth-status-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-success { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot-danger { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(192, 132, 252, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid var(--glass-border);
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 100;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      color: var(--text-main);
+      font-size: 0.9rem;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <div id="loadingText" style="font-weight: 500; font-size: 1rem;">正在儲存設定...</div>
+    </div>
+
+    <div class="content-wrapper">
+      <h1>請購系統管理後台<span class="version-tag">v3.0.0</span></h1>
+      <p class="subtitle">設定全校集中管理參數，設定儲存後前台使用者將會自動套用</p>
+
+      <!-- Auth Status -->
+      <div class="auth-status-box">
+        <div>
+          <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem;">系統權限狀態</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Drive/Doc/Spreadsheet API 授權檢測</p>
+        </div>
+        <div id="authStatusIndicator">
+          <div class="status-indicator">
+            <span class="dot dot-success"></span>
+            <span>檢測中...</span>
+          </div>
+        </div>
+      </div>
+
+      <form id="settingsForm" onsubmit="handleSaveSettings(event)">
+        <!-- GAS Config -->
+        <h2 class="section-title">雲端硬碟與範本整合</h2>
+        <div class="form-group">
+          <label for="templateId">Google 文件範本 ID</label>
+          <input type="text" id="templateId" required placeholder="請貼上範本 Google Doc 的唯一 ID">
+        </div>
+        <div class="form-group">
+          <label for="folderId">儲存主資料夾 ID (雲端硬碟)</label>
+          <input type="text" id="folderId" required placeholder="請貼上儲存資料夾的 ID（各處室子資料夾會在此資料夾下自動建立）">
+        </div>
+        <div class="form-group">
+          <label for="spreadsheetId">日誌試算表 ID (資料庫)</label>
+          <input type="text" id="spreadsheetId" required placeholder="請貼上 Log 試算表的 ID">
+        </div>
+
+        <!-- AI Config -->
+        <h2 class="section-title">估價單 AI 辨識設定 (Gemini API)</h2>
+        <div class="form-group">
+          <label for="geminiKey">Gemini API Key (金鑰)</label>
+          <input type="password" id="geminiKey" placeholder="請貼上您的 Google AI Studio API Key（留空則停用 AI 功能）">
+        </div>
+        <div class="form-group">
+          <label for="geminiModel">Gemini 模型名稱</label>
+          <input type="text" id="geminiModel" placeholder="例如：gemini-1.5-flash 或 gemini-2.0-flash">
+        </div>
+
+        <!-- Customizable Departments -->
+        <h2 class="section-title">學校處室管理</h2>
+        <div class="form-group">
+          <label for="departments">處室清單 (請以英文半形逗號分開)</label>
+          <textarea id="departments" rows="3" placeholder="例如：總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="btn-container">
+          <a href="#" id="btnBackToForm" class="btn btn-secondary">
+            ← 返回前台填單
+          </a>
+          <button type="submit" class="btn btn-primary">
+            儲存系統設定
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">設定已更新</div>
+
+  <script>
+    window.addEventListener('load', function() {
+      // 1. Set back to form URL
+      const currentUrl = window.location.href;
+      // Strip ?page=admin from url
+      const backUrl = currentUrl.replace(/[\?&]page=admin/g, '');
+      document.getElementById('btnBackToForm').href = backUrl;
+
+      // 2. Load settings from backend Script Properties
+      showLoading('正在讀取系統設定...');
+      google.script.run
+        .withSuccessHandler(onLoadSettingsSuccess)
+        .withFailureHandler(onActionFailure)
+        .getSystemSettings();
+
+      // 3. Test script auth status
+      google.script.run
+        .withSuccessHandler(onAuthCheckSuccess)
+        .withFailureHandler(onActionFailure)
+        .checkAuthStatus();
+    });
+
+    function showLoading(text) {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      document.getElementById('loadingText').innerText = text;
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    function onLoadSettingsSuccess(settings) {
+      hideLoading();
+      document.getElementById('templateId').value = settings.templateId || '';
+      document.getElementById('folderId').value = settings.folderId || '';
+      document.getElementById('spreadsheetId').value = settings.spreadsheetId || '';
+      document.getElementById('geminiKey').value = settings.geminiKey || '';
+      document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-1.5-flash';
+      document.getElementById('departments').value = settings.departments || '';
+    }
+
+    function onAuthCheckSuccess(result) {
+      const container = document.getElementById('authStatusIndicator');
+      if (result.authorized) {
+        container.innerHTML = `
+          <div class="status-indicator">
+            <span class="dot dot-success"></span>
+            <span style="color: var(--success);">已授權啟用</span>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="status-indicator" style="cursor: pointer;" onclick="triggerManualAuth()">
+            <span class="dot dot-danger"></span>
+            <span style="color: var(--danger); text-decoration: underline;">未授權 / 點此修復</span>
+          </div>
+        `;
+      }
+    }
+
+    function triggerManualAuth() {
+      showLoading('正在連線啟動權限...');
+      google.script.run
+        .withSuccessHandler(function() {
+          showToast('已觸發授權檢測！若沒反應，請於後端執行一次 triggerAuth');
+          // Re-check
+          google.script.run
+            .withSuccessHandler(onAuthCheckSuccess)
+            .withFailureHandler(onActionFailure)
+            .checkAuthStatus();
+        })
+        .withFailureHandler(onActionFailure)
+        .triggerAuth();
+    }
+
+    function handleSaveSettings(event) {
+      event.preventDefault();
+      showLoading('正在儲存設定至雲端屬性...');
+
+      const settings = {
+        templateId: document.getElementById('templateId').value.trim(),
+        folderId: document.getElementById('folderId').value.trim(),
+        spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
+        geminiKey: document.getElementById('geminiKey').value.trim(),
+        geminiModel: document.getElementById('geminiModel').value.trim(),
+        departments: document.getElementById('departments').value.trim()
+      };
+
+      google.script.run
+        .withSuccessHandler(onSaveSuccess)
+        .withFailureHandler(onActionFailure)
+        .saveSystemSettings(settings);
+    }
+
+    function onSaveSuccess(result) {
+      hideLoading();
+      if (result.success) {
+        showToast('系統設定已成功儲存！所有使用者已立即同步。');
+      } else {
+        alert('儲存失敗：' + result.message);
+      }
+    }
+
+    function onActionFailure(error) {
+      hideLoading();
+      alert('發生錯誤：' + error.toString());
+    }
+  </script>
+</body>
+</html>
