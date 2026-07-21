@@ -394,6 +394,29 @@
           <textarea id="departments" rows="3" placeholder="例如：總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室"></textarea>
         </div>
 
+        <!-- Customizable Dropdowns -->
+        <h2 class="section-title">下拉選單管理</h2>
+        <div class="form-group">
+          <label for="businessPlans">業務計畫 (請以英文半形逗號分開)</label>
+          <textarea id="businessPlans" rows="2" placeholder="例如：532國民小學教育"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="workPlans">工作計畫 (請以英文半形逗號分開)</label>
+          <textarea id="workPlans" rows="2" placeholder="例如：53220000各校經常門"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="purposeCategories">用途別 (請以英文半形逗號分開)</label>
+          <textarea id="purposeCategories" rows="2" placeholder="例如：1300各科消耗品"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="fundingSources">經費來源 (請以英文半形逗號分開)</label>
+          <textarea id="fundingSources" rows="2" placeholder="例如：115年度學校經常門"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="itemUnits">品項單位 (請以英文半形逗號分開)</label>
+          <textarea id="itemUnits" rows="2" placeholder="例如：式,個,組,支,盒,條,箱,張,份"></textarea>
+        </div>
+
         <!-- Admin Password Change -->
         <h2 class="section-title">管理員密碼設定</h2>
         <div class="form-group">
@@ -412,7 +435,7 @@
 
         <!-- Actions -->
         <div class="btn-container">
-          <a href="#" id="btnBackToForm" class="btn btn-secondary">
+          <a href="#" id="btnBackToForm" class="btn btn-secondary" target="_top">
             ← 返回前台填單
           </a>
           <button type="submit" class="btn btn-primary">
@@ -456,10 +479,11 @@
     }
 
     function loadAdminPanel() {
-      // Set back to form URL
-      const currentUrl = window.location.href;
-      const backUrl = currentUrl.replace(/[\?&]page=admin/g, '');
-      document.getElementById('btnBackToForm').href = backUrl;
+      // Set back to form URL using server-injected real exec URL
+      var execUrl = '<?= webAppUrl ?>';
+      if (execUrl) {
+        document.getElementById('btnBackToForm').href = execUrl;
+      }
 
       // Load settings from backend Script Properties
       showLoading('正在讀取系統設定...');
@@ -501,6 +525,11 @@
       document.getElementById('geminiKey').value = settings.geminiKey || '';
       document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-1.5-flash';
       document.getElementById('departments').value = settings.departments || '';
+      document.getElementById('businessPlans').value = settings.businessPlans || '';
+      document.getElementById('workPlans').value = settings.workPlans || '';
+      document.getElementById('purposeCategories').value = settings.purposeCategories || '';
+      document.getElementById('fundingSources').value = settings.fundingSources || '';
+      document.getElementById('itemUnits').value = settings.itemUnits || '式,個,組,支,盒,條,箱,張,份';
     }
 
     function onAuthCheckSuccess(result) {
@@ -546,7 +575,12 @@
         spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
         geminiKey: document.getElementById('geminiKey').value.trim(),
         geminiModel: document.getElementById('geminiModel').value.trim(),
-        departments: document.getElementById('departments').value.trim()
+        departments: document.getElementById('departments').value.trim(),
+        businessPlans: document.getElementById('businessPlans').value.trim(),
+        workPlans: document.getElementById('workPlans').value.trim(),
+        purposeCategories: document.getElementById('purposeCategories').value.trim(),
+        fundingSources: document.getElementById('fundingSources').value.trim(),
+        itemUnits: document.getElementById('itemUnits').value.trim()
       };
 
       google.script.run

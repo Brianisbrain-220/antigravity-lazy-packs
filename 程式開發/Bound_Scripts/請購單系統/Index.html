@@ -566,6 +566,8 @@
                 <span id="ocrStatusText" style="font-size: 0.8rem; color: var(--text-muted);">拖放估價單或點此上傳 (圖片或 PDF)</span>
                 <input type="file" id="ocrFile" style="display: none;" accept="image/*,application/pdf" onchange="handleOCRUpload(this)">
               </div>
+              <!-- AI Diagnostic Panel -->
+              <div id="ocrDiagnosticPanel" style="display:none; margin-top:0.75rem; padding:0.85rem 1rem; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:10px; text-align:left;"></div>
             </div>
           </div>
         </div>
@@ -587,33 +589,33 @@
 
         <!-- Budget Section -->
         <h2 class="section-title">預算科目與經費來源 (選填)</h2>
-        
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-          <label for="budgetPreset">常用預算科目與經費來源組合</label>
-          <select id="budgetPreset" onchange="applyBudgetPreset(this)">
-            <option value="custom">-- 自訂輸入 / 載入上次記憶 --</option>
-            <option value="regular">經常門組合 (532國民小學教育 / 53220000各校經常門分支計畫 / 經常門)</option>
-          </select>
-        </div>
 
         <div class="grid-2">
           <div class="form-group">
             <label for="businessPlan">業務計畫</label>
-            <input type="text" id="businessPlan" placeholder="例如：532國民小學教育">
+            <select id="businessPlan">
+              <option value="">-- 請選擇 --</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="workPlan">工作計畫</label>
-            <input type="text" id="workPlan" placeholder="例如：53220000各校經常門">
+            <select id="workPlan">
+              <option value="">-- 請選擇 --</option>
+            </select>
           </div>
         </div>
         <div class="grid-2">
           <div class="form-group">
             <label for="purposeCategory">用途別</label>
-            <input type="text" id="purposeCategory" placeholder="例如：1300各科消耗品">
+            <select id="purposeCategory">
+              <option value="">-- 請選擇 --</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="fundingSource">經費來源</label>
-            <input type="text" id="fundingSource" placeholder="例如：115年度學校經常門、一般行政設備費">
+            <select id="fundingSource">
+              <option value="">-- 請選擇 --</option>
+            </select>
           </div>
         </div>
 
@@ -683,25 +685,30 @@
     </div>
 
     <!-- Result View -->
-    <div class="result-card" id="resultCard">
+    <div class="result-card" id="resultCard" style="display:none; flex-direction:column; align-items:center;">
       <div class="success-icon">✓</div>
       <h2 class="result-title">請購單已成功生成！</h2>
       <p class="result-text" id="resultDetails">
         您請購的文件已經寫入 Google Sheet 歷史紀錄，並成功產出 Word 與 PDF 檔案放置於您的雲端硬碟中。
       </p>
-      
+
+      <!-- PDF Preview -->
+      <div style="width:100%; max-width:800px; margin: 1rem 0; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+        <div style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+          📄 請購單 PDF 預覽
+        </div>
+        <iframe id="pdfPreviewFrame" src="" style="width:100%; height:600px; border:none; background:#fff;" allowfullscreen></iframe>
+      </div>
+
+      <!-- Action Buttons -->
       <div class="result-buttons">
-        <a id="btnDownloadPdf" href="#" target="_blank" class="btn btn-pdf btn-result">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
-            <path d="M14 14V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM4 1a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V1z"/>
-        </a>
-        <a id="btnDownloadDocx" href="#" target="_blank" class="btn btn-secondary btn-result" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.2); color: #818cf8;">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+        <button type="button" class="btn btn-pdf btn-result" onclick="printAndDownloadWord()">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:middle;">
+            <path d="M5 1a2 2 0 0 0-2 2v1h10V3a2 2 0 0 0-2-2H5zm6 8H5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1z"/>
+            <path d="M0 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2H2a2 2 0 0 1-2-2V7zm2.5 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
           </svg>
-          下載 Word 檔 (.docx)
-        </a>
+          🖨️ 列印並下載 Word 檔
+        </button>
         <a id="btnOpenDoc" href="#" target="_blank" class="btn btn-secondary btn-result">
           <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
             <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
@@ -765,8 +772,12 @@
       addNewItemRow();
     });
 
-    // Handle dynamically loaded departments
+    // Global variable for item units
+    window.systemItemUnits = "式,個,組,支,盒,條,箱,張,份".split(',');
+
+    // Handle dynamically loaded settings
     function onLoadDepartmentsSuccess(settings) {
+      // 1. Departments
       const deptSelect = document.getElementById('department');
       deptSelect.innerHTML = '';
       
@@ -777,6 +788,24 @@
         option.innerText = dept.trim();
         deptSelect.appendChild(option);
       });
+
+      // 2. Populate new budget selects
+      populateSelect('businessPlan', settings.businessPlans);
+      populateSelect('workPlan', settings.workPlans);
+      populateSelect('purposeCategory', settings.purposeCategories);
+      populateSelect('fundingSource', settings.fundingSources);
+
+      // Restore budget selections from local storage
+      restoreSelect('businessPlan', 'gas_business_plan');
+      restoreSelect('workPlan', 'gas_work_plan');
+      restoreSelect('purposeCategory', 'gas_purpose_category');
+      restoreSelect('fundingSource', 'gas_funding_source');
+
+      // 3. Update item units globally and update existing rows
+      if (settings.itemUnits) {
+        window.systemItemUnits = settings.itemUnits.split(',');
+        updateAllItemUnitSelects();
+      }
 
       // Restore last selected department
       const lastDept = localStorage.getItem('gas_department');
@@ -838,10 +867,16 @@
       }, false);
     }
 
+    // Store last OCR file info for diagnostics
+    let lastOcrFileInfo = {};
+
     // Handle AI OCR File Upload
     function handleOCRUpload(input) {
       const file = input.files[0];
       if (!file) return;
+
+      lastOcrFileInfo = { name: file.name, size: file.size, mimeType: file.type };
+      hideDiagnosticPanel();
 
       const statusText = document.getElementById('ocrStatusText');
       statusText.innerText = '正在上傳與辨識此檔案...';
@@ -865,12 +900,11 @@
       if (result.success && result.items && result.items.length > 0) {
         statusText.innerText = `成功辨識 ${result.items.length} 筆品項！已載入表格。`;
         statusText.style.color = 'var(--success)';
+        hideDiagnosticPanel();
         
-        // Clear items table body
         const tbody = document.getElementById('itemsTableBody');
         tbody.innerHTML = '';
 
-        // Add rows dynamically from Gemini JSON
         result.items.forEach((item, idx) => {
           addNewItemRow();
           const rows = document.querySelectorAll('#itemsTableBody tr');
@@ -879,7 +913,6 @@
           lastRow.querySelector('.item-name').value = item.name || '';
           lastRow.querySelector('.item-spec').value = item.spec || '';
           
-          // Select item unit if matches option, else put it in custom unit field
           const unitSelect = lastRow.querySelector('.item-unit-select');
           let matched = false;
           for (let opt of unitSelect.options) {
@@ -901,25 +934,90 @@
           lastRow.querySelector('.item-qty').value = item.qty || 0;
           lastRow.querySelector('.item-price').value = item.price || 0;
           
-          // Trigger total calculation
           calculateRowAndGrandTotal(lastRow.querySelector('.item-qty'));
         });
         
-        showToast('AI 估價單辨識成功！請校對表格內之品項。');
+        let successMsg = 'AI 估價單辨識成功！請校對表格內之品項。';
+        if (result.usedModel) {
+            successMsg += ' (使用模型: ' + result.usedModel + ')';
+            statusText.innerText = `成功辨識 ${result.items.length} 筆品項！[${result.usedModel}]`;
+        }
+        
+        showToast(successMsg);
       } else {
-        statusText.innerText = '辨識失敗：' + (result.message || '無法擷取品項。');
-        statusText.style.color = 'var(--danger)';
+        showDiagnosticPanel(result.message || '無法擷取品項。', result.errorCode || 'UNKNOWN');
       }
-      // Reset input
       document.getElementById('ocrFile').value = '';
     }
 
     function onOCRFailure(error) {
       const statusText = document.getElementById('ocrStatusText');
-      statusText.innerText = 'AI 辨識系統出錯，請重試。';
+      statusText.innerText = '辨識失敗，請查看診斷報告。';
       statusText.style.color = 'var(--danger)';
-      alert('辨識出錯：' + error.toString());
+      showDiagnosticPanel(error.toString(), 'SCRIPT_ERROR');
       document.getElementById('ocrFile').value = '';
+    }
+
+    function hideDiagnosticPanel() {
+      const panel = document.getElementById('ocrDiagnosticPanel');
+      if (panel) panel.style.display = 'none';
+    }
+
+    function showDiagnosticPanel(errorMsg, errorCode) {
+      const statusText = document.getElementById('ocrStatusText');
+      statusText.innerText = '辨識失敗，請查看下方診斷報告↓';
+      statusText.style.color = 'var(--danger)';
+
+      const adviceMap = {
+        'MISSING_API_KEY': '尚未設定 Gemini API 金鑰。請聯絡管理員進入「系統設定」後台，貼上正確的 API Key。',
+        'API_KEY_INVALID': 'Gemini API Key 無效。請檢查後台設定的金鑰是否完整復製，或已被停用。',
+        'RESOURCE_EXHAUSTED': 'API 額度已用完或達到每分鐘呼叫上限。請稍候等候 1 分鐘後再試，或更換 API Key。',
+        'INVALID_ARGUMENT': '模型名稱格式錯誤。請進入後台，將「Gemini 模型名稱」改為正確格式（例如： gemini-1.5-flash，不要有空格）。',
+        'FILE_TOO_LARGE': '檔案大小超過 20MB 上限，請將 PDF 或圖片壓縮後再重新上傳。',
+        'SCRIPT_ERROR': 'Google Apps Script 系統發生內部錯誤，請稍候再試一次。',
+        'UNKNOWN': '未知錯誤，請將下方錯誤信息傳送給系統管理員處理。'
+      };
+
+      // Determine advice text
+      let advice = adviceMap['UNKNOWN'];
+      for (const key of Object.keys(adviceMap)) {
+        if (errorCode === key || (errorMsg && errorMsg.includes(key))) {
+          advice = adviceMap[key];
+          break;
+        }
+      }
+      if (errorMsg && errorMsg.includes('400')) advice = adviceMap['INVALID_ARGUMENT'];
+      if (errorMsg && errorMsg.includes('401') || errorMsg && errorMsg.includes('API_KEY_INVALID')) advice = adviceMap['API_KEY_INVALID'];
+      if (errorMsg && errorMsg.includes('403') || errorMsg && errorMsg.includes('RESOURCE_EXHAUSTED')) advice = adviceMap['RESOURCE_EXHAUSTED'];
+      if (lastOcrFileInfo.size && lastOcrFileInfo.size > 20 * 1024 * 1024) advice = adviceMap['FILE_TOO_LARGE'];
+
+      const fileSizeMB = lastOcrFileInfo.size ? (lastOcrFileInfo.size / 1024 / 1024).toFixed(2) : '?';
+
+      const panel = document.getElementById('ocrDiagnosticPanel');
+      panel.innerHTML = `
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+          <span style="font-size:1.1rem;">&#128295;</span>
+          <strong style="color:var(--text-main); font-size:0.95rem;">AI 辨識診斷報告</strong>
+        </div>
+        <table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
+          <tr><td style="color:var(--text-muted); padding:4px 0; width:35%;">📄 檔案</td><td style="color:var(--text-main);">${lastOcrFileInfo.name || '未知'} (${fileSizeMB} MB, ${lastOcrFileInfo.mimeType || '未知格式'})</td></tr>
+          <tr><td style="color:var(--text-muted); padding:4px 0;">🤖 模型</td><td id="diagModelName" style="color:var(--text-main);">讀取中...</td></tr>
+          <tr><td style="color:var(--text-muted); padding:4px 0;">⚠️ 錯誤訊息</td><td style="color: #ef4444; word-break:break-all;">${errorMsg}</td></tr>
+        </table>
+        <div style="margin-top:0.75rem; padding:0.75rem; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:8px; font-size:0.82rem;">
+          <strong style="color:#fbbf24;">💡 排除建議</strong><br>
+          <span style="color:var(--text-main); line-height:1.7;">${advice}</span>
+        </div>
+      `;
+      panel.style.display = 'block';
+
+      // Try to fill in model name from settings
+      google.script.run
+        .withSuccessHandler(function(s) {
+          const modelEl = document.getElementById('diagModelName');
+          if (modelEl) modelEl.innerText = (s.geminiModel || '(未設定)').trim();
+        })
+        .getSystemSettings();
     }
 
     // Trigger history search dynamically
@@ -952,7 +1050,6 @@
         const div = document.createElement('div');
         div.style.padding = '0.5rem';
         div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-        div.style.cursor = 'pointer';
         div.style.fontSize = '0.8rem';
         div.style.transition = 'all 0.2s';
         div.className = 'history-item';
@@ -962,8 +1059,15 @@
             <span>NT$ ${parseFloat(item.total).toLocaleString()}</span>
           </div>
           <div style="color:var(--text-main);margin-top:2px;">用途: ${item.purpose}</div>
+          <div style="margin-top:6px; display:flex; gap:0.5rem;">
+            <button type="button" onclick="selectHistoryItem(${idx})" style="padding:3px 10px; font-size:0.75rem; background:rgba(192,132,252,0.15); border:1px solid rgba(192,132,252,0.3); color:#c084fc; border-radius:6px; cursor:pointer;">
+              ↗️ 帶入基本資料
+            </button>
+            <button type="button" onclick="copyHistoryToNewForm(${idx})" style="padding:3px 10px; font-size:0.75rem; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#4ade80; border-radius:6px; cursor:pointer;">
+              🗒️ 一鍵複製續填
+            </button>
+          </div>
         `;
-        div.onclick = () => selectHistoryItem(idx);
         container.appendChild(div);
       });
     }
@@ -973,7 +1077,20 @@
       container.innerHTML = `<div style="font-size:0.8rem;color:var(--danger);padding:4px;">搜尋出錯: ${error.toString()}</div>`;
     }
 
-    // Autofill form from selected history record
+    // Copy history item including all detail items to form
+    function copyHistoryToNewForm(idx) {
+      const record = historyResultsCache[idx];
+      if (!record) return;
+
+      // Fill all header fields
+      selectHistoryItem(idx);
+
+      showToast('已創複寬全品項到新請購單！請檢查并確認后再送出。');
+      // Close history panel
+      document.getElementById('historyResultsContainer').style.display = 'none';
+    }
+
+    // Autofill form from selected history record (header only)
     function selectHistoryItem(idx) {
       const record = historyResultsCache[idx];
       if (!record) return;
@@ -1048,14 +1165,7 @@
         <td><input type="text" class="table-input item-spec" placeholder="規格/尺寸/型號"></td>
         <td>
           <select class="table-input item-unit-select" onchange="handleUnitChange(this)" required style="width: 100%;">
-            <option value="個">個</option>
-            <option value="張">張</option>
-            <option value="式">式</option>
-            <option value="顆">顆</option>
-            <option value="台">台</option>
-            <option value="批">批</option>
-            <option value="件">件</option>
-            <option value="本">本</option>
+            ${window.systemItemUnits.map(u => `<option value="${u.trim()}">${u.trim()}</option>`).join('')}
             <option value="其他">其他...</option>
           </select>
           <input type="text" class="table-input item-unit-custom" placeholder="輸入單位" style="display: none; width: 100%; margin-top: 4px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
@@ -1211,12 +1321,62 @@
         document.getElementById('formWrapper').style.display = 'none';
         document.getElementById('resultCard').style.display = 'flex';
         
-        // Bind URLs to action buttons
-        document.getElementById('btnDownloadPdf').href = result.pdfUrl;
-        document.getElementById('btnOpenDoc').href = result.docUrl;
-        document.getElementById('btnDownloadDocx').href = result.docxUrl;
+        // Store URLs globally for use by buttons
+        window._lastPdfUrl = result.pdfUrl || '';
+        window._lastDocUrl = result.docUrl || '';
+        window._lastDocxUrl = result.docxUrl || '';
+        window._lastDocxBase64 = result.docxBase64 || '';
+        window._lastDocxName = result.docxName || '請購單.docx';
+
+        // Set PDF preview iframe
+        // Convert Google Drive URL to embeddable preview URL
+        const driveMatch = (result.pdfUrl || '').match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveMatch) {
+          const fileId = driveMatch[1];
+          document.getElementById('pdfPreviewFrame').src =
+            'https://drive.google.com/file/d/' + fileId + '/preview';
+        } else {
+          document.getElementById('pdfPreviewFrame').src = result.pdfUrl || '';
+        }
+
+        // Bind open doc button
+        document.getElementById('btnOpenDoc').href = result.docUrl || '#';
       } else {
         alert('生成請購單失敗：\n' + result.message);
+      }
+    }
+
+    // Print PDF and simultaneously download Word file
+    function printAndDownloadWord() {
+      // 1. Open PDF in a new tab (Must be synchronous to bypass popup blocker)
+      if (window._lastPdfUrl) {
+        window.open(window._lastPdfUrl, '_blank');
+      }
+
+      // 2. Trigger DOCX download via Local Blob
+      if (window._lastDocxBase64) {
+        try {
+          const byteCharacters = atob(window._lastDocxBase64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], {type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+          
+          const a = document.createElement('a');
+          a.href = window.URL.createObjectURL(blob);
+          a.download = window._lastDocxName;
+          a.target = "_blank"; // CRITICAL: Prevents iframe from navigating and crashing to 403
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } catch(e) {
+          console.error("Blob download failed:", e);
+          if (window._lastDocxUrl) window.open(window._lastDocxUrl, '_blank');
+        }
+      } else if (window._lastDocxUrl) {
+        window.open(window._lastDocxUrl, '_blank');
       }
     }
 
@@ -1233,29 +1393,22 @@
       document.getElementById('formWrapper').style.display = 'block';
       document.getElementById('resultCard').style.display = 'none';
       
-      // Reset text inputs
-      document.getElementById('businessPlan').value = '';
-      document.getElementById('workPlan').value = '';
-      document.getElementById('purposeCategory').value = '';
-      document.getElementById('fundingSource').value = '';
+      // Clear PDF preview
+      document.getElementById('pdfPreviewFrame').src = '';
+      window._lastPdfUrl = '';
+      window._lastDocxUrl = '';
+      window._lastDocUrl = '';
+
+      // Reset select/input fields (now selects, not text inputs)
+      document.getElementById('businessPlan').selectedIndex = 0;
+      document.getElementById('workPlan').selectedIndex = 0;
+      document.getElementById('purposeCategory').selectedIndex = 0;
+      document.getElementById('fundingSource').selectedIndex = 0;
       document.getElementById('purpose').value = '';
       document.getElementById('vendor').value = '';
       document.getElementById('isProcurementCard').checked = false;
-      document.getElementById('budgetPreset').value = 'custom';
       
-      // Load settings from localStorage to prepopulate
-      if (localStorage.getItem('gas_business_plan')) {
-        document.getElementById('businessPlan').value = localStorage.getItem('gas_business_plan');
-      }
-      if (localStorage.getItem('gas_work_plan')) {
-        document.getElementById('workPlan').value = localStorage.getItem('gas_work_plan');
-      }
-      if (localStorage.getItem('gas_purpose_category')) {
-        document.getElementById('purposeCategory').value = localStorage.getItem('gas_purpose_category');
-      }
-      if (localStorage.getItem('gas_funding_source')) {
-        document.getElementById('fundingSource').value = localStorage.getItem('gas_funding_source');
-      }
+      // Restore last vendor from localStorage
       if (localStorage.getItem('gas_vendor')) {
         document.getElementById('vendor').value = localStorage.getItem('gas_vendor');
       }
@@ -1267,19 +1420,54 @@
       calculateGrandTotal();
     }
 
-    // Preset budget handler
-    function applyBudgetPreset(select) {
-      const val = select.value;
-      if (val === 'regular') {
-        document.getElementById('businessPlan').value = '532國民小學教育';
-        document.getElementById('workPlan').value = '53220000各校經常門分支計畫';
-        document.getElementById('fundingSource').value = '經常門';
-      } else if (val === 'custom') {
-        // Try reloading from localStorage memory
-        document.getElementById('businessPlan').value = localStorage.getItem('gas_business_plan') || '';
-        document.getElementById('workPlan').value = localStorage.getItem('gas_work_plan') || '';
-        document.getElementById('fundingSource').value = localStorage.getItem('gas_funding_source') || '';
+    // Helper to populate select options
+    function populateSelect(id, commaString) {
+      const select = document.getElementById(id);
+      if (!select) return;
+      select.innerHTML = '<option value="">-- 請選擇 --</option>';
+      if (commaString) {
+        commaString.split(',').forEach(item => {
+          const val = item.trim();
+          if (val) {
+            const option = document.createElement('option');
+            option.value = val;
+            option.innerText = val;
+            select.appendChild(option);
+          }
+        });
       }
+    }
+
+    // Helper to restore select value from localStorage
+    function restoreSelect(id, storageKey) {
+      const select = document.getElementById(id);
+      const val = localStorage.getItem(storageKey);
+      if (select && val) {
+        // Only set if option exists
+        const exists = Array.from(select.options).some(opt => opt.value === val);
+        if (exists) select.value = val;
+      }
+    }
+
+    // Helper to update all existing unit selects when settings load
+    function updateAllItemUnitSelects() {
+      const selects = document.querySelectorAll('.item-unit-select');
+      selects.forEach(select => {
+        const currentVal = select.value;
+        select.innerHTML = window.systemItemUnits.map(u => `<option value="${u.trim()}">${u.trim()}</option>`).join('') + '<option value="其他">其他...</option>';
+        
+        // Restore value if it exists in new options, otherwise set to '其他' and show custom input
+        const exists = Array.from(select.options).some(opt => opt.value === currentVal);
+        if (exists) {
+          select.value = currentVal;
+        } else if (currentVal) {
+          select.value = '其他';
+          const customInput = select.nextElementSibling;
+          customInput.style.display = "block";
+          customInput.required = true;
+          if (currentVal !== '其他') customInput.value = currentVal;
+        }
+      });
     }
   </script>
 </body>

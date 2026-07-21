@@ -177,9 +177,13 @@ function createRequisition(formData) {
       muteHttpExceptions: true
     });
     var docxFile;
+    var docxBase64 = "";
+    var docxName = "";
     if (docxResponse.getResponseCode() === 200) {
       var docxBlob = docxResponse.getBlob().setName(newFileName + ".docx");
       docxFile = targetFolder.createFile(docxBlob);
+      docxBase64 = Utilities.base64Encode(docxBlob.getBytes());
+      docxName = newFileName + ".docx";
     } else {
       console.log("Could not export DOCX. Status: " + docxResponse.getResponseCode());
     }
@@ -206,7 +210,9 @@ function createRequisition(formData) {
     return {
       success: true,
       docUrl: copiedFile.getUrl(),
-      docxUrl: docxFile ? docxFile.getUrl() : "",
+      docxUrl: docxFile ? "https://drive.google.com/uc?export=download&id=" + docxFile.getId() : "",
+      docxBase64: docxBase64,
+      docxName: docxName,
       pdfUrl: pdfFile.getUrl()
     };
 
@@ -562,7 +568,12 @@ function getSystemSettings() {
     geminiKey: props.geminiKey || "",
     geminiModel: props.geminiModel || "gemini-1.5-flash",
     departments: props.departments || "總務處,教務處,學務處,輔導處,幼兒園,校長室,人事室,會計室",
-    adminEmails: props.adminEmails || "brianhung@gm.ccps.kh.edu.tw"
+    adminEmails: props.adminEmails || "brianhung@gm.ccps.kh.edu.tw",
+    businessPlans: props.businessPlans || "",
+    workPlans: props.workPlans || "",
+    purposeCategories: props.purposeCategories || "",
+    fundingSources: props.fundingSources || "",
+    itemUnits: props.itemUnits || "式,個,組,支,盒,條,箱,張,份"
   };
 }
 
@@ -578,6 +589,11 @@ function saveSystemSettings(settings) {
   props.setProperty("geminiModel", settings.geminiModel || "gemini-1.5-flash");
   props.setProperty("departments", settings.departments || "");
   props.setProperty("adminEmails", settings.adminEmails || "brianhung@gm.ccps.kh.edu.tw");
+  props.setProperty("businessPlans", settings.businessPlans || "");
+  props.setProperty("workPlans", settings.workPlans || "");
+  props.setProperty("purposeCategories", settings.purposeCategories || "");
+  props.setProperty("fundingSources", settings.fundingSources || "");
+  props.setProperty("itemUnits", settings.itemUnits || "式,個,組,支,盒,條,箱,張,份");
   return { success: true };
 }
 
@@ -688,13 +704,11 @@ function analyzeQuotation(base64Data, mimeType) {
   try {
     var settings = getSystemSettings();
     var apiKey = settings.geminiKey;
-    var model = settings.geminiModel || "gemini-1.5-flash";
+    var model = (settings.geminiModel || "gemini-3.5-flash").trim().replace(/^models\//, "").replace(/\s+/g, "-");
     
     if (!apiKey) {
-      return { success: false, message: "請先由管理員進入後台設定 Gemini API Key 才能使用 AI 辨識功能。" };
+      return { success: false, message: "請先由管理員進入後台設定 Gemini API Key 才能使用 AI 辨識功能。", errorCode: "MISSING_API_KEY" };
     }
-    
-    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
     
     var prompt = "你是一個學校會計助理。請精準讀取此估價單/報價單。請分析並擷取出其中的所有購買品項清單，必須回傳一個 JSON 陣列。每個品項物件需有以下屬性：\n" +
                  "- name: 品名\n" +
@@ -704,45 +718,100 @@ function analyzeQuotation(base64Data, mimeType) {
                  "- price: 單價（請轉換為數值）\n" +
                  "請精準讀取每一行。若品名包含規格，請將規格拆出至 spec。";
                  
-        var payload = {
-          "contents": [
+    var payload = {
+      "contents": [
+        {
+          "parts": [
+            { "text": prompt },
             {
-              "parts": [
-                { "text": prompt },
-                {
-                  "inlineData": {
-                    "mimeType": mimeType,
-                    "data": base64Data
-                  }
-                }
-              ]
+              "inlineData": {
+                "mimeType": mimeType,
+                "data": base64Data
+              }
             }
-          ],
-          "generationConfig": {
-            "responseMimeType": "application/json"
-          }
-        };
-        
-        var options = {
-          "method": "post",
-          "contentType": "application/json",
-          "payload": JSON.stringify(payload),
-          "muteHttpExceptions": true
-        };
-        
-        var response = UrlFetchApp.fetch(url, options);
-        var resCode = response.getResponseCode();
-        var resText = response.getContentText();
-        
-        if (resCode !== 200) {
-          return { success: false, message: "Gemini API 呼叫失敗 (" + resCode + "): " + resText };
+          ]
         }
+      ],
+      "generationConfig": {
+        "responseMimeType": "application/json"
+      }
+    };
+    
+    var options = {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    };
+    
+    // Auto-fallback: try user's model first, then fallback models if 404
+    var modelsToTry = [model];
+    if (model !== "gemini-3.5-flash") modelsToTry.push("gemini-3.5-flash");
+    if (model !== "gemini-3.1-flash-lite") modelsToTry.push("gemini-3.1-flash-lite");
+    
+    var apiVersions = ["v1beta", "v1"];
+    var response;
+    var resCode;
+    var resText;
+    var lastError = "";
+    var succeeded = false;
+
+    // Nested loop: try each model × each API version
+    for (var m = 0; m < modelsToTry.length && !succeeded; m++) {
+      var tryModel = modelsToTry[m];
+      for (var i = 0; i < apiVersions.length && !succeeded; i++) {
+        var apiVer = apiVersions[i];
+        var url = "https://generativelanguage.googleapis.com/" + apiVer + "/models/" + tryModel + ":generateContent?key=" + apiKey;
+        
+        try {
+          response = UrlFetchApp.fetch(url, options);
+          resCode = response.getResponseCode();
+          resText = response.getContentText();
+          
+          if (resCode === 200) {
+            succeeded = true;
+            lastError = "";
+            break;
+          }
+          
+          // Parse error code from JSON to help diagnostic panel
+          var errCode = "UNKNOWN";
+          try {
+            var errJson = JSON.parse(resText);
+            if (errJson.error && errJson.error.status) {
+              errCode = errJson.error.status;
+            }
+          } catch(e) {}
+          
+          lastError = "Gemini API 呼叫失敗 (模型: " + tryModel + ", 版本: " + apiVer + ", " + resCode + "): " + resText;
+          
+          // If it's a 403 (Quota) or 401 (Auth), no point trying other models/versions
+          if (resCode === 403 || resCode === 401) {
+            return { success: false, message: lastError, errorCode: errCode };
+          }
+          
+          // If 404, try next combination
+        } catch(fetchErr) {
+          lastError = "Fetch 發生異常: " + fetchErr.toString();
+        }
+      }
+    }
+    
+    if (!succeeded) {
+      var finalCode = "MODEL_NOT_FOUND";
+      if (lastError.includes("RESOURCE_EXHAUSTED")) finalCode = "RESOURCE_EXHAUSTED";
+      if (lastError.includes("API_KEY_INVALID")) finalCode = "API_KEY_INVALID";
+      return { success: false, message: "所有模型皆無法使用。最後嘗試的錯誤: " + lastError, errorCode: finalCode };
+    }
         
         var resJson = JSON.parse(resText);
         var contentText = resJson.candidates[0].content.parts[0].text;
         
         var items = JSON.parse(contentText);
-        return { success: true, items: items };
+        // Note: the loop ensures that 'tryModel' holds the name of the model that succeeded.
+        // Wait, 'tryModel' is scoped to the loop but in Javascript var is function-scoped.
+        // Let's explicitly save the successful model in a variable just in case.
+        return { success: true, items: items, usedModel: tryModel };
         
       } catch (e) {
         return { success: false, message: "AI 辨識發生錯誤: " + e.toString() };
