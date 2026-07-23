@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isManager() {
+      return request.auth != null && (
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)).data.role in ['manager', 'sysadmin']) ||
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())).data.role in ['manager', 'sysadmin'])
+      );
+    }
+    
+    function isSysadmin() {
+      return request.auth != null && (
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)).data.role == 'sysadmin') ||
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())).data.role == 'sysadmin')
+      );
+    }
+
+    // 庫存 (Inventory)
+    match /consumables_inventory/{item} {
+      // 所有人可讀取 (供前端顯示)
+      allow read: if true;
+      // 允許前台送出申請時扣除庫存，但僅限異動 stock 欄位
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']);
+      // 僅管理員可管理(新增/刪除/完整異動)
+      allow write: if isManager();
+    }
+
+    // 申請單 (Applications)
+    match /consumables_applications/{app} {
+      // 允許前台匿名寫入 (Kiosk 端送單)
+      allow create: if true;
+      // 僅管理員可讀取與管理單據
+      allow read, update, delete: if isManager();
+    }
+
+    // 管理員名單 (Admins)
+    match /consumables_admins/{admin} {
+      // 登入者皆可讀取自己的角色判定
+      allow read: if request.auth != null;
+      // 僅系統管理員可新增/刪除管理員
+      allow write: if isSysadmin();
+    }
+
+    // 系統設定與金鑰 (Settings)
+    match /consumables_settings/{setting} {
+      // 開放所有人讀取，因為前台 app.js 需要讀取 HUB_API_URL 與設定時間
+      allow read: if true;
+      allow write: if isSysadmin();
+    }
+  }
+}

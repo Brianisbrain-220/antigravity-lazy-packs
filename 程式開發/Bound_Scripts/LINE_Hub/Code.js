@@ -31,6 +31,35 @@ function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) return ContentService.createTextOutput('Bad Request');
     const json = JSON.parse(e.postData.contents);
+    
+    // ======== Intercept Web App POST API Actions (Consumables V3) ========
+    if (json.action === 'checkUser') {
+      const email = String(json.email || '').trim();
+      if (!email) return ContentService.createTextOutput(JSON.stringify({ success: false, message: 'No email provided' })).setMimeType(ContentService.MimeType.JSON);
+      
+      const userResult = SYS_FindUserByEmail(email);
+      if (userResult.found && userResult.userId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, message: '已註冊' })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, message: '未註冊' })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    if (json.action === 'sendEmail') {
+      const { to, subject, htmlBody } = json;
+      if (!to || !to.includes('@')) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, message: 'Invalid Email' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      MailApp.sendEmail({
+        to: to,
+        subject: subject,
+        body: '請使用支援 HTML 的郵件軟體讀取此信件。',
+        htmlBody: htmlBody
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: '寄信成功' })).setMimeType(ContentService.MimeType.JSON);
+    }
+    // =======================================================================
+
     const events = Array.isArray(json.events) ? json.events : [];
     if (!events.length) return ContentService.createTextOutput('OK');
     events.forEach(event => {

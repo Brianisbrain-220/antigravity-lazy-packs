@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中正國小 - 消耗品管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 50; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 摺疊面板轉場動畫 */
+        .accordion-content { transition: max-height 0.3s ease-out, padding 0.3s ease; overflow: hidden; }
+        .chevron-rotate { transition: transform 0.3s ease; }
+        .rotate-180 { transform: rotate(180deg); }
+    </style>
+</head>
+<body>
+
+    <!-- 管理員登入遮罩 -->
+    <div id="admin-login-overlay" class="fixed inset-0 bg-indigo-950/95 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-t-8 border-indigo-600 text-center">
+            <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-lock text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-gray-800 mb-2">管理員安全身分驗證</h3>
+            <p class="text-xs text-gray-500 mb-6">此頁面為系統後台，請輸入管理員 Email 與密碼以存取資料。</p>
+            <input type="email" id="admin-overlay-email" placeholder="請輸入管理員 Email" class="w-full border rounded-lg p-3 text-base mb-3 outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+            <input type="password" id="admin-overlay-password" placeholder="請輸入後台管理密碼" class="w-full border rounded-lg p-3 text-base mb-4 outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+            <button onclick="submitOverlayPassword()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors mb-3">密碼登入驗證</button>
+            <div class="relative my-3">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400 font-bold">或</span></div>
+            </div>
+            <button onclick="signInWithGoogle()" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-lg border border-gray-300 shadow-sm transition-colors flex items-center justify-center gap-2 mb-4">
+                <i class="fa-brands fa-google text-red-500 text-lg"></i> 使用 Google 帳號快速登入
+            </button>
+            <button onclick="exitAdminMode()" class="w-full text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">返回申請前台</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <!-- Html5Qrcode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    
+    <!-- JsBarcode (1D Barcode Generator) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+    <script src="/firebase-config.js"></script>
+    <script src="/app.js" defer></script>
+    
+    <script>
+        const WEB_APP_URL = window.location.origin;
+        let IS_ADMIN = false; // Will be set by Firebase Auth state
+        let inventoryData = [];
+        let manageData = [];
+        let cart = [];
+        let pendingFormData = null;
+    </script>
+
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-3">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg shadow-sm">
+                            <i class="fa-solid fa-box-open"></i>
+                        </div>
+                        <span class="font-bold text-xl text-gray-800 hidden md:block" id="nav-title">消耗品管理系統</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar" id="nav-menu"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="view-apply" class="view-section hidden">
+            <div id="closed-banner" class="w-full bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded shadow-sm hidden">
+                <p class="text-sm font-bold text-yellow-800" id="closed-banner-text"></p>
+            </div>
+            
+            <div id="apply-form-container" class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1 bg-white rounded-xl shadow-sm p-5 md:p-6 border border-gray-100">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-blue-600"></i>填寫申請</h2>
+                    <form id="applyForm" onsubmit="event.preventDefault(); submitCart();">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="apply-name" required placeholder="申請人姓名" class="w-full border rounded-lg p-3 text-base outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="flex gap-2">
+                                <input type="email" id="apply-email" required placeholder="Email (需登記於 LINE Hub)" class="w-full border rounded-lg p-3 text-base outline-none focus:ring-2 focus:ring-blue-500">
+                                <button type="button" onclick="verifyUser()" id="btn-verify-user" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 rounded-lg shrink-0 transition-colors shadow-sm">驗證身分</button>
+                            </div>
+                            <div id="verify-error-msg" class="text-sm text-red-600 mt-2 hidden"></div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <select id="apply-item" class="w-full border rounded-lg p-3 text-base mb-4 bg-white" onchange="updatePriceHint()"></select>
+                            <p id="item-price-hint" class="text-xs text-gray-500 mb-4 font-medium"></p>
+                            <textarea id="apply-special-purpose" rows="2" class="w-full border-2 border-orange-400 rounded-lg p-3 text-base mb-4 bg-orange-50 hidden outline-none focus:ring-2 focus:ring-orange-500" placeholder="⚠️ 申請數量超過 2 份，請填寫特殊用途說明..."></textarea>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center border rounded-lg overflow-hidden bg-white shadow-sm shrink-0">
+                                    <button type="button" onclick="changeQty(-1)" class="px-4 py-3 hover:bg-gray-100 transition-colors"><i class="fa-solid fa-minus"></i></button>
+                                    <input type="number" id="apply-qty" value="1" min="1" class="w-14 md:w-16 text-center border-x py-3 text-base outline-none bg-white">
+                                    <button type="button" onclick="changeQty(1)" class="px-4 py-3 hover:bg-gray-100 transition-colors"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                                <button type="button" onclick="addToCart()" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors">加入清單</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="w-full md:w-80 bg-white rounded-xl shadow-sm p-5 md:p-6 border border-gray-100">
+                    <h2 class="font-bold text-gray-800 mb-4 border-b pb-2">本次清單 (<span id="cart-count">0</span>)</h2>
+                    <div id="cart-items" class="min-h-[150px] mb-4 space-y-2"></div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between mb-4"><span class="font-bold">總價</span><span class="text-xl font-black">$<span id="cart-total">0</span></span></div>
+                        <button type="submit" form="applyForm" id="btn-submit-cart" class="w-full py-3.5 rounded-xl font-bold transition-all shadow-md" disabled>請先加入物品</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-inventory" class="view-section hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-600"></i>即時庫存</h2>
+                <div class="flex items-center gap-2">
+                    <button id="btn-add-item" onclick="openItemModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-colors hidden flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> 新增品項</button>
+                    <button onclick="loadInventory()" class="text-gray-600 bg-white border px-4 py-2 rounded-lg font-bold shadow-sm hover:text-blue-600 transition-colors"><i class="fa-solid fa-rotate-right mr-1"></i>重整</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="inventory-grid"></div>
+        </div>
+
+        <div id="view-manage" class="view-section hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-clipboard-user text-indigo-600"></i>核發領取管理</h2>
+                <div class="flex w-full md:w-auto relative gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                        <input type="text" id="search-applicant" placeholder="搜尋姓名或單號 (USB條碼槍直刷)..." onkeyup="filterManageList()" onkeydown="handleSearchKeyDown(event)" class="border px-10 py-2.5 rounded-lg w-full md:w-72 focus:ring-2 focus:ring-indigo-500 outline-none text-base">
+                    </div>
+                    <button onclick="toggleScanner()" class="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700 transition-colors shrink-0 shadow-sm"><i class="fa-solid fa-qrcode"></i> 掃碼</button>
+                </div>
+            </div>
+            
+            <div id="qr-reader-container" class="hidden mb-6 bg-white p-4 rounded-xl shadow-sm border border-indigo-100">
+                <div id="qr-reader" class="w-full max-w-sm mx-auto"></div>
+                <div class="text-center mt-3 text-sm text-gray-500">將取件 QR Code 對準相機鏡頭，或使用實體 USB 條碼槍直接掃描</div>
+            </div>
+
+            <div class="space-y-8">
+                <!-- 🔴 全部未領取區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-red-600 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block animate-pulse"></span>
+                        全部未領取 (<span id="count-all-pending">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-pending"></div>
+                </div>
+
+                <!-- 🟡 部分領取區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-orange-500 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block"></span>
+                        部分領取 (<span id="count-partial">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-partial"></div>
+                </div>
+
+                <!-- 🟢 已全部領取 / 結案區段 -->
+                <div>
+                    <h3 class="text-base font-bold text-gray-500 mb-3 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        已全部領取 / 結案 (<span id="count-fully-done">0</span>)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="manage-grid-done"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-restock" class="view-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-boxes-packing text-blue-600"></i>批次補貨</h2>
+                <div class="flex items-center gap-2">
+                    <button onclick="seedPresetInventory()" class="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-lg font-bold transition-colors flex items-center gap-1.5"><i class="fa-solid fa-file-import"></i> 匯入常用預設品項</button>
+                    <button onclick="submitBatchRestock()" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> 儲存補貨</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[500px]">
+                        <thead class="bg-gray-50 text-sm"><tr><th class="p-4">品名</th><th class="p-4 text-center">目前</th><th class="p-4">門檻</th><th class="p-4 text-center bg-blue-50">進貨數量</th></tr></thead>
+                        <tbody id="restock-table-body" class="text-sm border-t"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-settings" class="view-section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border p-6 border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-gear text-indigo-600"></i>系統設定</h2>
+                    <p class="text-sm text-gray-500 mb-5">設定系統環境變數與開放時間。</p>
+                    <div id="settings-form-container" class="space-y-4 mb-6"></div>
+                    <button onclick="saveAllSettings()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors">儲存所有設定</button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border p-6 border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-users-gear text-indigo-600"></i>後台管理人員權限管理 (RBAC)</h2>
+                    <p class="text-sm text-gray-500 mb-5">直接輸入同仁 Email 即可快速授權後台管理權限！</p>
+                    <div class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+                        <div class="font-bold text-sm text-indigo-900 mb-2"><i class="fa-solid fa-user-plus mr-1"></i> 輸入 Email 快速新增管理員</div>
+                        <div class="space-y-3">
+                            <input type="email" id="admin-add-email" placeholder="同仁 Email (例如: teacher@gm.ccps.kh.edu.tw)" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-bold">
+                            <div class="flex gap-2">
+                                <select id="admin-add-role" class="flex-1 border rounded-lg p-2.5 text-sm bg-white font-bold">
+                                    <option value="manager">👤 一般管理員 (manager)</option>
+                                    <option value="sysadmin">⚙️ 系統管理員 (sysadmin)</option>
+                                </select>
+                                <button onclick="saveAdminRole()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm transition-colors text-sm">授權儲存</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-3" id="admin-list-container">
+                        <!-- 管理員列表動態渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="customAlert" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-t-8 border-gray-800">
+            <h3 class="font-black text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-circle-exclamation text-yellow-500"></i> 系統提示</h3>
+            <p id="alertMessage" class="text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed font-medium"></p>
+            <button onclick="document.getElementById('customAlert').classList.add('hidden')" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-xl transition-colors">我知道了</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full border-t-8 border-yellow-500">
+            <h3 class="text-xl font-black mb-3">⚠️ 確認覆蓋申請</h3>
+            <p id="confirmMessage" class="text-gray-600 mb-6 leading-relaxed"></p>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('confirmModal').classList.add('hidden')" class="w-1/2 bg-gray-100 hover:bg-gray-200 py-3.5 rounded-xl font-bold transition-colors">返回修改</button>
+                <button onclick="executeOverwrite()" class="w-1/2 bg-yellow-500 hover:bg-yellow-600 text-white py-3.5 rounded-xl font-bold shadow-md transition-colors">確認覆蓋送出</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 取件憑證 Modal -->
+    <div id="qr-voucher-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-t-8 border-indigo-600 text-center relative">
+            <button onclick="closeVoucherModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            <div class="text-[11px] font-black uppercase text-indigo-600 tracking-wider mb-1">中正國小消耗品申請系統</div>
+            <h3 class="text-xl font-black text-gray-800 mb-3">📱 取件條碼憑證</h3>
+            
+            <div class="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-100 mb-3 inline-block shadow-inner w-full">
+                <!-- JsBarcode will render here -->
+                <svg id="voucher-barcode-svg" class="w-full h-24 mx-auto rounded-lg shadow-sm bg-white p-2 border border-gray-100"></svg>
+                <div class="mt-2 text-lg font-black tracking-widest text-indigo-900 font-mono" id="voucher-group-id">G000000</div>
+            </div>
+
+            <div class="text-left text-xs bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4 space-y-1 max-h-36 overflow-y-auto">
+                <div><span class="text-gray-500 font-bold">申請人：</span><span class="font-bold text-gray-800" id="voucher-applicant">--</span></div>
+                <div><span class="text-gray-500 font-bold">時間：</span><span id="voucher-date" class="text-gray-600">--</span></div>
+                <div class="pt-1 border-t border-gray-200 font-bold text-gray-700">申請品項：</div>
+                <div id="voucher-items-list" class="space-y-0.5 text-gray-600"></div>
+            </div>
+
+            <p class="text-[11px] text-gray-400 mb-4">請出示此條碼，並將手機螢幕亮度調亮，交由管理人員以實體掃描槍掃描核發。</p>
+
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl transition-colors text-xs flex items-center justify-center gap-1"><i class="fa-solid fa-print"></i> 列印憑證</button>
+                <button onclick="closeVoucherModal()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition-colors text-xs shadow-md">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 品項編輯 / 新增 Modal -->
+    <div id="item-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full border-t-8 border-indigo-600">
+            <h3 class="text-xl font-black text-gray-800 mb-4 flex items-center gap-2" id="item-modal-title"><i class="fa-solid fa-box"></i> 品項編輯</h3>
+            <input type="hidden" id="modal-item-doc-id">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">品項自訂 ID (選填)</label>
+                    <input type="text" id="modal-item-id" placeholder="如: CH-CHK-WT" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">品名</label>
+                    <input type="text" id="modal-item-name" required placeholder="如: 粉筆-白" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">類別</label>
+                    <input type="text" id="modal-item-category" placeholder="如: 文具 / 耗材" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">單位</label>
+                    <input type="text" id="modal-item-unit" placeholder="如: 盒 / 支 / 個" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">目前庫存</label>
+                    <input type="number" id="modal-item-stock" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">總庫存量</label>
+                    <input type="number" id="modal-item-totalstock" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">單價 ($)</label>
+                    <input type="number" id="modal-item-price" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">低庫存警示門檻</label>
+                    <input type="number" id="modal-item-alert" value="3" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">排序號碼 (數字越小越前面)</label>
+                    <input type="number" id="modal-item-order" value="10" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-center pt-5">
+                    <label class="inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="modal-item-adminonly" class="w-4 h-4 text-indigo-600 rounded">
+                        <span class="ml-2 text-sm font-bold text-red-600">行政專用品項 (教職員隱藏)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeItemModal()" class="w-1/2 bg-gray-100 hover:bg-gray-200 py-3 rounded-xl font-bold transition-colors">取消</button>
+                <button onclick="saveItemFromModal()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md transition-colors">儲存品項</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader" class="flex flex-col gap-4">
+        <div class="spinner"></div><div class="text-white font-bold tracking-widest drop-shadow-md">系統處理中...</div>
+    </div>
+
+</body>
+</html>

@@ -106,3 +106,42 @@ const playBeep = () => {
   }
 };
 ```
+
+---
+
+## 📷 光學掃描物理限制與相機雙軌架構 (Html5Qrcode)
+
+### 1. 物理相容性限制認知
+開發條碼系統時必須明確區分兩種掃描情境與硬體限制：
+- **傳統雷射 / 紅光一維掃描槍**：依靠發射雷射並接收「紙張反光」解碼。**物理上無法讀取會發光的手機/平板螢幕**（因玻璃反光與液晶刷新率干擾）。
+- **2D CMOS 影像掃描槍 / 手機相機**：透過感光元件「拍照」解碼，能順利讀取手機螢幕上的條碼或 QR Code。
+
+### 2. 雙軌備援架構設計
+在設計核發或取件系統時，若使用者需要出示手機憑證，**必須**提供以下雙軌機制：
+- **實體槍模式**：全局鍵盤監聽（上述 `useBarcodeScanner`），適用於紙本憑證或操作員擁有高階 2D 實體掃描槍。
+- **鏡頭相機模式 (Fallback)**：整合 `Html5Qrcode` 相機模組，讓操作員可用手機、平板或 WebCam 直接對準使用者的螢幕掃碼。
+
+### 3. Html5Qrcode 連續掃描回調防護 (Callback Safety)
+在使用 `Html5QrcodeScanner` 時，其啟動函式要求傳入兩個回調（Success 與 Failure）。
+🚨 **致命陷阱**：相機開啟時，每秒會進行多次（例如 10 幀）解碼嘗試。如果在未掃描到條碼的幀中，系統嘗試呼叫 Failure 回調，而開發者**漏未定義**該函式，將導致拋出 `ReferenceError: onScanFailure is not defined`，進而引發相機模組死機或白畫面。
+
+**標準防護實作**：
+```javascript
+// 必須實作空的回調，或做靜默處理
+function onScanFailure(error) {
+    // 通常為了避免干擾，可選擇忽略或輸出 warning
+    // console.warn(`Scan attempt failed: ${error}`);
+}
+
+function onScanSuccess(decodedText) {
+    // 處理掃描成功邏輯
+}
+
+// 初始化時，即使不用處理失敗，也嚴禁省略第二個參數！
+try {
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+    scanner.render(onScanSuccess, onScanFailure); // 👈 這裡的 onScanFailure 絕對不能少！
+} catch (e) {
+    console.error("相機初始化失敗（可能無權限）", e);
+}
+```

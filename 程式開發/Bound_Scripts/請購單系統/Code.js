@@ -164,9 +164,10 @@ function createRequisition(formData) {
     // Save and close doc
     doc.saveAndClose();
 
-    // 6. Generate PDF
-    var pdfBlob = copiedFile.getAs('application/pdf');
-    var pdfFile = targetFolder.createFile(pdfBlob).setName(newFileName + ".pdf");
+    // 6a. Generate PDF
+    var pdfBlob = copiedFile.getAs(MimeType.PDF).setName(newFileName + ".pdf");
+    var pdfFile = targetFolder.createFile(pdfBlob);
+    var pdfBase64 = Utilities.base64Encode(pdfBlob.getBytes());
 
     // 6b. Generate DOCX (Word File)
     var docxUrl = "https://docs.google.com/feeds/download/documents/export/Export?id=" + docId + "&exportFormat=docx";
@@ -200,6 +201,18 @@ function createRequisition(formData) {
       console.log("Could not set sharing settings: " + e.message);
     }
 
+    // Explicitly share with the active user to bypass workspace domain restrictions
+    try {
+      var activeUserEmail = Session.getActiveUser().getEmail();
+      if (activeUserEmail) {
+        copiedFile.addViewer(activeUserEmail);
+        pdfFile.addViewer(activeUserEmail);
+        if (docxFile) docxFile.addViewer(activeUserEmail);
+      }
+    } catch(e) {
+      console.log("Could not add explicit viewer: " + e.message);
+    }
+
     // 7. Write to Google Sheet (Log)
     var logFundingSource = fundingSource;
     if (isProcurementCard) {
@@ -213,7 +226,8 @@ function createRequisition(formData) {
       docxUrl: docxFile ? "https://drive.google.com/uc?export=download&id=" + docxFile.getId() : "",
       docxBase64: docxBase64,
       docxName: docxName,
-      pdfUrl: pdfFile.getUrl()
+      pdfUrl: pdfFile.getUrl(),
+      pdfBase64: pdfBase64
     };
 
   } catch (error) {

@@ -83,15 +83,12 @@ export function useAuth() { return useContext(AuthContext); }
 
 ---
 
-## 🛡️ 健全的 Try-Catch-Finally 載入控制
+## 🛡️ 健全的 Try-Catch-Finally 載入控制與防死鎖 (Deadlock Prevention)
 
-在任何進行非同步讀取的網頁元件中，**禁止在沒有 `finally` 的情況下修改載入狀態**。否則一旦網路斷線或權限不足，頁面將會永久卡在「轉圈圈」或「載入中」狀態。
+在任何進行非同步讀取的網頁元件中，**禁止在沒有 `finally` 的情況下修改載入狀態**。否則一旦網路斷線、權限不足，或**發生未捕捉的同步錯誤**，頁面將會永久卡在「轉圈圈」或「載入中」狀態。
 
-### 元件載入規範模板
+### 1. 標準 Async/Await 元件載入規範
 ```javascript
-const [data, setData] = useState([]);
-const [loading, setLoading] = useState(true);
-
 const loadData = async () => {
   setLoading(true);
   try {
@@ -99,9 +96,45 @@ const loadData = async () => {
     setData(result);
   } catch (e) {
     console.error("載入失敗：", e);
-    showToastNotification(e.message, 'error'); // 透過 Toast 友好顯示錯誤
+    showToastNotification(e.message, 'error');
   } finally {
-    setLoading(false); // 確保不論成功或失敗都會停止轉圈圈
+    setLoading(false); // 👈 確保不論成功或失敗都會停止轉圈圈
   }
 };
 ```
+
+### 2. Firestore `onSnapshot` 回調的致命陷阱與防護
+在使用 Firestore 即時監聽 (`onSnapshot`) 時，如果開發者在成功回調（Success Callback）內部，使用了**未定義的變數**或引發了 `ReferenceError`，這會導致同步崩潰。
+🚨 **後果**：該次 Callback 執行鏈直接斷裂，寫在底部的 `setLoading(false)` 永遠無法被執行，導致 UI 卡死。
+
+**防護範本**：
+```javascript
+const unsubscribe = onSnapshot(queryRef, (snap) => {
+  try {
+    const data = snap.docs.map(doc => {
+      const d = doc.data();
+      // 🚨 防護：動態資料綁定時，必須使用 Optional Chaining 或預設值！
+      // 否則若資料庫缺少該欄位，呼叫 .toLowerCase() 會導致整個 onSnapshot 崩潰！
+      return {
+        id: doc.id,
+        name: d.applicantName || '未知', // 安全的預設值
+        remark: d.remark?.substring(0, 10) || '' // 安全的安全鏈
+      };
+    });
+    
+    // 渲染 UI (Template Literals)
+    renderList(data);
+  } catch (err) {
+    console.error("資料渲染崩潰", err);
+  } finally {
+    setLoading(false); // 👈 即使上方 render 發生 ReferenceError，也能安全關閉轉圈圈！
+  }
+}, (error) => {
+  console.error("權限或連線錯誤", error);
+  setLoading(false);
+});
+```
+
+**重要觀念總結**：
+1. `onSnapshot` 的第二個參數 (Error Callback) 只能捕捉 **Firebase 本身的錯誤**（如無權限讀取）。
+2. Callback **內部**發生的 JavaScript 語法錯誤（如 `warningBadge is not defined`），必須靠內部的 `try...finally` 來捕捉並釋放 UI 鎖！
