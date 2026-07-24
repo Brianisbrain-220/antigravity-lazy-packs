@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  getUsers, createUser, updateUser, deleteUser, bulkImportUsers,
+  getUsers, createUser, updateUser, deleteUser, bulkImportUsers, bulkDeleteUsers,
   getCategories, createCategory, deleteCategory
 } from '../db';
 import { useToast } from '../ToastContext';
@@ -19,6 +19,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ category: '', name: '', contactName: '', email: '' });
   const [newCatName, setNewCatName] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const fileRef = useRef(null);
 
   const load = async () => {
@@ -45,6 +46,46 @@ export default function UsersPage() {
     const matchSearch = !search || u.name.includes(search) || (u.contactName || '').includes(search) || (u.email || '').includes(search);
     return matchCat && matchSearch;
   });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(u => u.id)));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    // 檢查是否有單位持有卡片
+    const holdingCards = users.filter(u => selectedIds.has(u.id) && u.currentCardId);
+    if (holdingCards.length > 0) {
+      toast(`無法批次刪除，因為有 ${holdingCards.length} 個單位目前持有冷氣卡，請先歸還卡片。`, 'error');
+      return;
+    }
+
+    if (!confirm(`⚠️ 確定要永久刪除選取的 ${selectedIds.size} 筆借用單位資料嗎？此操作無法復原！`)) return;
+    
+    setProcessing(true);
+    try {
+      await bulkDeleteUsers(Array.from(selectedIds));
+      toast(`✅ 已成功刪除 ${selectedIds.size} 筆單位`, 'success');
+      setSelectedIds(new Set());
+      load();
+    } catch (e) {
+      toast('批次刪除失敗：' + e.message, 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast('請填寫名稱', 'error'); return; }
@@ -180,6 +221,11 @@ export default function UsersPage() {
           </select>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          {selectedIds.size > 0 && (
+            <button className="btn btn-danger" onClick={handleBulkDelete} disabled={processing}>
+              🗑️ 刪除選取的 {selectedIds.size} 筆
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setShowCatModal(true)}>🏷️ 類別管理</button>
           <button className="btn btn-secondary" onClick={handleExportTemplate}>📥 下載範本</button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleFileImport} />
@@ -197,6 +243,13 @@ export default function UsersPage() {
           <table>
             <thead>
               <tr>
+                <th style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th>類別</th>
                 <th>名稱</th>
                 <th>聯絡人</th>
@@ -208,7 +261,14 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {filtered.map(u => (
-                <tr key={u.id}>
+                <tr key={u.id} className={selectedIds.has(u.id) ? 'selected-row' : ''}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.has(u.id)}
+                      onChange={() => toggleSelectOne(u.id)}
+                    />
+                  </td>
                   <td><span className="badge badge-gray">{u.category}</span></td>
                   <td style={{ fontWeight: '600' }}>{u.name}</td>
                   <td style={{ fontSize: '12px' }}>{u.contactName || '—'}</td>

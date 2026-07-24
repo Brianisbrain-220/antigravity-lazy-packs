@@ -44,6 +44,14 @@ export async function bulkImportUsers(userList) {
   await batch.commit();
 }
 
+export async function bulkDeleteUsers(userIds) {
+  const batch = writeBatch(db);
+  userIds.forEach(id => {
+    batch.delete(doc(db, 'users', id));
+  });
+  await batch.commit();
+}
+
 // ===================== CARDS (冷氣卡) =====================
 
 export async function getCards() {
