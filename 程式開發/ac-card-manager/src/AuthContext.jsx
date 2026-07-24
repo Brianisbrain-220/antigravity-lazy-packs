@@ -10,15 +10,26 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [adminVerified, setAdminVerified] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        const ok = await isAdmin(firebaseUser.email);
-        setAdminVerified(ok);
+        try {
+          const ok = await Promise.race([
+            isAdmin(firebaseUser.email),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('驗證逾時，可能是網路連線異常或資料庫限制。')), 10000))
+          ]);
+          setAdminVerified(ok);
+        } catch (e) {
+          console.error("Auth Error:", e);
+          setAuthError(e.message || "發生未知驗證錯誤");
+          setAdminVerified(false);
+        }
       } else {
         setAdminVerified(false);
+        setAuthError(null);
       }
       setLoading(false);
     });
@@ -34,7 +45,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, adminVerified, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, adminVerified, loading, authError, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

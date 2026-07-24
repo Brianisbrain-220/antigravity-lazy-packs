@@ -16,7 +16,7 @@ import BottomNav from './components/BottomNav';
 import './index.css';
 
 function AppInner() {
-  const { user, adminVerified, loading } = useAuth();
+  const { user, adminVerified, loading, authError } = useAuth();
   const [page, setPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -29,6 +29,39 @@ function AppInner() {
     <div className="loading-screen">
       <div className="spinner"></div>
       <p>驗證身份中...</p>
+    </div>
+  );
+
+  if (authError) return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#0a0e1a',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'rgba(255,107,107,0.08)',
+        border: '1px solid rgba(255,107,107,0.25)',
+        borderRadius: '24px',
+        padding: '44px',
+        textAlign: 'center',
+        maxWidth: '420px'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+        <h2 style={{ color: '#ff6b6b', marginBottom: '10px' }}>系統發生錯誤</h2>
+        <p style={{ color: 'rgba(240,244,255,0.6)', fontSize: '13px', marginBottom: '24px' }}>
+          {authError}
+        </p>
+        <button
+          className="btn btn-danger"
+          onClick={() => signOut(auth)}
+          style={{ width: '100%' }}
+        >
+          登出並重試
+        </button>
+      </div>
     </div>
   );
 
