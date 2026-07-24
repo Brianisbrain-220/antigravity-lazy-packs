@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  getUsers, createUser, updateUser, deleteUser, bulkImportUsers, bulkDeleteUsers,
+  getUsers, createUser, updateUser, deleteUser, bulkImportUsers, bulkDeleteUsers, updateUsersBatch,
   getCategories, createCategory, deleteCategory
 } from '../db';
 import { useToast } from '../ToastContext';
@@ -84,6 +84,49 @@ export default function UsersPage() {
       load();
     } catch (e) {
       toast('批次刪除失敗：' + e.message, 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleMove = async (index, direction) => {
+    if (filterCat === '全部') {
+      toast('請先在上方選擇特定的「類別」，才能進行上下排序', 'error');
+      return;
+    }
+    if (search) {
+      toast('搜尋狀態下無法排序，請先清空搜尋框', 'error');
+      return;
+    }
+    if (direction === -1 && index === 0) return;
+    if (direction === 1 && index === filtered.length - 1) return;
+
+    const current = filtered[index];
+    const target = filtered[index + direction];
+
+    setProcessing(true);
+    try {
+      const updates = [];
+      const normalized = [...filtered];
+      
+      // 在本地陣列中交換位置
+      normalized[index] = target;
+      normalized[index + direction] = current;
+
+      // 重新賦予整個類別連貫的排序索引
+      normalized.forEach((u, i) => {
+        if (u.sortOrder !== i) {
+          updates.push({ id: u.id, sortOrder: i });
+        }
+      });
+
+      if (updates.length > 0) {
+        await updateUsersBatch(updates);
+      }
+      await load();
+    } catch (e) {
+      console.error(e);
+      toast('排序失敗', 'error');
     } finally {
       setProcessing(false);
     }
@@ -267,7 +310,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => (
+              {filtered.map((u, i) => (
                 <tr key={u.id} className={selectedIds.has(u.id) ? 'selected-row' : ''}>
                   <td>
                     <input 
@@ -286,6 +329,20 @@ export default function UsersPage() {
                   <td>{statusBadge[u.status] || <span className="badge badge-gray">{u.status}</span>}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }}>
+                      <button 
+                        className="btn btn-sm btn-secondary" 
+                        title="上移"
+                        onClick={() => handleMove(i, -1)} 
+                        disabled={i === 0 || search || filterCat === '全部' || processing}
+                        style={{ padding: '4px 8px' }}
+                      >↑</button>
+                      <button 
+                        className="btn btn-sm btn-secondary" 
+                        title="下移"
+                        onClick={() => handleMove(i, 1)} 
+                        disabled={i === filtered.length - 1 || search || filterCat === '全部' || processing}
+                        style={{ padding: '4px 8px' }}
+                      >↓</button>
                       <button className="btn btn-sm btn-secondary" onClick={() => {
                         setEditTarget(u);
                         setForm({ category: u.category, name: u.name, contactName: u.contactName || '', email: u.email || '' });

@@ -12,6 +12,9 @@ export async function getUsers() {
   return list.sort((a, b) => {
     const catComp = String(a.category || '').localeCompare(String(b.category || ''), 'zh-Hant');
     if (catComp !== 0) return catComp;
+    const orderA = a.sortOrder ?? 999;
+    const orderB = b.sortOrder ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
     return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant');
   });
 }
@@ -23,8 +26,16 @@ export async function getUserById(id) {
 
 export async function createUser(data) {
   const ref = doc(collection(db, 'users'));
-  await setDoc(ref, { ...data, currentCardId: null, status: 'idle', createdAt: serverTimestamp() });
+  await setDoc(ref, { ...data, currentCardId: null, status: 'idle', createdAt: serverTimestamp(), sortOrder: 999 });
   return ref.id;
+}
+
+export async function updateUsersBatch(updates) {
+  const batch = writeBatch(db);
+  updates.forEach(u => {
+    batch.update(doc(db, 'users', u.id), { sortOrder: u.sortOrder });
+  });
+  await batch.commit();
 }
 
 export async function updateUser(id, data) {
