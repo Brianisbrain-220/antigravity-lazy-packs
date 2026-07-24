@@ -5,6 +5,7 @@ import {
 } from '../db';
 import { useToast } from '../ToastContext';
 import * as XLSX from 'xlsx';
+import PrintRegistrationForm from '../components/PrintRegistrationForm';
 
 export default function UsersPage() {
   const toast = useToast();
@@ -20,6 +21,7 @@ export default function UsersPage() {
   const [newCatName, setNewCatName] = useState('');
   const [processing, setProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showPrint, setShowPrint] = useState(false);
   const fileRef = useRef(null);
 
   const load = async () => {
@@ -202,6 +204,10 @@ export default function UsersPage() {
 
   if (loading) return <div className="loading-screen"><div className="spinner"></div><p>載入中...</p></div>;
 
+  if (showPrint) {
+    return <PrintRegistrationForm users={users} categories={categories} onClose={() => setShowPrint(false)} />;
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -227,6 +233,7 @@ export default function UsersPage() {
             </button>
           )}
           <button className="btn btn-secondary" onClick={() => setShowCatModal(true)}>🏷️ 類別管理</button>
+          <button className="btn btn-secondary" onClick={() => setShowPrint(true)}>🖨️ 列印領用表</button>
           <button className="btn btn-secondary" onClick={handleExportTemplate}>📥 下載範本</button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleFileImport} />
           <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>📤 批次匯入</button>
