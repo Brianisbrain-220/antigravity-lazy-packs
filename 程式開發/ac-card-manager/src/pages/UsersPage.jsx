@@ -22,6 +22,8 @@ export default function UsersPage() {
   const [processing, setProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showPrint, setShowPrint] = useState(false);
+  const [dragItemIndex, setDragItemIndex] = useState(null);
+  const [dragOverItemIndex, setDragOverItemIndex] = useState(null);
   const fileRef = useRef(null);
 
   const load = async () => {
@@ -130,6 +132,50 @@ export default function UsersPage() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleDragStart = (e, index) => {
+    if (search || filterCat === '全部') {
+      e.preventDefault();
+      toast('請先選擇特定類別且清空搜尋才能拖曳排序', 'error');
+      return;
+    }
+    setDragItemIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnter = (e, index) => {
+    if (dragItemIndex === null) return;
+    setDragOverItemIndex(index);
+  };
+
+  const handleDragEnd = async () => {
+    if (dragItemIndex !== null && dragOverItemIndex !== null && dragItemIndex !== dragOverItemIndex) {
+      setProcessing(true);
+      try {
+        const updates = [];
+        const normalized = [...filtered];
+        const [draggedItem] = normalized.splice(dragItemIndex, 1);
+        normalized.splice(dragOverItemIndex, 0, draggedItem);
+        
+        normalized.forEach((u, i) => {
+          if (u.sortOrder !== i) {
+            updates.push({ id: u.id, sortOrder: i });
+          }
+        });
+        if (updates.length > 0) {
+          await updateUsersBatch(updates);
+        }
+        await load();
+      } catch (e) {
+        console.error(e);
+        toast('排序失敗', 'error');
+      } finally {
+        setProcessing(false);
+      }
+    }
+    setDragItemIndex(null);
+    setDragOverItemIndex(null);
   };
 
   const handleSave = async () => {
@@ -311,7 +357,22 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {filtered.map((u, i) => (
-                <tr key={u.id} className={selectedIds.has(u.id) ? 'selected-row' : ''}>
+                <tr 
+                  key={u.id} 
+                  className={selectedIds.has(u.id) ? 'selected-row' : ''}
+                  draggable={!search && filterCat !== '全部' && !processing}
+                  onDragStart={(e) => handleDragStart(e, i)}
+                  onDragEnter={(e) => handleDragEnter(e, i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnd={handleDragEnd}
+                  style={{ 
+                    opacity: dragItemIndex === i ? 0.5 : 1,
+                    borderTop: dragOverItemIndex === i && dragItemIndex > i ? '2px solid var(--accent-blue)' : undefined,
+                    borderBottom: dragOverItemIndex === i && dragItemIndex < i ? '2px solid var(--accent-blue)' : undefined,
+                    cursor: (!search && filterCat !== '全部') ? 'grab' : 'default',
+                    transition: 'all 0.1s ease'
+                  }}
+                >
                   <td>
                     <input 
                       type="checkbox" 
@@ -329,20 +390,12 @@ export default function UsersPage() {
                   <td>{statusBadge[u.status] || <span className="badge badge-gray">{u.status}</span>}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button 
-                        className="btn btn-sm btn-secondary" 
-                        title="上移"
-                        onClick={() => handleMove(i, -1)} 
-                        disabled={i === 0 || search || filterCat === '全部' || processing}
-                        style={{ padding: '4px 8px' }}
-                      >↑</button>
-                      <button 
-                        className="btn btn-sm btn-secondary" 
-                        title="下移"
-                        onClick={() => handleMove(i, 1)} 
-                        disabled={i === filtered.length - 1 || search || filterCat === '全部' || processing}
-                        style={{ padding: '4px 8px' }}
-                      >↓</button>
+                      <div 
+                        title="也可以直接按住整列來拖曳"
+                        style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'grab', padding: '0 4px', fontSize: '18px' }}
+                      >
+                        ☰
+                      </div>
                       <button className="btn btn-sm btn-secondary" onClick={() => {
                         setEditTarget(u);
                         setForm({ category: u.category, name: u.name, contactName: u.contactName || '', email: u.email || '' });
