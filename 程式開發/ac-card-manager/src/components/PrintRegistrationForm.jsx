@@ -40,13 +40,13 @@ export default function PrintRegistrationForm({ users, categories, onClose }) {
             <h2 className="print-title">
               {academicYear}學年度苓雅區中正國小冷氣卡領用登記表－ {group.category}卡
             </h2>
-            <table className="print-table">
+            <table className="print-table" style={{ borderBottom: '1.5px solid #000' }}>
               <thead>
                 <tr>
                   <th style={{ width: '10%' }}>班級</th>
                   <th style={{ width: '10%' }}>卡號</th>
                   <th style={{ width: '15%' }}>領用人簽名</th>
-                  <th colSpan={3} style={{ width: '35%' }}>累計加值金額紀錄(起始金額2000)</th>
+                  <th colSpan={5} style={{ width: '35%' }}>累計加值金額紀錄(起始金額2000)</th>
                   <th style={{ width: '15%' }}>繳回時餘額</th>
                   <th style={{ width: '15%' }}>備註</th>
                 </tr>
@@ -56,6 +56,8 @@ export default function PrintRegistrationForm({ users, categories, onClose }) {
                   <tr key={user.id}>
                     <td className="center-text">{user.name}</td>
                     <td className="center-text">{user.currentCardId || ''}</td>
+                    <td></td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
