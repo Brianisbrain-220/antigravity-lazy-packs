@@ -10,9 +10,9 @@ export async function getUsers() {
   const snap = await getDocs(collection(db, 'users'));
   const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   return list.sort((a, b) => {
-    const catComp = (a.category || '').localeCompare(b.category || '', 'zh-Hant');
+    const catComp = String(a.category || '').localeCompare(String(b.category || ''), 'zh-Hant');
     if (catComp !== 0) return catComp;
-    return (a.name || '').localeCompare(b.name || '', 'zh-Hant');
+    return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant');
   });
 }
 
