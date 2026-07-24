@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAdmins, addAdmin, removeAdmin } from '../db';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
+import { APP_VERSION, VERSION_DATE } from '../config/version';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -149,7 +150,7 @@ export default function SettingsPage() {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <span style={{ color: 'var(--text-muted)', width: '120px' }}>系統版本</span>
-              <span>v1.0.0</span>
+              <span>{APP_VERSION} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({VERSION_DATE})</span></span>
             </div>
           </div>
         </div>

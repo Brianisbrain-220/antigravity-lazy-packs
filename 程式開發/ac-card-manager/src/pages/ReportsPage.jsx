@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getRecords, getUsers, getCards, getOverdueRecords } from '../db';
 import { useToast } from '../ToastContext';
 import * as XLSX from 'xlsx';
-
-const GAS_WEBHOOK_URL = ''; // 待填入 GAS Web App URL
+import { sendEmail } from '../utils/email';
 
 export default function ReportsPage() {
   const toast = useToast();
@@ -76,26 +75,19 @@ export default function ReportsPage() {
   const handleSendNotice = async (record) => {
     const user = getUserById(record.userId);
     if (!user?.email) { toast('此借用單位沒有填寫信箱', 'error'); return; }
-    if (!GAS_WEBHOOK_URL) {
-      toast('GAS 發信 URL 尚未設定，請聯絡系統管理員', 'error');
-      return;
-    }
+    
     setSendingId(record.id);
     setSending(true);
     try {
-      const res = await fetch(GAS_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sendOverdueNotice',
-          to: user.email,
-          name: user.contactName || user.name,
-          unit: user.name,
-          cardId: record.cardId,
-          dueDate: record.dueDate?.toDate ? record.dueDate.toDate().toLocaleDateString('zh-TW') : '—',
-          overdueDays: record.overdueDays
-        })
-      });
+      const dueDateStr = record.dueDate?.toDate ? record.dueDate.toDate().toLocaleDateString('zh-TW') : '—';
+      await sendEmail(
+        user.email,
+        '🚨 [中正國小冷氣卡] 逾期歸還通知',
+        `<p>${user.contactName || user.name} 您好，</p>
+         <p>貴單位借用的冷氣卡 (卡號: <strong>${record.cardId}</strong>) 原訂應於 <strong>${dueDateStr}</strong> 歸還。</p>
+         <p style="color: red;">目前已逾期 <strong>${record.overdueDays}</strong> 天。</p>
+         <p>麻煩您盡速將冷氣卡歸還至管理單位，感謝您的配合！</p>`
+      );
       toast(`✅ 已發送逾期通知至 ${user.email}`, 'success');
     } catch (e) {
       toast('發信失敗：' + e.message, 'error');

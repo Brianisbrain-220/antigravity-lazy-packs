@@ -11,6 +11,8 @@ import CardManagePage from './pages/CardManagePage';
 import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import ApplicationsPage from './pages/ApplicationsPage';
+import ApplyPage from './pages/ApplyPage';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import './index.css';
@@ -110,6 +112,7 @@ function AppInner() {
     cards: <CardManagePage />,
     users: <UsersPage />,
     reports: <ReportsPage />,
+    applications: <ApplicationsPage />,
     settings: <SettingsPage />
   };
 
@@ -148,6 +151,15 @@ function AppInner() {
 }
 
 export default function App() {
+  const path = window.location.pathname;
+  if (path === '/apply') {
+    return (
+      <ToastProvider>
+        <ApplyPage />
+      </ToastProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <ToastProvider>

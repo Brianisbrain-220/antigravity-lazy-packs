@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../AuthContext';
+import { APP_VERSION } from '../config/version';
 
 const NAV = [
   { section: '主要功能' },
@@ -11,6 +12,7 @@ const NAV = [
   { key: 'users', icon: '👥', label: '借用單位' },
   { section: '報表設定' },
   { key: 'reports', icon: '📋', label: '報表管理' },
+  { key: 'applications', icon: '📝', label: '臨時卡審核' },
   { key: 'settings', icon: '⚙️', label: '系統設定' }
 ];
 
@@ -42,13 +44,18 @@ export default function Sidebar({ page, onNavigate, isOpen, onClose }) {
         })}
       </div>
 
-      <div className="sidebar-user">
-        {user?.photoURL && <img src={user.photoURL} alt="avatar" />}
-        <div className="sidebar-user-info">
-          <p>{user?.displayName || '管理員'}</p>
-          <p>{user?.email}</p>
+      <div className="sidebar-user" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {user?.photoURL && <img src={user.photoURL} alt="avatar" />}
+          <div className="sidebar-user-info" style={{ flex: 1 }}>
+            <p>{user?.displayName || '管理員'}</p>
+            <p>{user?.email}</p>
+          </div>
+          <button className="logout-btn" onClick={logout} title="登出">↩</button>
         </div>
-        <button className="logout-btn" onClick={logout} title="登出">↩</button>
+        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '4px' }}>
+          {APP_VERSION}
+        </div>
       </div>
     </nav>
   );
