@@ -53,7 +53,7 @@ export default function Sidebar({ page, onNavigate, isOpen, onClose }) {
           </div>
           <button className="logout-btn" onClick={logout} title="登出">↩</button>
         </div>
-        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '4px' }}>
+        <div style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textAlign: 'center', marginTop: '4px' }}>
           {APP_VERSION}
         </div>
       </div>

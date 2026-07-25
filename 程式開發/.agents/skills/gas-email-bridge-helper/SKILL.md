@@ -39,11 +39,9 @@ function sendEmail(req) {
   if (!to || !to.includes('@')) return { success: false, message: '無效的收件信箱' };
   
   try {
-    MailApp.sendEmail({
-      to: to,
-      subject: subject,
-      body: plainBody || '請使用支援 HTML 的郵件客戶端讀取此信件。',
-      htmlBody: htmlBody
+    GmailApp.sendEmail(to, subject, plainBody || '請使用支援 HTML 的郵件客戶端讀取此信件。', {
+      htmlBody: htmlBody,
+      name: "系統通知"
     });
     return { success: true, message: '發信成功' };
   } catch (e) {
@@ -51,6 +49,28 @@ function sendEmail(req) {
   }
 }
 ```
+
+---
+
+## ⚠️ 踩坑與防禦指南：Google Workspace 權限快取黑洞
+
+在開發與更新 GAS 發信橋接器時，極易遇到以下兩個致命權限問題：
+
+### 1. MailApp 被 Google Workspace 默默封鎖
+**症狀**：Web App 執行身分設為 `我 (USER_DEPLOYING)` 時，呼叫 `MailApp.sendEmail` 拋出 `Exception: 你沒有呼叫「MailApp.sendEmail」的權限`。
+**原因**：Google 教育版/企業版針對匿名 Web App 防止垃圾信件濫用。
+**解法**：強制將寄信引擎升級為 `GmailApp.sendEmail`，並在 `appsscript.json` 中宣告最高權限 `https://mail.google.com/`。
+
+### 2. GAS 網頁編輯器「授權快取黑洞」 (The Authorization Cache Bug)
+**症狀**：透過 `clasp` 推送更新了 `GmailApp` 程式碼與 `appsscript.json` 後，點擊「新增部署作業」卻沒有跳出 OAuth 授權視窗，導致新版 Web App 依舊因為缺乏權限而崩潰。
+**解法 (強制喚醒授權)**：
+只要您有更新 GAS 的權限範圍（例如剛換上 GmailApp），在部署前 **絕對必須** 執行以下動作：
+1. 開啟 GAS 網頁編輯器，進入 `Code.js`。
+2. **手動敲擊一個空白鍵 (破壞 AST 快取)**。
+3. **點擊儲存 💾** (強制系統重新解析程式碼)。
+4. 選擇上方任何一個包含 `GmailApp` 的函式（例如可寫一個空的 `SYS_AuthMailApp`）並點擊 **「執行」**。
+5. 此時才會真正跳出「需要審查權限」的藍色視窗！完成授權（進階 -> 前往不安全 -> 允許）後。
+6. 最後再進行「新增部署作業」，產生的網址才真正帶有發信權限。
 
 ---
 

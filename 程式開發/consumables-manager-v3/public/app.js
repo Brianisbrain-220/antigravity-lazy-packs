@@ -14,6 +14,13 @@ const safeFormatDate = (val) => {
 let SETTINGS = {};
 // db and auth are already initialized in firebase-config.js
 
+/**
+ * @version v3.1.3
+ * @date 2026-07-23
+ * @description 升級為 GmailApp 寄信引擎，突破 Google Workspace 安全限制
+ */
+console.log('%c Consumables Manager %c v3.1.3 ', 'background:#2563eb;color:#fff;border-radius:3px 0 0 3px;padding:2px;', 'background:#10b981;color:#fff;border-radius:0 3px 3px 0;padding:2px;');
+
 // --- Firebase Auth & Routing ---
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -40,6 +47,127 @@ function setupKioskMode() {
     
     setupNavigation();
     switchTab('apply');
+
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const cancelGroupId = urlParams.get('cancel');
+    const queryEmail = urlParams.get('query');
+    const userEmail = urlParams.get('email');
+
+    if (cancelGroupId && userEmail) {
+        setTimeout(() => handleCancelRequest(cancelGroupId, userEmail), 500);
+    } else if (queryEmail) {
+        setTimeout(() => handleQueryRequest(queryEmail), 500);
+    }
+}
+
+async function handleCancelRequest(groupId, email) {
+    if(!confirm(`您確定要取消單號 ${groupId} 的所有未領取品項嗎？\n(已領取的項目不受影響)`)) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+    }
+    showLoader();
+    try {
+        const snap = await db.collection('consumables_applications')
+                             .where('groupId', '==', groupId)
+                             .where('applicantEmail', '==', email)
+                             .get();
+        if (snap.empty) {
+            showAlert("找不到相符的單據或您沒有權限。");
+            window.history.replaceState({}, document.title, window.location.pathname);
+            hideLoader();
+            return;
+        }
+
+        const batch = db.batch();
+        let cancelledCount = 0;
+
+        for (const docSnap of snap.docs) {
+            const data = docSnap.data();
+            if (data.status === 'pending') {
+                batch.update(docSnap.ref, { status: 'cancelled' });
+                // Return stock
+                const invRef = db.collection('consumables_inventory').doc(data.itemId);
+                batch.update(invRef, { stock: firebase.firestore.FieldValue.increment(data.qty) });
+                cancelledCount++;
+            }
+        }
+        
+        if (cancelledCount > 0) {
+            await batch.commit();
+            showAlert(`已成功取消 ${cancelledCount} 筆項目，並歸還庫存！`);
+        } else {
+            showAlert("該申請單中沒有可以取消的品項（可能已全部領取或作廢）。");
+        }
+    } catch(e) {
+        showAlert("取消失敗: " + e.message);
+    }
+    window.history.replaceState({}, document.title, window.location.pathname);
+    hideLoader();
+}
+
+async function handleQueryRequest(email) {
+    showLoader();
+    try {
+        const snap = await db.collection('consumables_applications')
+                             .where('applicantEmail', '==', email)
+                             .orderBy('timestamp', 'desc')
+                             .get();
+        
+        if (snap.empty) {
+            showAlert("目前沒有查到任何申請紀錄。");
+            window.history.replaceState({}, document.title, window.location.pathname);
+            hideLoader();
+            return;
+        }
+
+        let groups = {};
+        snap.docs.forEach(doc => {
+            const d = doc.data();
+            if(!groups[d.groupId]) {
+                groups[d.groupId] = {
+                    groupId: d.groupId,
+                    timestamp: d.timestamp ? d.timestamp.toDate() : new Date(),
+                    items: []
+                };
+            }
+            groups[d.groupId].items.push(d);
+        });
+
+        const sortedGroups = Object.values(groups).sort((a,b) => b.timestamp - a.timestamp);
+        
+        let html = `<div class="max-h-[50vh] overflow-y-auto pr-2 space-y-4">`;
+        sortedGroups.forEach(g => {
+            html += `
+                <div class="border rounded-lg p-3 bg-gray-50 shadow-sm">
+                    <div class="font-bold text-blue-700 mb-2 border-b border-blue-100 pb-2 flex justify-between items-center">
+                        <span><i class="fa-solid fa-hashtag mr-1 text-blue-400"></i>${g.groupId}</span>
+                        <span class="text-xs text-gray-500 font-normal bg-white px-2 py-0.5 rounded-full border">${safeFormatDate(g.timestamp)}</span>
+                    </div>
+            `;
+            g.items.forEach(i => {
+                let statusText = '';
+                if(i.status === 'pending') statusText = '<span class="text-orange-600 bg-orange-100 px-2 py-0.5 rounded text-[10px] font-bold">準備中</span>';
+                else if (i.status === 'picked_up') statusText = '<span class="text-green-600 bg-green-100 px-2 py-0.5 rounded text-[10px] font-bold">已領取</span>';
+                else statusText = '<span class="text-gray-500 bg-gray-200 px-2 py-0.5 rounded text-[10px] font-bold line-through">已取消</span>';
+
+                html += `<div class="flex justify-between items-center text-sm py-1.5 border-b border-gray-100 last:border-0">
+                            <div class="font-bold text-gray-700">${i.itemName} <span class="text-gray-400 text-xs ml-1">x${i.qty}</span></div>
+                            <div>${statusText}</div>
+                         </div>`;
+            });
+            html += `</div>`;
+        });
+        html += `</div>`;
+
+        document.getElementById('history-content').innerHTML = html;
+        document.getElementById('history-modal').classList.remove('hidden');
+
+    } catch(e) {
+        showAlert("查詢失敗: " + e.message);
+    }
+    window.history.replaceState({}, document.title, window.location.pathname);
+    hideLoader();
 }
 
 async function checkAdminRole(user) {
@@ -511,13 +639,45 @@ async function submitCart() {
         await batch.commit();
         hideLoader();
         
-        // Prepare submitted cart details for QR voucher
+        // Prepare submitted cart details
         const submittedDetails = {
             groupId: groupId,
             applicant: name,
             date: safeFormatDate(new Date()),
             items: cart.map(c => `${c.name} x ${c.qty}`)
         };
+
+        // Send Email via API before clearing cart
+        if (SETTINGS.HUB_API_URL) {
+            let itemsHtml = cart.map(c => `<li>${c.name} x ${c.qty}</li>`).join('');
+            let htmlBody = `
+                <h2 style="color:#2563eb;">消耗品申請單成立</h2>
+                <p><strong>申請人：</strong> ${name}</p>
+                <p><strong>取件單號：</strong> ${groupId}</p>
+                <p><strong>申請明細：</strong></p>
+                <ul>${itemsHtml}</ul>
+                <div style="margin: 20px 0;">
+                    <img src="https://bwipjs-api.metafloor.com/?bcid=code128&text=${groupId}&scale=2&includetext" alt="Barcode" style="max-width: 100%;">
+                </div>
+                <p style="color:#666;font-size:12px;margin-top:20px;">請憑此 Email 或網頁 QR Code/條碼前往領取。</p>
+                <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <a href="${window.location.origin}/?cancel=${groupId}&email=${encodeURIComponent(email)}" style="display:inline-block;padding:10px 15px;background-color:#ef4444;color:white;text-decoration:none;border-radius:5px;font-weight:bold;">❌ 取消此單據</a>
+                </div>
+            `;
+            fetch(SETTINGS.HUB_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'sendEmail',
+                    to: email,
+                    subject: '中正國小消耗品申請通知 - ' + groupId,
+                    htmlBody: htmlBody,
+                    secret: SETTINGS.API_SECRET_KEY
+                })
+            })
+            .then(res => res.json())
+            .then(res => console.log("Email API response:", res))
+            .catch(e => console.error("信件錯誤", e));
+        }
 
         // Reset form & cart
         cart = [];
@@ -536,30 +696,6 @@ async function submitCart() {
             btnVerify.classList.replace('bg-gray-400', 'bg-blue-600');
             btnVerify.disabled = false;
         }
-        
-        // Send Email via API
-        if (SETTINGS.HUB_API_URL) {
-            let itemsHtml = cart.map(c => `<li>${c.name} x ${c.qty}</li>`).join('');
-            let htmlBody = `
-                <h2 style="color:#2563eb;">消耗品申請單成立</h2>
-                <p><strong>申請人：</strong> ${name}</p>
-                <p><strong>取件單號：</strong> ${groupId}</p>
-                <p><strong>申請明細：</strong></p>
-                <ul>${itemsHtml}</ul>
-                <p style="color:#666;font-size:12px;margin-top:20px;">請憑此 Email 或網頁 QR Code 前往領取。</p>
-            `;
-            fetch(SETTINGS.HUB_API_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'sendEmail',
-                    to: email,
-                    subject: '【中正國小】消耗品申請單成立通知 - ' + groupId,
-                    htmlBody: htmlBody,
-                    secret: SETTINGS.API_SECRET_KEY
-                })
-            }).catch(e => console.error("寄信失敗", e));
-        }
-
     } catch (e) {
         hideLoader();
         showAlert("送出失敗: " + e.message);

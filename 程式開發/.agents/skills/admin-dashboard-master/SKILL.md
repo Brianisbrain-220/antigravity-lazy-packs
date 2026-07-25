@@ -1,11 +1,23 @@
 ---
 name: admin-dashboard-master
-description: 當開發過程中提到「管理後台」、「後台管理」、「後台設定」、「請購單系統」、「庫存管理」、「權限後台」或「系統管理」等關鍵字時自動載入。提供結合 Obsidian 開發經驗庫調閱、GAS+Firebase 雙軌驗證、防死鎖加載、全域三層版本號標記（含同日多次修正遞增）與 RWD 版型標準化範本。
+description: 當開發過程中提到「管理後台」、「後台管理」、「後台設定」、「請購單系統」、「庫存管理」、「權限後台」或「系統管理」等關鍵字時自動載入。提供標準化初始化腳本 (init)、Obsidian 開發經驗庫調閱、GAS+Firebase 雙軌驗證、防死鎖加載、全域三層版本號標記與 RWD 版型標準化範本。
 ---
 
 # admin-dashboard-master Skill
 
-提供 `c:\2026Antigravity2\程式開發` 工作區專案標準化、極致防禦且具備 Obsidian 實戰經驗連動的管理後台開發指引與模板。
+提供 `c:\2026Antigravity2\程式開發` 工作區專案一個一致、安全且具備交接機制的管理後台腳本與模板。
+
+## 🚀 零步：初始化腳本 (Initialization)
+對於全新專案，可直接執行以下指令自動生成完整架構：
+```sh
+antigravity admin-dashboard init
+```
+此指令會啟動 Python 腳本，在當前專案中自動生成：
+- `src/pages/AdminDashboard.jsx` – 完整後台 UI (CSV 匯入、類別管理、白名單、發信設定、交接模組)
+- `src/components/AdminLayout.jsx` – 包含主題支援的標準排版
+- `src/utils/adminAuth.js` – Firebase 登入與白名單權限檢查
+- `firestore_rules.rules` – 限制僅允許白名單管理員存取的安全規則範本
+- 同時自動更新 `package.json` 加入 `admin:*` 的相關 npm 指令。
 
 ---
 
@@ -23,6 +35,7 @@ description: 當開發過程中提到「管理後台」、「後台管理」、�
    - `barcode-scanner-dual-mode.md` (USB 條碼槍防抖與 Html5Qrcode 相機雙軌)
 3. **🔐 3-權限與驗證**：
    - `gas-firebase-hybrid-auth.md` (GAS 與 Firebase 雙軌帳號驗證)
+   - `GAS與Firebase混合架構開發踩坑紀錄.md` (解決 Workspace MailApp 權限封鎖、授權快取黑洞與 CORS 302 跳轉問題)
 4. **📐 4-介面與版型**：
    - `responsive-admin-layout.md` (RWD 手機/桌機雙模版型)
 

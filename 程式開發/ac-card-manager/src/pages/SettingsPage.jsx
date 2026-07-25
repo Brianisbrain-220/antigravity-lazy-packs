@@ -86,7 +86,7 @@ export default function SettingsPage() {
                 gap: '10px',
                 padding: '10px 14px',
                 borderRadius: '8px',
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--bg-card-hover)',
                 border: '1px solid var(--border-subtle)'
               }}>
                 <span style={{ fontSize: '18px' }}>👤</span>
@@ -122,7 +122,7 @@ export default function SettingsPage() {
           <div style={{
             marginTop: '18px',
             padding: '14px',
-            background: 'rgba(255,255,255,0.04)',
+            background: 'var(--bg-card-hover)',
             borderRadius: '10px',
             fontSize: '12px',
             color: 'var(--text-secondary)',

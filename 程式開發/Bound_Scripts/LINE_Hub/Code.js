@@ -1,4 +1,9 @@
 // © 2026 行政自動化系統 | Refactored to safer V1.9.2
+/**
+ * @version v3.1.3
+ * @date 2026-07-23
+ * @description 升級為 GmailApp 寄信引擎，突破 Google Workspace 安全限制
+ */
 const CFG_HUB = {
   SHEET_USERS: 'Users',
   SHEET_SETTINGS: 'System_Settings',
@@ -17,9 +22,17 @@ function onOpen() {
     .addToUi();
 }
 
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.testEmail) {
+    try {
+      GmailApp.sendEmail(e.parameter.testEmail, "GAS Web App 權限測試", "如果您收到這封信，代表 Web App 寄信權限完全正常！");
+      return ContentService.createTextOutput("測試信件已成功寄出給 " + e.parameter.testEmail);
+    } catch (err) {
+      return ContentService.createTextOutput("寄信失敗，錯誤訊息：" + err.toString());
+    }
+  }
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('事務小幫手 - 系統中台')
+    .setTitle('總務小管家 - 系統中樞')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -50,13 +63,17 @@ function doPost(e) {
       if (!to || !to.includes('@')) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, message: 'Invalid Email' })).setMimeType(ContentService.MimeType.JSON);
       }
-      MailApp.sendEmail({
-        to: to,
-        subject: subject,
-        body: '請使用支援 HTML 的郵件軟體讀取此信件。',
-        htmlBody: htmlBody
-      });
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: '寄信成功' })).setMimeType(ContentService.MimeType.JSON);
+      try {
+        GmailApp.sendEmail(to, subject, "", {
+          htmlBody: htmlBody,
+          name: "總務小管家"
+        });
+        SYS_WriteLoginLog('SYSTEM_EMAIL', to, 'Sent: ' + subject);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, message: '信件已寄出' })).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        SYS_WriteLoginLog('SYSTEM_EMAIL_ERROR', to, err.toString());
+        return ContentService.createTextOutput(JSON.stringify({ success: false, message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+      }
     }
     // =======================================================================
 
@@ -335,15 +352,14 @@ function SYS_LineBotRouter(replyToken, userId, msg) {
     const guideMsg = SYS_GetConfig('Msg_Welcome') || '請點擊網址填寫註冊表單，或直接輸入手機號碼 / Email 進行綁定。';
     return SYS_ReplyLine(replyToken, [{ type: 'text', text: `💡 ${guideMsg}` }]);
   }
-  const consumableKeywords = ['查詢消耗品', '我的文具', '消耗品'];
+  const consumableKeywords = ['查詢消耗品', '我的', '消耗品', '查詢申請單', '查詢未領取'];
   if (consumableKeywords.includes(msg.trim())) {
     const userStatus = SYS_CheckIfBound(userId);
     if (!userStatus.bound) return SYS_ReplyLine(replyToken, [{ type: 'text', text: '⚠️ 您尚未完成身分綁定，無法查詢個人紀錄。\n請輸入您註冊時填寫的信箱或手機號碼進行綁定。' }]);
-    const apiUrl = SYS_GetConfig('CONSUMABLE_API_URL');
-    const secret = SYS_GetConfig('CONSUMABLE_SECRET_KEY');
-    if (!apiUrl || !secret) return SYS_ReplyLine(replyToken, [{ type: 'text', text: '⚠️ 系統尚未完成與消耗品系統的串接設定，請通知管理員。' }]);
-    const fetchResult = SYS_FetchFromSpoke(apiUrl, 'query', userStatus.email, secret);
-    return SYS_ReplyLine(replyToken, [{ type: 'text', text: fetchResult.success ? String(fetchResult.message || '查詢完成') : '❌ 查詢失敗，無法連線至消耗品系統：' + String(fetchResult.error || '未知錯誤') }]);
+    const webUrl = 'https://cjps-admin-hub-consumables.web.app';
+    const link = `${webUrl}/?query=${encodeURIComponent(userStatus.email)}`;
+    const replyText = `📦 查詢消耗品申請單\n\n您好，${userStatus.name}！\n請點擊下方專屬連結，前往前台查看您的歷史申請紀錄與取件條碼：\n👉 ${link}`;
+    return SYS_ReplyLine(replyToken, [{ type: 'text', text: replyText }]);
   }
   const isMenuTrigger = ['選單', '主選單', '?', '？', '幫助'].includes(msg.toLowerCase());
   if (isMenuTrigger) return SYS_BuildFlexMenu(replyToken);
@@ -660,3 +676,8 @@ function SYS_MaskSecret(val) {
 }
 function SYS_JsonOutput(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function SYS_LogError(mod, err) { console.error(`[${mod} Error]: ${err}`); }
+
+function SYS_AuthMailApp() {
+  GmailApp.sendEmail("test@example.com", "Auth", "Auth");
+  SpreadsheetApp.getActiveSpreadsheet().toast("授權成功！");
+}

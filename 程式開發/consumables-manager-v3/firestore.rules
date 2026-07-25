@@ -30,8 +30,11 @@ service cloud.firestore {
     match /consumables_applications/{app} {
       // 允許前台匿名寫入 (Kiosk 端送單)
       allow create: if true;
-      // 僅管理員可讀取與管理單據
-      allow read, update, delete: if isManager();
+      // 允許前台讀取以查詢自己的單據
+      allow read: if true;
+      // 僅管理員可管理單據，或允許前台取消單據(僅變更status為cancelled)
+      allow update: if isManager() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'cancelled');
+      allow delete: if isManager();
     }
 
     // 管理員名單 (Admins)

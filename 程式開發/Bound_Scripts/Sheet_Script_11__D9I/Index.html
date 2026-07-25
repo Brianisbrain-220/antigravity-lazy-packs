@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中正國小 - 公務使用學校場地會辦系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+    <style>
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #334155 !important; border-color: #334155 !important; }
+        .header-bg { background-color: #0f172a; background-image: radial-gradient(#1e293b 1px, transparent 1px), radial-gradient(#1e293b 1px, transparent 1px); background-size: 40px 40px; background-position: 0 0, 20px 20px; }
+        select.time-select { text-align: center; text-align-last: center; appearance: none; background: transparent; }
+    </style>
+</head>
+<body class="bg-slate-300 min-h-screen text-slate-800 font-sans pb-12 relative">
+
+    <header class="header-bg shadow-lg">
+        <div class="max-w-4xl mx-auto px-6 py-10 relative z-10 flex flex-col md:flex-row items-center gap-6">
+            <div class="w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-white shrink-0">
+                <img src="https://drive.google.com/thumbnail?id=1lmWd_49PO2_cezIOPu1H7JeWIUmDhQto&sz=w500" alt="校徽" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=中正&background=0284c7&color=fff';">
+            </div>
+            
+            <div class="text-center md:text-left text-white w-full relative">
+                <h1 class="text-3xl md:text-4xl font-bold tracking-wider mb-2 drop-shadow-md pr-8">高雄市苓雅區中正國民小學</h1>
+                <h2 class="text-xl md:text-2xl font-light text-slate-300 drop-shadow-sm">公務使用學校場地會辦系統</h2>
+                <button type="button" onclick="showAdminLogin()" class="absolute top-0 right-0 p-2 text-slate-400 hover:text-white transition-colors" title="管理後台">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="mainAppView" class="max-w-4xl mx-auto px-4 sm:px-6 -mt-6 relative z-20 block">
+        <div class="bg-white rounded-t-xl shadow-md overflow-hidden border-b-4 border-slate-600">
+            <svg viewBox="0 0 800 300" class="w-full h-auto block bg-slate-800" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="150" cy="50" r="1.5" fill="#fff" opacity="0.6" />
+                <circle cx="350" cy="120" r="2" fill="#fff" opacity="0.4" />
+                <circle cx="650" cy="70" r="1.5" fill="#fff" opacity="0.8" />
+                <circle cx="700" cy="80" r="35" fill="#fde047" opacity="0.9" />
+                <rect x="520" y="60" width="160" height="240" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+                <g fill="#fcd34d" opacity="0.8"><rect x="540" y="80" width="20" height="30"/><rect x="580" y="80" width="20" height="30" opacity="0.2"/><rect x="620" y="80" width="20" height="30"/><rect x="580" y="130" width="20" height="30"/><rect x="620" y="180" width="20" height="30"/></g>
+                <rect x="80" y="100" width="220" height="200" fill="#334155" stroke="#1e293b" stroke-width="2"/>
+                <g fill="#fef08a" opacity="0.7"><rect x="110" y="120" width="25" height="35"/><rect x="160" y="120" width="25" height="35" opacity="0.2"/><rect x="210" y="120" width="25" height="35"/><rect x="160" y="180" width="25" height="35"/></g>
+                <rect x="250" y="150" width="300" height="150" fill="#475569" stroke="#334155" stroke-width="2"/>
+                <g fill="#fde047" opacity="0.9"><rect x="280" y="180" width="30" height="40"/><rect x="330" y="180" width="30" height="40" opacity="0.4"/><rect x="380" y="180" width="30" height="40"/><rect x="430" y="180" width="30" height="40"/></g>
+                <path d="M 0 260 Q 50 240 100 265 T 250 250 T 400 270 T 550 255 T 700 275 T 800 260 L 800 300 L 0 300 Z" fill="#0f172a" />
+            </svg>
+        </div>
+
+        <div class="bg-white p-6 md:p-10 shadow-lg rounded-b-xl">
+            <form id="venueForm" onsubmit="submitForm(event)">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-6 border-b-2 border-slate-200 pb-2">申請人基本資料 (需先綁定官方LINE)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div><label class="block text-sm font-medium text-slate-600 mb-1">姓名 <span class="text-red-500">*</span></label><input type="text" id="name" required class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-600 mb-1">電子信箱 <span class="text-red-500">*</span></label><input type="email" id="email" required class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">所屬單位 <span class="text-red-500">*</span></label>
+                        <select id="unit" onchange="toggleOtherUnit()" required class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"><option value="">載入中...</option></select>
+                        <input type="text" id="unitOther" class="hidden mt-3 w-full px-4 py-2 border border-slate-300 rounded-lg outline-none" placeholder="自訂單位">
+                    </div>
+                    <div><label class="block text-sm font-medium text-slate-600 mb-1">聯絡電話 <span class="text-red-500">*</span></label><input type="tel" id="phone" required class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"></div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-600 mb-1">申請地點 <span class="text-red-500">*</span></label>
+                        <div id="locationCheckboxes" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2"><span class="text-slate-400 text-sm">載入中...</span></div>
+                        <input type="text" id="locationOther" class="hidden mt-3 w-full px-4 py-2 border border-slate-300 rounded-lg outline-none" placeholder="自訂場地">
+                    </div>
+                    <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">申請事由 <span class="text-red-500">*</span></label><input type="text" id="reason" required class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"></div>
+                    <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">備註</label><input type="text" id="remarks" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none"></div>
+                </div>
+
+                <div class="flex items-center justify-between mb-4 border-b-2 border-slate-200 pb-2 mt-10">
+                    <h3 class="text-2xl font-semibold text-slate-800">申請時段</h3>
+                    <button type="button" onclick="addTimeSlot()" class="bg-slate-600 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-1">新增時段</button>
+                </div>
+
+                <div id="timeSlotsContainer" class="space-y-4 mb-8">
+                    <div class="time-slot-row bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col md:flex-row items-center gap-4 relative">
+                        <div class="w-full md:w-5/12"><label class="block text-xs text-slate-500 mb-1">選擇日期</label><input type="text" class="date-picker w-full px-3 py-2 border border-slate-300 rounded-md outline-none bg-white" required></div>
+                        <div class="w-full md:w-3/12">
+                            <label class="block text-xs text-slate-500 mb-1">開始時間</label>
+                            <div class="flex items-center justify-between w-full px-2 py-1 border border-slate-300 rounded-md bg-white">
+                                <select class="start-hour time-select w-full text-2xl font-medium outline-none" required><option value="" disabled selected>時</option></select><span class="text-xl font-bold text-slate-400 mx-1">:</span><select class="start-minute time-select w-full text-2xl font-medium outline-none" required><option value="" disabled selected>分</option></select>
+                            </div>
+                        </div>
+                        <span class="hidden md:block text-slate-400 mt-4">~</span>
+                        <div class="w-full md:w-3/12">
+                            <label class="block text-xs text-slate-500 mb-1">結束時間</label>
+                            <div class="flex items-center justify-between w-full px-2 py-1 border border-slate-300 rounded-md bg-white">
+                                <select class="end-hour time-select w-full text-2xl font-medium outline-none" required><option value="" disabled selected>時</option></select><span class="text-xl font-bold text-slate-400 mx-1">:</span><select class="end-minute time-select w-full text-2xl font-medium outline-none" required><option value="" disabled selected>分</option></select>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-1/12 flex justify-end md:justify-center mt-2 md:mt-5"><button type="button" onclick="removeTimeSlot(this)" class="text-red-500 hover:text-red-700 p-2">刪除</button></div>
+                    </div>
+                </div>
+
+                <div class="mt-10 border-t border-slate-200 pt-6 text-center">
+                    <button id="submitBtn" type="submit" class="w-full md:w-1/2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-6 rounded-xl text-lg transition-colors">送出申請</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <section id="adminDashboard" class="max-w-7xl mx-auto px-4 sm:px-6 relative z-20 hidden mt-8">
+        <div class="flex justify-between items-end mb-4 px-2">
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <span class="text-3xl">🗄️</span> 系統管理戰情室
+            </h2>
+            <button onclick="logoutAdmin()" class="text-sm font-bold text-red-600 hover:text-red-800 bg-white px-4 py-2 rounded-lg shadow">登出</button>
+        </div>
+
+        <div class="flex space-x-2 mb-6">
+            <button id="tabBtnRequests" onclick="switchTab('requests')" class="flex-1 py-3 px-4 bg-slate-800 text-white font-bold rounded-t-xl transition-colors">📝 申請單管理</button>
+            <button id="tabBtnSettings" onclick="switchTab('settings')" class="flex-1 py-3 px-4 bg-slate-400 text-slate-100 hover:bg-slate-500 font-bold rounded-t-xl transition-colors">⚙️ 系統設定</button>
+        </div>
+
+        <div id="tabContentRequests" class="block">
+            <div id="dashboardLoading" class="text-center py-12 text-slate-500 text-lg font-bold">
+                <svg class="animate-spin h-8 w-8 text-slate-800 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                資料讀取與清理中...
+            </div>
+            <div id="requestsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden pb-12">
+            </div>
+        </div>
+
+        <div id="tabContentSettings" class="bg-white rounded-b-xl shadow-lg p-6 hidden border-t-4 border-slate-800 mb-12">
+            <form id="settingsForm" onsubmit="saveSettings(event)">
+                <div id="settingsContainer" class="space-y-6 mb-8">
+                </div>
+                <div class="border-t border-slate-200 pt-6 text-right">
+                    <button id="btnSaveSettings" type="submit" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all">💾 儲存系統設定</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-slate-800"></div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">🔒 進入戰情室</h3>
+            <p class="text-slate-500 text-sm mb-6">請輸入管理後台通關密碼</p>
+            <form onsubmit="verifyAdmin(event)">
+                <input type="password" id="adminPwd" class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-slate-800 transition-colors mb-4 text-center text-lg tracking-widest" placeholder="••••••••" required>
+                <div id="loginError" class="text-red-500 text-sm mb-4 hidden text-center font-bold">密碼錯誤或驗證失敗</div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="document.getElementById('loginModal').classList.add('hidden')" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl font-bold transition-colors">取消</button>
+                    <button id="btnLogin" type="submit" class="w-2/3 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold shadow transition-colors">解鎖</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="customAlert" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 border-t-8 border-red-500">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">⚠️ 系統提示</h3>
+            <p id="alertMessage" class="text-slate-600 mb-6 whitespace-pre-wrap"></p>
+            <button onclick="document.getElementById('customAlert').classList.add('hidden')" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg font-bold">我知道了</button>
+        </div>
+    </div>
+
+    <div id="printModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 border-t-8 border-green-500">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">🎉 申請送出成功</h3>
+            <p class="text-slate-600 mb-6 leading-relaxed">您的場地申請已進入審核流程。<br><br>請問是否需要列印「A4 書面會辦單」留存或遞交？</p>
+            <div class="flex gap-3">
+                <button onclick="closePrintModal(false)" class="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-lg font-bold transition-colors">❌ 否，關閉</button>
+                <button onclick="closePrintModal(true)" class="w-1/2 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-lg font-bold transition-colors shadow-md">🖨️ 是，開啟列印</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const flatpickrOptions = { mode: "multiple", dateFormat: "Y-m-d (l)", locale: "zh_tw", minDate: "today" };
+        let gMinH = 8, gMaxH = 22, gMinM = 480, gMaxM = 1320;
+        let savedFormData = null;
+        let gOvertimeUrl = "", gWeekdayHours = "07:00-21:00", gHolidayHours = "08:00-20:00", gHolidays = [];
+
+        document.addEventListener('DOMContentLoaded', () => loadSettings());
+
+        function loadSettings() {
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler(function(settings) {
+                        if (settings.openTime) {
+                            const [t1, t2] = settings.openTime.split('-');
+                            gMinH = parseInt(t1.split(':')[0]); gMaxH = parseInt(t2.split(':')[0]);
+                            gMinM = gMinH * 60 + parseInt(t1.split(':')[1] || 0); gMaxM = gMaxH * 60 + parseInt(t2.split(':')[1] || 0);
+                        }
+                        if (settings.overtimeUrl) gOvertimeUrl = settings.overtimeUrl;
+                        if (settings.weekdayHours) gWeekdayHours = settings.weekdayHours;
+                        if (settings.holidayHours) gHolidayHours = settings.holidayHours;
+                        if (settings.holidays) gHolidays = settings.holidays;
+
+                        const unitSelect = document.getElementById('unit'); unitSelect.innerHTML = '<option value="">請選擇...</option>';
+                        settings.units.forEach(u => unitSelect.innerHTML += `<option value="${u}">${u}</option>`);
+                        if (!settings.units.includes('其他')) unitSelect.innerHTML += '<option value="其他">其他</option>';
+
+                        const locContainer = document.getElementById('locationCheckboxes');
+                        locContainer.innerHTML = '';
+                        settings.locations.forEach(loc => locContainer.innerHTML += `<label class="flex items-center space-x-2 text-slate-700 cursor-pointer"><input type="checkbox" name="locations" value="${loc}" class="w-4 h-4" ${loc==='其他'?'onchange="toggleOtherLocation()"':''}><span>${loc}</span></label>`);
+                        if (!settings.locations.includes('其他')) locContainer.innerHTML += `<label class="flex items-center space-x-2 text-slate-700 cursor-pointer"><input type="checkbox" name="locations" value="其他" class="w-4 h-4" onchange="toggleOtherLocation()"><span>其他</span></label>`;
+                        
+                        initTimeRow(document.querySelector('.time-slot-row'));
+                    })
+                    .withFailureHandler(function(err) {
+                        document.getElementById('unit').innerHTML = '<option value="">(讀取失敗) 請選擇...</option><option value="其他">其他</option>';
+                        document.getElementById('locationCheckboxes').innerHTML = `<label class="flex items-center space-x-2 text-slate-700 cursor-pointer"><input type="checkbox" name="locations" value="其他" class="w-4 h-4" onchange="toggleOtherLocation()"><span>自行輸入</span></label>`;
+                        initTimeRow(document.querySelector('.time-slot-row'));
+                    }).getSettings();
+            } else { initTimeRow(document.querySelector('.time-slot-row')); }
+        }
+
+        function toggleOtherUnit() { document.getElementById('unitOther').classList.toggle('hidden', document.getElementById('unit').value !== '其他'); }
+        function toggleOtherLocation() { document.getElementById('locationOther').classList.toggle('hidden', !document.querySelector('input[name="locations"][value="其他"]').checked); }
+
+        function initTimeRow(row) {
+            if (!row.querySelector('.date-picker')._flatpickr) flatpickr(row.querySelector('.date-picker'), flatpickrOptions);
+            const sh = row.querySelector('.start-hour'), sm = row.querySelector('.start-minute'), eh = row.querySelector('.end-hour'), em = row.querySelector('.end-minute');
+            if (sh.options.length <= 1) for (let i = gMinH; i <= gMaxH; i++) { let v = i.toString().padStart(2, '0'); sh.innerHTML += `<option value="${v}">${v}</option>`; eh.innerHTML += `<option value="${v}">${v}</option>`; }
+            if (sm.options.length <= 1) ['00', '15', '30', '45'].forEach(v => { sm.innerHTML += `<option value="${v}">${v}</option>`; em.innerHTML += `<option value="${v}">${v}</option>`; });
+            const validate = () => validateTime(row);
+            sh.addEventListener('change', validate); sm.addEventListener('change', validate); eh.addEventListener('change', validate); em.addEventListener('change', validate);
+        }
+
+        function validateTime(row) {
+            const sh = row.querySelector('.start-hour').value, sm = row.querySelector('.start-minute').value, eh = row.querySelector('.end-hour').value, em = row.querySelector('.end-minute').value;
+            if (sh && sm && eh && em) {
+                const sMins = parseInt(sh) * 60 + parseInt(sm), eMins = parseInt(eh) * 60 + parseInt(em);
+                if (eMins <= sMins) { showAlert('結束時間不能早於開始時間！'); row.querySelector('.end-hour').value = ''; row.querySelector('.end-minute').value = ''; }
+                else if (eMins > gMaxM || sMins < gMinM) { showAlert(`須在開放時間範圍內！`); row.querySelector('.start-hour').value = ''; row.querySelector('.end-hour').value = ''; }
+            }
+        }
+
+        function addTimeSlot() {
+            const clone = document.querySelector('.time-slot-row').cloneNode(true);
+            clone.querySelectorAll('input, select').forEach(el => el.value = '');
+            const dp = clone.querySelector('.date-picker'); dp._flatpickr = undefined; dp.classList.remove('flatpickr-input', 'active'); dp.removeAttribute('readonly');
+            Array.from(dp.parentNode.children).forEach(c => { if (c !== dp && c.tagName !== 'LABEL') c.remove(); });
+            document.getElementById('timeSlotsContainer').appendChild(clone); initTimeRow(clone);
+        }
+
+        function removeTimeSlot(btn) { if (document.querySelectorAll('.time-slot-row').length > 1) btn.closest('.time-slot-row').remove(); else showAlert('至少保留一個時段！'); }
+        
+        function showAlert(msg) { document.getElementById('alertMessage').innerText = msg; document.getElementById('customAlert').classList.remove('hidden'); }
+
+        function getValidatedFormData() {
+            if (!document.getElementById('venueForm').checkValidity()) { document.getElementById('venueForm').reportValidity(); return null; }
+            const name = document.getElementById('name').value, email = document.getElementById('email').value, phone = document.getElementById('phone').value, reason = document.getElementById('reason').value, remarks = document.getElementById('remarks').value;
+            let unit = document.getElementById('unit').value === '其他' ? document.getElementById('unitOther').value : document.getElementById('unit').value;
+            if(!unit) return showAlert("請輸入單位"), null;
+            let locs = Array.from(document.querySelectorAll('input[name="locations"]:checked')).map(c => c.value);
+            if (locs.length === 0) return showAlert("請選擇地點"), null;
+            if (locs.includes('其他')) locs = locs.map(l => l === '其他' ? document.getElementById('locationOther').value : l);
+            const timeSlots = []; let validTime = true;
+            document.querySelectorAll('.time-slot-row').forEach(row => {
+                const d = row.querySelector('.date-picker').value, sh = row.querySelector('.start-hour').value, sm = row.querySelector('.start-minute').value, eh = row.querySelector('.end-hour').value, em = row.querySelector('.end-minute').value;
+                if(!d || !sh || !sm || !eh || !em) validTime = false; else timeSlots.push({ dates: d, startTime: `${sh}:${sm}`, endTime: `${eh}:${em}` });
+            });
+            if(!validTime) return showAlert("時段不完整"), null;
+            return { name, email, unit, phone, location: locs.join('、'), reason, remarks, timeSlots };
+        }
+
+        function checkNeedsOvertime(formData) {
+            if (!gOvertimeUrl) return false;
+            let needsOvertime = false;
+            
+            const [wStartStr, wEndStr] = gWeekdayHours.split('-');
+            const wStartM = parseInt(wStartStr.split(':')[0]) * 60 + parseInt(wStartStr.split(':')[1]);
+            const wEndM = parseInt(wEndStr.split(':')[0]) * 60 + parseInt(wEndStr.split(':')[1]);
+            
+            const [hStartStr, hEndStr] = gHolidayHours.split('-');
+            const hStartM = parseInt(hStartStr.split(':')[0]) * 60 + parseInt(hStartStr.split(':')[1]);
+            const hEndM = parseInt(hEndStr.split(':')[0]) * 60 + parseInt(hEndStr.split(':')[1]);
+
+            for (let slot of formData.timeSlots) {
+                const sMins = parseInt(slot.startTime.split(':')[0]) * 60 + parseInt(slot.startTime.split(':')[1]);
+                const eMins = parseInt(slot.endTime.split(':')[0]) * 60 + parseInt(slot.endTime.split(':')[1]);
+                
+                const dates = slot.dates.split(', ');
+                for (let dStr of dates) {
+                    const pureDate = dStr.substring(0, 10);
+                    const dObj = new Date(pureDate);
+                    const day = dObj.getDay();
+                    const isHoliday = (day === 0 || day === 6 || gHolidays.includes(pureDate));
+                    
+                    const dutyStart = isHoliday ? hStartM : wStartM;
+                    const dutyEnd = isHoliday ? hEndM : wEndM;
+                    
+                    if (sMins < dutyStart || eMins > dutyEnd) {
+                        needsOvertime = true;
+                        break;
+                    }
+                }
+                if (needsOvertime) break;
+            }
+            return needsOvertime;
+        }
+
+        function generatePrintableDoc(formData) {
+            const timeStr = formData.timeSlots.map(s => `${s.dates} ${s.startTime}~${s.endTime}`).join('<br>');
+            let html = `<!DOCTYPE html><html><head><style>
+                @page { size: A4 portrait; margin: 0; }
+                body { font-family: "標楷體", sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; background: #fff; }
+                .a4-page { width: 210mm; min-height: 297mm; padding: 15mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; }
+                .section { flex: 1; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px dashed #999; padding: 5mm 0; position: relative; }
+                .section:last-child { border-bottom: none; }
+                .cut-icon { position: absolute; bottom: -12px; left: 0; font-size: 16px; color: #666; background: #fff; padding-right: 10px; }
+                table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
+                th, td { border: 1px solid #000; padding: 8px; font-size: 14pt; }
+                th { text-align: center; width: 20%; background-color: #f1f5f9; }
+            </style></head><body><div class="a4-page">`;
+            ['總務處', '警衛室', '主辦單位自存'].forEach((t, i) => {
+                html += `<div class="section"><table>
+                    <tr><th colspan="4" style="font-size: 18pt; background-color: transparent;">中正國小場地會辦單 (${t})</th></tr>
+                    <tr><th>活動</th><td colspan="3">${formData.reason}</td></tr>
+                    <tr><th>時間</th><td colspan="3">${timeStr}</td></tr>
+                    <tr><th>地點</th><td>${formData.location}</td><th>負責人</th><td>${formData.name} (${formData.unit})</td></tr>
+                    <tr><th>電話</th><td colspan="3">${formData.phone}</td></tr>
+                    <tr><th>備註</th><td colspan="3">${formData.remarks || "無"}</td></tr>
+                </table>`;
+                if(i < 2) html += `<div class="cut-icon">✂------------------</div>`;
+                html += `</div>`;
+            });
+            html += `</div><script>window.onload = function() { setTimeout(()=>window.print(), 500); }<\/script></body></html>`;
+
+            const printWin = window.open('', '_blank');
+            if (printWin) { 
+                printWin.document.open(); printWin.document.write(html); printWin.document.close(); 
+            } else { 
+                alert("瀏覽器阻擋了彈出視窗，請允許開啟彈出視窗以進行列印。");
+            }
+        }
+
+        function closePrintModal(doPrint) {
+            document.getElementById('printModal').classList.add('hidden');
+            if (doPrint && savedFormData) generatePrintableDoc(savedFormData);
+            document.getElementById('venueForm').reset();
+            document.querySelectorAll('.time-slot-row').forEach((r, i) => i>0 && r.remove());
+            savedFormData = null;
+        }
+
+        function submitForm(event) {
+            event.preventDefault();
+            const formData = getValidatedFormData(); if (!formData) return; 
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerHTML = "處理中...";
+            let isResponded = false;
+
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run.withSuccessHandler(res => {
+                    isResponded = true;
+                    btn.disabled = false; btn.innerHTML = "送出申請";
+                    if (res.success) {
+                        savedFormData = formData;
+                        
+                        const isOvertimeNeeded = checkNeedsOvertime(formData);
+                        const printModal = document.getElementById('printModal');
+                        const modalDiv = printModal.querySelector('div.bg-white');
+                        
+                        if (isOvertimeNeeded && gOvertimeUrl) {
+                            const queryParams = new URLSearchParams({
+                                name: formData.name,
+                                email: formData.email,
+                                dept: formData.unit,
+                                phone: formData.phone,
+                                reason: formData.reason
+                            }).toString();
+                            
+                            const fullUrl = gOvertimeUrl + (gOvertimeUrl.includes('?') ? '&' : '?') + queryParams;
+                            
+                            printModal.querySelector('h3').innerHTML = '⚠️ 申請送出成功，但需要申請保全加班！';
+                            printModal.querySelector('p').innerHTML = '您的場地申請時間超出了警衛一般值勤時段。<br><br>請務必點擊下方按鈕，前往申請「保全加班」，以免屆時無法使用場地。';
+                            printModal.querySelector('.flex.gap-3').innerHTML = `
+                                <button onclick="closePrintModal(false)" class="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-lg font-bold transition-colors">僅關閉</button>
+                                <a href="${fullUrl}" target="_blank" onclick="closePrintModal(false)" class="w-2/3 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-lg font-bold transition-colors shadow-md text-center block flex items-center justify-center">前往申請保全加班</a>
+                            `;
+                            if(modalDiv.classList.contains('border-green-500')) modalDiv.classList.replace('border-green-500', 'border-rose-500');
+                        } else {
+                            printModal.querySelector('h3').innerHTML = '🎉 申請送出成功';
+                            printModal.querySelector('p').innerHTML = '您的場地申請已進入審核流程。<br><br>請問是否需要列印「A4 書面會辦單」留存或遞交？';
+                            printModal.querySelector('.flex.gap-3').innerHTML = `
+                                <button onclick="closePrintModal(false)" class="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-lg font-bold transition-colors">❌ 否，關閉</button>
+                                <button onclick="closePrintModal(true)" class="w-1/2 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-lg font-bold transition-colors shadow-md">🖨️ 是，開啟列印</button>
+                            `;
+                            if(modalDiv.classList.contains('border-rose-500')) modalDiv.classList.replace('border-rose-500', 'border-green-500');
+                        }
+                        
+                        printModal.classList.remove('hidden');
+                    } else {
+                        showAlert(res.message);
+                    }
+                }).withFailureHandler(err => {
+                    isResponded = true; 
+                    btn.disabled = false; btn.innerHTML = "送出申請"; 
+                    showAlert(err.message);
+                }).processForm(formData);
+                setTimeout(() => {
+                    if (!isResponded) { showAlert("伺服器連線逾時，請檢查網路狀態。"); btn.disabled = false; btn.innerHTML = "送出申請"; }
+                }, 15000);
+            }
+        }
+
+        // ============================================================================
+        // 🗄️ 【管理後台與戰情室 JS 引擎】
+        // ============================================================================
+
+        let sessionPwd = null;
+        try { sessionPwd = sessionStorage.getItem('ADMIN_PWD') || null; } catch(e) { console.warn("SessionStorage unavailable."); }
+
+        function showAdminLogin() {
+            if (sessionPwd) switchToDashboard();
+            else {
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('adminPwd').focus();
+            }
+        }
+
+        function verifyAdmin(event) {
+            event.preventDefault();
+            const pwd = document.getElementById('adminPwd').value;
+            const btn = document.getElementById('btnLogin');
+            btn.innerHTML = "驗證中..."; btn.disabled = true;
+
+            google.script.run.withSuccessHandler(isValid => {
+                btn.innerHTML = "解鎖"; btn.disabled = false;
+                if (isValid) {
+                    sessionPwd = pwd;
+                    try { sessionStorage.setItem('ADMIN_PWD', pwd); } catch(e) {}
+                    document.getElementById('loginModal').classList.add('hidden');
+                    switchToDashboard();
+                } else {
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            }).withFailureHandler(err => {
+                btn.innerHTML = "解鎖"; btn.disabled = false;
+                alert("連線失敗：" + err.message);
+            }).API_VerifyAdmin(pwd);
+        }
+
+        function switchToDashboard() {
+            document.getElementById('mainAppView').classList.remove('block');
+            document.getElementById('mainAppView').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            switchTab('requests');
+        }
+
+        function logoutAdmin() {
+            try { sessionStorage.removeItem('ADMIN_PWD'); } catch(e) {}
+            sessionPwd = null;
+            location.reload();
+        }
+
+        function switchTab(tabName) {
+            const btnReq = document.getElementById('tabBtnRequests');
+            const btnSet = document.getElementById('tabBtnSettings');
+            const contentReq = document.getElementById('tabContentRequests');
+            const contentSet = document.getElementById('tabContentSettings');
+
+            if (tabName === 'requests') {
+                btnReq.className = "flex-1 py-3 px-4 bg-slate-800 text-white font-bold rounded-t-xl transition-colors";
+                btnSet.className = "flex-1 py-3 px-4 bg-slate-400 text-slate-100 hover:bg-slate-500 font-bold rounded-t-xl transition-colors";
+                contentReq.classList.remove('hidden'); contentReq.classList.add('block');
+                contentSet.classList.remove('block'); contentSet.classList.add('hidden');
+                loadDashboardData();
+            } else {
+                btnSet.className = "flex-1 py-3 px-4 bg-slate-800 text-white font-bold rounded-t-xl transition-colors";
+                btnReq.className = "flex-1 py-3 px-4 bg-slate-400 text-slate-100 hover:bg-slate-500 font-bold rounded-t-xl transition-colors";
+                contentSet.classList.remove('hidden'); contentSet.classList.add('block');
+                contentReq.classList.remove('block'); contentReq.classList.add('hidden');
+                loadDashboardData();
+            }
+        }
+
+        // 6. 非同步載入戰情室資料與渲染卡片 (升級衝突高亮版)
+        function loadDashboardData() {
+            if (!sessionPwd) return;
+            document.getElementById('dashboardLoading').classList.remove('hidden');
+            document.getElementById('requestsGrid').classList.add('hidden');
+
+            google.script.run.withSuccessHandler(res => {
+                document.getElementById('dashboardLoading').classList.add('hidden');
+                
+                const grid = document.getElementById('requestsGrid');
+                grid.innerHTML = '';
+                if (res.requests.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500">目前沒有即將到來的場地申請單。</div>`;
+                } else {
+                    res.requests.forEach((req, idx) => {
+                        // 🎨 判斷是否為衝突單據，強制覆寫樣式為警戒紅
+                        const isConflict = req.hasConflict;
+                        let cardBg = 'bg-white';
+                        let cardHeaderColor = 'text-slate-800';
+                        let statusBadge = '';
+                        let borderColor = '';
+                        let accordionBg = 'bg-slate-50';
+
+                        if (isConflict) {
+                            cardBg = 'bg-rose-50';
+                            accordionBg = 'bg-rose-100';
+                            cardHeaderColor = 'text-rose-900';
+                            borderColor = 'border-rose-500';
+                            statusBadge = `<span class="px-2 py-1 text-xs font-bold rounded-full bg-rose-200 text-rose-800 border border-rose-500 animate-pulse flex items-center gap-1">⚠️ 外部衝突</span>`;
+                        } else {
+                            if (req.status === '已同意') {
+                                borderColor = 'border-green-500';
+                                statusBadge = `<span class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border-green-500">${req.status}</span>`;
+                            } else {
+                                borderColor = 'border-amber-500';
+                                statusBadge = `<span class="px-2 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border-amber-500">${req.status}</span>`;
+                            }
+                        }
+
+                        // 🗑️ 如果狀態為「已同意」，且尚未取消，則在展開明細中加入「撤銷」按鈕
+                        let revokeBtnHtml = '';
+                        if (req.status === '已同意') {
+                            revokeBtnHtml = `
+                                <div class="mt-4 border-t border-slate-300 pt-3 text-right">
+                                    <button type="button" onclick="revokeRequest(event, '${req.id}')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm inline-flex items-center gap-1 border border-red-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                        撤銷並刪除行事曆
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        grid.innerHTML += `
+                            <div class="${cardBg} rounded-xl shadow-md border-t-4 ${borderColor} overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onclick="toggleAccordion('acc-${idx}')">
+                                <div class="p-4 flex justify-between items-start">
+                                    <div>
+                                        <div class="text-xs font-mono text-slate-500 mb-1">${req.id}</div>
+                                        <h3 class="text-lg font-bold ${cardHeaderColor} mb-0.5">${req.location}</h3>
+                                        <div class="text-sm font-bold ${isConflict ? 'text-rose-700' : 'text-sky-700'} mb-1.5 flex items-center gap-1">
+                                            <span>📅</span> ${req.timeSummary}
+                                        </div>
+                                        <p class="text-sm font-medium ${isConflict ? 'text-rose-800' : 'text-slate-600'}">${req.name} (${req.unit})</p>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                <div id="acc-${idx}" class="hidden ${accordionBg} p-4 border-t ${isConflict ? 'border-rose-200' : 'border-slate-100'} text-sm text-slate-700">
+                                    <div class="mb-2"><strong>事由：</strong>${req.reason}</div>
+                                    <div class="mb-2"><strong>備註：</strong>${req.remarks || '無'}</div>
+                                    <div class="mb-2"><strong>電話：</strong><a href="tel:${req.phone}" class="text-sky-600 font-bold">${req.phone}</a></div>
+                                    <div class="mt-3 bg-white bg-opacity-70 p-3 rounded border ${isConflict ? 'border-rose-300' : 'border-slate-200'}">
+                                        <strong>📅 時段明細：</strong><br>
+                                        ${req.slotsHtml}
+                                    </div>
+                                    ${revokeBtnHtml}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                grid.classList.remove('hidden');
+
+                const setContainer = document.getElementById('settingsContainer');
+                setContainer.innerHTML = '';
+                res.settings.forEach(set => {
+                    const isSecure = set.key.includes("SECRET") || set.key.includes("KEY") || set.key.includes("密碼");
+                    setContainer.innerHTML += `
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">${set.key}</label>
+                            <input type="text" name="${set.key}" value="${set.value}" class="w-full px-3 py-2 border border-slate-300 rounded outline-none focus:border-sky-500 font-mono text-sm ${isSecure ? 'text-emerald-600 font-bold' : ''}">
+                            <p class="text-xs text-slate-500 mt-1">${set.desc}</p>
+                        </div>
+                    `;
+                });
+
+            }).withFailureHandler(err => {
+                alert("取得資料失敗，請重新登入。");
+                logoutAdmin();
+            }).API_GetDashboardData(sessionPwd);
+        }
+
+        // 7. 手風琴收合特效
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('hidden')) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        // 8. 儲存設定
+        function saveSettings(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const settingsArray = [];
+            for (let [key, value] of formData.entries()) {
+                settingsArray.push({ key: key, value: value });
+            }
+
+            const btn = document.getElementById('btnSaveSettings');
+            btn.innerHTML = "⏳ 儲存與加密中..."; btn.disabled = true;
+
+            google.script.run.withSuccessHandler(msg => {
+                btn.innerHTML = "💾 儲存系統設定"; btn.disabled = false;
+                alert(msg);
+                loadDashboardData(); 
+            }).withFailureHandler(err => {
+                btn.innerHTML = "💾 儲存系統設定"; btn.disabled = false;
+                alert("儲存失敗：" + err.message);
+            }).API_SaveSettings(sessionPwd, settingsArray);
+        }
+
+        // 9. 💥 後台一鍵撤銷與刪除行事曆
+        function revokeRequest(event, id) {
+            event.stopPropagation(); // 阻止手風琴收合
+            if (!confirm(`【警告】確定要撤銷單號 ${id} 嗎？\n\n系統將會：\n1. 將試算表狀態改為「已取消」\n2. 自動前往共用行事曆「刪除」該場地事件\n\n此動作無法復原！`)) {
+                return;
+            }
+            
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ 淨化行事曆中..."; 
+            btn.disabled = true;
+            btn.classList.add("opacity-50", "cursor-not-allowed");
+
+            google.script.run.withSuccessHandler(msg => {
+                alert(msg);
+                loadDashboardData(); // 重新載入，該卡片將自動從畫面上消失
+            }).withFailureHandler(err => {
+                alert("撤單失敗：" + err.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove("opacity-50", "cursor-not-allowed");
+            }).API_CancelRequest(sessionPwd, id);
+        }
+    </script>
+</body>
+</html>
+    </script>
+</body>
+</html>

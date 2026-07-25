@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高雄市苓雅區中正國民小學 - 保全加班申請系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+
+  <style>
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, 
+    .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, 
+    .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, 
+    .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, 
+    .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, 
+    .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {
+        background: #059669 !important; border-color: #059669 !important;
+    }
+    #loadingOverlay { transition: opacity 0.3s ease-out; }
+    .overlay-hidden { opacity: 0; pointer-events: none; }
+    input[type=checkbox]:checked + span, input[type=checkbox]:checked + div > span { color: #047857; font-weight: 800; }
+    .tab-btn { transition: all 0.2s ease-in-out; }
+    .tab-active { background-color: white; color: #047857; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .tab-inactive { color: #64748b; font-weight: 500; }
+    .tab-inactive:hover { color: #334155; background-color: #f1f5f9; }
+  </style>
+</head>
+<body class="bg-stone-100 min-h-screen py-8 px-4 relative">
+
+  <div class="hidden bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-500 hover:text-white text-teal-700"></div>
+
+  <div id="loadingOverlay" class="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emerald-600 mb-4"></div>
+    <p class="text-emerald-800 font-bold text-lg tracking-wider" id="loadingText">載入系統設定中...</p>
+  </div>
+
+  <div id="main-container" class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden transition-all duration-500 ease-in-out">
+    
+    <div class="bg-emerald-800 text-white px-6 py-5 flex items-center gap-5 relative overflow-hidden">
+      <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-emerald-600 opacity-20"></div>
+      <div class="bg-white p-1 rounded-full shrink-0 flex items-center justify-center w-16 h-16 shadow-lg z-10">
+        <img src="https://drive.google.com/thumbnail?id=1lmWd_49PO2_cezIOPu1H7JeWIUmDhQto&sz=w500" alt="中正國小校徽" id="schoolLogo" class="w-full h-full rounded-full object-cover" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=中正&background=fff&color=065f46&size=80&font-size=0.4';">
+      </div>
+      <div class="z-10">
+        <h1 class="text-2xl font-bold tracking-wider drop-shadow-sm">高雄市苓雅區中正國民小學</h1>
+        <p class="text-emerald-100 text-sm mt-1 font-medium tracking-wide">保全加班申請系統</p>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-view" class="hidden relative min-h-[500px] bg-slate-50">
+      <div id="admin-login" class="absolute inset-0 z-40 bg-slate-100/70 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border-t-4 border-emerald-600">
+          <h2 class="text-2xl font-bold text-slate-800 mb-2">🔒 戰情室解鎖</h2>
+          <p class="text-slate-500 text-sm mb-6">請輸入於試算表設定的後台密碼</p>
+          <input type="password" id="adminPwd" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 mb-4 text-center tracking-widest text-lg" placeholder="••••••••" onkeypress="if(event.key === 'Enter') doAdminLogin()">
+          <button onclick="doAdminLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors">解鎖進入</button>
+          <p id="loginError" class="text-rose-500 text-sm mt-3 hidden font-bold">❌ 密碼錯誤或連線逾時</p>
+        </div>
+      </div>
+
+      <div id="admin-dashboard" class="p-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-4 gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-800">🛡️ 加班管理戰情室</h1>
+            <p class="text-slate-500 mt-1 text-sm">系統每 3 分鐘自動更新資料。</p>
+          </div>
+          <div class="flex gap-3 bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex flex-col justify-center">
+              <span class="text-xs font-bold text-slate-400">目前費率 (修改將追溯重算)</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xl font-black text-rose-600">$<span id="dashRate">0</span>/hr</span>
+                <button onclick="changeRate()" class="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-md text-slate-600" title="修改時薪">✏️</button>
+              </div>
+            </div>
+            <div class="border-l border-slate-200 mx-1"></div>
+            <button onclick="loadDashboardData()" class="px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-lg transition-colors flex items-center gap-2">🔄 刷新</button>
+          </div>
+        </div>
+
+        <div class="flex space-x-1 bg-slate-200/70 p-1.5 rounded-lg mb-4 w-fit border border-slate-200">
+          <button id="tab-active" onclick="switchDashTab('active')" class="tab-btn tab-active px-4 py-2 rounded-md">📌 進行中案件</button>
+          <button id="tab-history" onclick="switchDashTab('history')" class="tab-btn tab-inactive px-4 py-2 rounded-md">🗄️ 歷史備查區</button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+              <thead class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <tr>
+                  <th class="px-4 py-3 font-bold">狀態</th>
+                  <th class="px-4 py-3 font-bold">單號 / 日期</th>
+                  <th class="px-4 py-3 font-bold">申請人 / 單位</th>
+                  <th class="px-4 py-3 font-bold text-right">真實 / 計費時數</th>
+                  <th class="px-4 py-3 font-bold text-right">預估總額</th>
+                  <th class="px-4 py-3 font-bold text-center">多軌審核操作</th>
+                </tr>
+              </thead>
+              <tbody id="dashTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Public View -->
+    <div id="public-view" class="hidden">
+      <form id="appForm" class="p-6" onsubmit="submitForm(event)">
+        
+        <div class="mb-8 relative rounded-xl overflow-hidden shadow-inner border border-emerald-100 bg-emerald-50">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" class="w-full h-auto block">
+            <rect width="800" height="220" fill="#ecfdf5"/>
+            <rect y="140" width="800" height="80" fill="#a7f3d0"/>
+            <path d="M 120 60 Q 140 40 160 60 Q 180 60 170 80 L 110 80 Q 100 60 120 60 Z" fill="#ffffff" opacity="0.9"/>
+            <path d="M 640 80 Q 660 60 680 80 Q 700 80 690 100 L 630 100 Q 620 80 640 80 Z" fill="#ffffff" opacity="0.7"/>
+            <rect x="220" y="80" width="35" height="90" fill="#cbd5e1" rx="3"/>
+            <rect x="545" y="80" width="35" height="90" fill="#cbd5e1" rx="3"/>
+            <rect x="215" y="70" width="45" height="15" fill="#94a3b8" rx="2"/>
+            <rect x="540" y="70" width="45" height="15" fill="#94a3b8" rx="2"/>
+            <rect x="255" y="100" width="290" height="8" fill="#64748b"/>
+            <rect x="255" y="130" width="290" height="8" fill="#64748b"/>
+            <path d="M 270 80 L 270 150 M 310 80 L 310 150 M 350 80 L 350 150 M 390 80 L 390 150 M 430 80 L 430 150 M 470 80 L 470 150 M 510 80 L 510 150 M 530 80 L 530 150" stroke="#64748b" stroke-width="5"/>
+            <g transform="translate(100, 80)">
+              <rect x="18" y="40" width="14" height="40" fill="#78350f"/>
+              <circle cx="25" cy="25" r="30" fill="#10b981"/>
+              <circle cx="12" cy="12" r="18" fill="#34d399"/>
+            </g>
+            <g transform="translate(680, 90)">
+              <rect x="18" y="30" width="14" height="40" fill="#78350f"/>
+              <circle cx="25" cy="20" r="25" fill="#10b981"/>
+              <circle cx="12" cy="10" r="15" fill="#34d399"/>
+            </g>
+            <g transform="translate(350, 50)">
+              <ellipse cx="50" cy="120" rx="35" ry="6" fill="#064e3b" opacity="0.15"/>
+              <rect x="30" y="65" width="40" height="40" fill="#1e293b" rx="8"/>
+              <path d="M 32 70 L 15 95" stroke="#1e293b" stroke-width="12" stroke-linecap="round"/>
+              <path d="M 68 70 L 85 95" stroke="#1e293b" stroke-width="12" stroke-linecap="round"/>
+              <circle cx="15" cy="95" r="6" fill="#fcd34d"/>
+              <circle cx="85" cy="95" r="6" fill="#fcd34d"/>
+              <rect x="38" y="100" width="10" height="22" fill="#0f172a" rx="4"/>
+              <rect x="52" y="100" width="10" height="22" fill="#0f172a" rx="4"/>
+              <polygon points="45,65 55,65 50,85" fill="#f59e0b"/>
+              <circle cx="65" cy="78" r="4" fill="#fbbf24"/>
+              <circle cx="50" cy="38" r="32" fill="#ffedd5"/> 
+              <path d="M 12 22 Q 50 -10 88 22 L 80 32 L 20 32 Z" fill="#1e293b"/>
+              <rect x="6" y="28" width="88" height="7" fill="#0f172a" rx="3.5"/> 
+              <polygon points="43,15 57,15 50,25" fill="#fbbf24"/> 
+              <circle cx="36" cy="42" r="4" fill="#1e293b"/>
+              <circle cx="64" cy="42" r="4" fill="#1e293b"/>
+              <path d="M 42 52 Q 50 60 58 52" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <circle cx="28" cy="48" r="6" fill="#fca5a5" opacity="0.6"/>
+              <circle cx="72" cy="48" r="6" fill="#fca5a5" opacity="0.6"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          <div>
+            <label class="block text-sm font-bold text-emerald-800 mb-1">申請人姓名 *</label>
+            <input type="text" id="name" required class="w-full px-4 py-2 border border-emerald-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500 shadow-sm bg-emerald-50/30">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-emerald-800 mb-1">聯絡 Email * <span class="text-xs text-gray-500 font-normal">(接收通知與取消連結)</span></label>
+            <input type="email" id="email" required class="w-full px-4 py-2 border border-emerald-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500 shadow-sm bg-emerald-50/30">
+          </div>
+          
+          <div class="md:col-span-2">
+            <label class="block text-sm font-bold text-emerald-800 mb-2">所屬單位 / 申請地點 * (可多選)</label>
+            <div id="deptContainer" class="flex flex-wrap gap-x-6 gap-y-3 p-4 bg-emerald-50/50 border border-emerald-200 rounded-md"></div>
+            <input type="text" id="deptOtherText" placeholder="請填寫其他單位或地點名稱" class="hidden mt-2 w-full px-4 py-2 border border-emerald-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 shadow-sm">
+            
+            <div class="mt-4">
+              <label class="inline-flex items-center cursor-pointer group bg-rose-50 px-4 py-2 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors">
+                <input type="checkbox" id="isExternalUnit" onchange="toggleExternalWarning(); calculateTotals();" class="w-5 h-5 text-rose-600 rounded border-rose-300 focus:ring-rose-500">
+                <span class="ml-2 font-bold text-rose-800 tracking-wide">本申請為校外單位</span>
+              </label>
+              <div id="externalWarning" class="hidden mt-2 ml-1 text-sm font-bold text-rose-600 animate-pulse">
+                ⚠️ 校外單位申請保全加班，單段未滿 1 小時以 1 小時計，超過 1 小時無條件進位至整數。
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-emerald-800 mb-1">聯絡電話 * <span class="text-xs text-gray-500 font-normal">(保留前導0)</span></label>
+            <input type="tel" id="phone" required class="w-full px-4 py-2 border border-emerald-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500 shadow-sm bg-emerald-50/30">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-emerald-800 mb-1">加班原因 *</label>
+            <input type="text" id="reason" required class="w-full px-4 py-2 border border-emerald-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500 shadow-sm bg-emerald-50/30">
+          </div>
+
+          <div class="md:col-span-2 p-5 bg-emerald-50/50 border border-emerald-200 rounded-xl shadow-sm mt-2">
+            <label class="block text-sm font-bold text-emerald-900 mb-3 text-lg border-l-4 border-emerald-500 pl-2">付款方式 <span class="text-emerald-600 text-sm font-normal">(選填)</span></label>
+            <div class="flex flex-wrap gap-6 mb-3">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="paymentMethod" value="另開發票現金支付" onchange="toggleInvoice()" class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                <span class="ml-2 text-gray-800 font-bold">另開發票現金支付</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="paymentMethod" value="另開發票校內經費" onchange="toggleInvoice()" class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                <span class="ml-2 text-gray-800 font-bold">另開發票校內經費</span>
+              </label>
+            </div>
+            <div id="invoiceBlock" class="hidden mt-4 pt-4 border-t border-emerald-200">
+              <label class="block text-sm font-bold text-emerald-800 mb-1">發票抬頭 <span class="text-emerald-600 font-normal">(選填)</span></label>
+              <input type="text" id="invoiceTitle" placeholder="請填寫發票完整抬頭名稱 (選填)" class="w-full md:w-1/2 px-4 py-2 border border-emerald-300 rounded-md focus:ring-emerald-500 shadow-sm">
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-6 border-emerald-100">
+
+        <div class="mb-6">
+          <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+            <div>
+              <h2 class="text-lg font-bold text-emerald-900 border-l-4 border-emerald-500 pl-3">加班日期與時段設定</h2>
+              <p class="text-sm text-emerald-600 mt-2 font-medium" id="openHoursNotice">保全值勤時間：讀取中...</p>
+            </div>
+            <button type="button" onclick="addPeriodRow()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-md transition-colors shadow-sm self-start md:self-auto">
+              + 新增加班區間
+            </button>
+          </div>
+          
+          <div id="periodsContainer" class="space-y-5"></div>
+        </div>
+
+        <div class="bg-emerald-50 p-6 rounded-xl border border-emerald-200 flex flex-col sm:flex-row justify-between items-center mt-8 shadow-sm relative overflow-hidden">
+          <div class="text-emerald-900 mb-4 sm:mb-0 z-10">
+            <span class="block text-emerald-700 font-medium">真實值勤： <span id="totalHours" class="font-bold text-2xl text-emerald-600">0.00</span> 小時 <span id="billableDisplay" class="text-rose-600 text-sm font-bold hidden">➔ 計費核算 <span id="totalBillableHours">0.00</span> 小時</span></span>
+            <span class="block mt-2 text-emerald-700 font-medium">預估總金額： <span class="font-bold text-4xl text-rose-600 tracking-wide drop-shadow-sm">NT$ <span id="totalCost">0</span></span> <span class="text-sm text-emerald-600 ml-1">(費率：NT$ <span id="displayRate">讀取中...</span>/hr)</span></span>
+            <span class="block mt-2 text-sm font-bold text-rose-500 bg-white/60 inline-block px-2 py-1 rounded">⚠️ 最終金額依保全人員實際加班計費時數核算</span>
+          </div>
+          <button type="submit" id="submitBtn" class="w-full sm:w-auto px-8 py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg shadow-lg transition-all text-xl z-10">
+            送出申請單
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let globalSettings = {
+      rate: 200, weekdayHours: '07:00-21:00', holidayHours: '08:00-20:00',
+      departments: ['教務處', '學務處', '總務處', '輔導室', '幼兒園']
+    };
+    let heartbeatInterval;
+    let cachedDashData = null; 
+    let currentTab = 'active'; 
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const mainContainer = document.getElementById('main-container');
+
+      if (typeof google !== 'undefined' && google.script && google.script.url) {
+        google.script.url.getLocation(function(location) {
+          if (location.parameters && location.parameters.page && location.parameters.page[0] === 'admin') {
+            mainContainer.classList.replace('max-w-4xl', 'max-w-6xl');
+            document.getElementById('admin-view').classList.remove('hidden');
+            checkAdminSession();
+          } else {
+            document.getElementById('public-view').classList.remove('hidden');
+            loadPublicData();
+          }
+        });
+      } else {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('page') === 'admin') {
+          mainContainer.classList.replace('max-w-4xl', 'max-w-6xl');
+          document.getElementById('admin-view').classList.remove('hidden');
+          checkAdminSession();
+        } else {
+          document.getElementById('public-view').classList.remove('hidden');
+          loadPublicData();
+        }
+      }
+    });
+
+    function checkAdminSession() {
+      const pwd = sessionStorage.getItem('hub_admin_pwd');
+      if (pwd) { verifyAndLoadDash(pwd); } 
+      else { 
+        document.getElementById('loadingOverlay').classList.add('overlay-hidden');
+        document.getElementById('admin-login').classList.remove('hidden'); 
+      }
+    }
+
+    function doAdminLogin() {
+      const pwd = document.getElementById('adminPwd').value;
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('loadingOverlay').classList.remove('overlay-hidden');
+      document.getElementById('loadingText').innerText = "密碼驗證中...";
+      verifyAndLoadDash(pwd);
+    }
+
+    function verifyAndLoadDash(pwd) {
+      google.script.run
+        .withSuccessHandler(res => {
+          sessionStorage.setItem('hub_admin_pwd', pwd);
+          document.getElementById('admin-login').classList.add('hidden');
+          document.getElementById('admin-dashboard').classList.remove('hidden');
+          cachedDashData = res;
+          renderDashboardTable();
+          if(!heartbeatInterval) heartbeatInterval = setInterval(loadDashboardData, 180000); 
+        })
+        .withFailureHandler(e => {
+          sessionStorage.removeItem('hub_admin_pwd');
+          document.getElementById('loadingOverlay').classList.add('overlay-hidden');
+          document.getElementById('admin-login').classList.remove('hidden');
+          document.getElementById('loginError').classList.remove('hidden');
+        })
+        .getDashboardData(pwd);
+    }
+
+    function loadDashboardData() {
+      const pwd = sessionStorage.getItem('hub_admin_pwd');
+      if(!pwd) return;
+      document.getElementById('loadingOverlay').classList.remove('overlay-hidden');
+      document.getElementById('loadingText').innerText = "拉取最新資料...";
+      google.script.run
+        .withSuccessHandler(res => { cachedDashData = res; renderDashboardTable(); })
+        .withFailureHandler(e=>alert('更新失敗'))
+        .getDashboardData(pwd);
+    }
+
+    function switchDashTab(tabName) {
+      currentTab = tabName;
+      document.getElementById('tab-active').className = tabName === 'active' ? 'tab-btn tab-active px-4 py-2 rounded-md' : 'tab-btn tab-inactive px-4 py-2 rounded-md';
+      document.getElementById('tab-history').className = tabName === 'history' ? 'tab-btn tab-active px-4 py-2 rounded-md' : 'tab-btn tab-inactive px-4 py-2 rounded-md';
+      renderDashboardTable();
+    }
+
+    function renderDashboardTable() {
+      if(!cachedDashData) return;
+      document.getElementById('loadingOverlay').classList.add('overlay-hidden');
+      document.getElementById('dashRate').innerText = cachedDashData.rate;
+      const tbody = document.getElementById('dashTableBody');
+      tbody.innerHTML = '';
+      
+      const filteredRequests = cachedDashData.requests.filter(req => {
+        if (currentTab === 'active') return req.status === '待審核' || req.status === '已同意';
+        if (currentTab === 'history') return req.status === '已結案' || req.status === '已退回' || req.status === '已取消';
+        return true;
+      });
+
+      if (filteredRequests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-medium">此分類下尚無任何單據資料</td></tr>`;
+        return;
+      }
+
+      filteredRequests.forEach(req => {
+        let badge = `<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-bold">待審核</span>`;
+        if (req.status === '已同意') badge = `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold">已同意</span>`;
+        if (req.status === '已結案') badge = `<span class="px-2 py-1 bg-slate-200 text-slate-700 rounded-md text-xs font-bold">已結案</span>`;
+        if (req.status === '已退回' || req.status === '已取消') badge = `<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-md text-xs font-bold">${req.status}</span>`;
+        
+        let actionBtns = `<span class="text-slate-400 text-xs">-</span>`;
+        
+        if (req.status === '待審核') {
+          actionBtns = `
+            <div class="flex gap-2 justify-center">
+              <button onclick="adminAction('${req.id}', 'approve_email_only')" class="px-2 py-1 bg-emerald-100 hover:bg-emerald-500 hover:text-white text-emerald-700 rounded transition font-bold text-xs" title="同意(純Email)">+ Email</button>
+              <button onclick="adminAction('${req.id}', 'approve_push_guard')" class="px-2 py-1 bg-sky-100 hover:bg-sky-500 hover:text-white text-sky-700 rounded transition font-bold text-xs" title="同意(推播保全)">+ LINE警</button>
+              <button onclick="adminAction('${req.id}', 'approve_push_all')" class="px-2 py-1 bg-indigo-100 hover:bg-indigo-500 hover:text-white text-indigo-700 rounded transition font-bold text-xs" title="同意(推播全員)">+ LINE全</button>
+              <button onclick="adminAction('${req.id}', 'reject')" class="px-2 py-1 bg-rose-100 hover:bg-rose-500 hover:text-white text-rose-700 rounded transition font-bold text-xs">退回</button>
+            </div>
+          `;
+        } else if (req.status === '已同意') {
+          actionBtns = `
+            <div class="flex gap-2 justify-center">
+              <button onclick="adminAction('${req.id}', 'close')" class="px-3 py-1 bg-slate-800 hover:bg-slate-600 text-white rounded transition font-bold text-xs shadow-sm">📦 結案歸檔</button>
+            </div>
+          `;
+        }
+
+        let hStr = req.hours;
+        if (req.isExternal && req.hours !== req.billableHours) {
+          hStr = `<span class="text-slate-500 line-through">${req.hours}</span> <span class="text-rose-600 font-black ml-1">${req.billableHours}</span>`;
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3">${badge}</td>
+            <td class="px-4 py-3 font-medium">${req.id}<br><span class="text-xs text-slate-400">${req.date}</span></td>
+            <td class="px-4 py-3">${req.name}<br><span class="text-xs text-slate-400">${req.dept} / ${req.phone}</span></td>
+            <td class="px-4 py-3 text-right font-bold text-emerald-600">${hStr}</td>
+            <td class="px-4 py-3 text-right font-bold text-rose-600">$${req.cost.toLocaleString()}</td>
+            <td class="px-4 py-3 text-center">${actionBtns}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function changeRate() {
+      const current = document.getElementById('dashRate').innerText;
+      const newRate = prompt('請輸入新的保全時薪費率 (整數)：\n⚠️ 注意：修改後系統將自動「追溯重算」所有尚未審核的單據總金額。', current);
+      if(!newRate || isNaN(newRate) || newRate === current) return;
+      if(!confirm(`確定要將費率改為 $${newRate}/hr 嗎？\n待審核單據將被重算。`)) return;
+      
+      document.getElementById('loadingOverlay').classList.remove('overlay-hidden');
+      document.getElementById('loadingText').innerText = "費率套用與追溯重算中...";
+      
+      const pwd = sessionStorage.getItem('hub_admin_pwd');
+      google.script.run
+        .withSuccessHandler(count => { alert(`✅ 費率已更新！共重算 ${count} 筆待審核單據。`); loadDashboardData(); })
+        .withFailureHandler(e => { alert('❌ 更新失敗：' + e.message); loadDashboardData(); })
+        .updateRateAndRecalculate(pwd, parseInt(newRate, 10));
+    }
+
+    function adminAction(id, action) {
+      let actionName = action === 'reject' ? '退回申請' : '同意申請並推播';
+      if (action === 'close') actionName = '結案歸檔 (此操作將移至歷史區且無聲完成)';
+      if(!confirm(`確定要執行「${actionName}」嗎？`)) return;
+      
+      document.getElementById('loadingOverlay').classList.remove('overlay-hidden');
+      document.getElementById('loadingText').innerText = "系統處理中...";
+      const pwd = sessionStorage.getItem('hub_admin_pwd');
+      google.script.run
+        .withSuccessHandler(res => { 
+          if(res.includes('LINE 執行結果')) { alert(res); } 
+          loadDashboardData(); 
+        })
+        .withFailureHandler(e => { alert('❌ 失敗：' + e.message); loadDashboardData(); })
+        .adminProcessRequest(pwd, id, action);
+    }
+
+    // ==========================================
+    // 🟩 前端大眾申請邏輯 (Public View) 🟩
+    // ==========================================
+    function loadPublicData() {
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run.withSuccessHandler(function(settings) {
+          if (settings) {
+            globalSettings = settings;
+            document.getElementById('displayRate').innerText = parseFloat(settings.rate);
+            document.getElementById('openHoursNotice').innerHTML = `保全值勤時間：<br class="md:hidden">平日 <span class="font-bold">${settings.weekdayHours}</span> / 假日 <span class="font-bold">${settings.holidayHours}</span>`;
+          }
+          initForm();
+        }).getSettings();
+      } else {
+        initForm();
+      }
+    }
+
+    function initForm() {
+      renderDepartments();
+      document.getElementById('loadingOverlay').classList.add('overlay-hidden');
+      addPeriodRow();
+
+      if (typeof google !== 'undefined' && google.script && google.script.url) {
+        google.script.url.getLocation(function(location) {
+          const params = location.parameter;
+          if (params.name) document.getElementById('name').value = params.name;
+          if (params.email) document.getElementById('email').value = params.email;
+          if (params.phone) document.getElementById('phone').value = params.phone;
+          if (params.reason) document.getElementById('reason').value = params.reason + ' 場地保全加班';
+          
+          if (params.dept) {
+            const deptStr = params.dept;
+            let matched = false;
+            document.querySelectorAll('.dept-cb').forEach(cb => {
+              if (deptStr.includes(cb.value) && cb.value !== '其他') {
+                cb.checked = true;
+                matched = true;
+              }
+            });
+            if (!matched && deptStr) {
+              const otherCb = document.getElementById('deptOtherCb');
+              if(otherCb) {
+                 otherCb.checked = true;
+                 toggleOtherDept();
+                 document.getElementById('deptOtherText').value = deptStr;
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderDepartments() {
+      const container = document.getElementById('deptContainer');
+      let html = '';
+      globalSettings.departments.forEach(dept => {
+        html += `
+          <label class="inline-flex items-center cursor-pointer group">
+            <input type="checkbox" value="${dept}" class="dept-cb w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+            <span class="ml-2 text-gray-700 transition-colors">${dept}</span>
+          </label>
+        `;
+      });
+      html += `
+        <label class="inline-flex items-center cursor-pointer group">
+          <input type="checkbox" value="其他" id="deptOtherCb" onchange="toggleOtherDept()" class="dept-cb w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+          <span class="ml-2 text-gray-700 transition-colors">其他 (自行填寫)</span>
+        </label>
+      `;
+      container.innerHTML = html;
+    }
+
+    function toggleOtherDept() {
+      const cb = document.getElementById('deptOtherCb');
+      const textInput = document.getElementById('deptOtherText');
+      if (cb.checked) {
+        textInput.classList.remove('hidden'); textInput.required = true;
+      } else {
+        textInput.classList.add('hidden'); textInput.required = false; textInput.value = '';
+      }
+    }
+
+    function toggleExternalWarning() {
+      const isExt = document.getElementById('isExternalUnit').checked;
+      document.getElementById('externalWarning').classList.toggle('hidden', !isExt);
+    }
+
+    function toggleInvoice() {
+      const checkedNode = document.querySelector('input[name="paymentMethod"]:checked');
+      const block = document.getElementById('invoiceBlock');
+      if (checkedNode) {
+        block.classList.remove('hidden');
+      } else {
+        block.classList.add('hidden');
+      }
+    }
+
+    function toggleDutySelect(cb, type) {
+      const row = cb.closest('.time-row');
+      const sel = row.querySelector(`.${type}-sel`);
+      if (cb.checked) {
+        sel.classList.remove('hidden'); sel.required = true;
+      } else {
+        sel.classList.add('hidden'); sel.required = false; sel.value = ""; 
+      }
+      calculateTotals();
+    }
+
+    function addPeriodRow() {
+      const container = document.getElementById('periodsContainer');
+      const rowId = 'row_' + Date.now();
+      
+      const rowHTML = `
+        <div id="${rowId}" class="time-row bg-white p-4 border border-emerald-200 rounded-lg shadow-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[6fr_5fr_5fr_4fr] gap-4 items-start relative group hover:border-emerald-400 transition-all mt-4 lg:mt-0">
+          
+          <div class="md:col-span-2 lg:col-span-1">
+            <label class="block text-sm font-bold text-emerald-700 mb-2">挑選日期 (多選) *</label>
+            <input type="text" class="dates-input w-full px-3 py-2 h-[42px] border border-emerald-200 rounded-md bg-white cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="點擊展開日曆..." required onchange="calculateTotals()">
+          </div>
+          
+          <div class="md:col-span-1 lg:col-span-1 flex flex-col">
+            <label class="block text-sm font-bold text-transparent mb-2 select-none pointer-events-none hidden lg:block">排版用</label>
+            <div class="duty-block bg-emerald-50/50 px-2.5 py-1.5 rounded-md border border-emerald-100 transition-all flex flex-col justify-center flex-grow min-h-[42px]">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" class="early-cb w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" onchange="toggleDutySelect(this, 'early')">
+                <span class="ml-2 text-sm text-gray-700 cursor-pointer font-bold">提前值勤</span>
+              </label>
+              <select class="early-sel hidden w-full mt-2 px-1 py-1 border border-emerald-200 rounded-md bg-white text-emerald-800 font-bold focus:ring-2 focus:ring-emerald-500 outline-none" onchange="calculateTotals()">
+                <option value="" disabled selected>請選擇</option>
+                <option value="0.5">提前 0.5 小時</option>
+                <option value="1">提前 1 小時</option>
+                <option value="1.5">提前 1.5 小時</option>
+                <option value="2">提前 2 小時</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="md:col-span-1 lg:col-span-1 flex flex-col">
+            <label class="block text-sm font-bold text-transparent mb-2 select-none pointer-events-none hidden lg:block">排版用</label>
+            <div class="duty-block bg-amber-50/30 px-2.5 py-1.5 rounded-md border border-amber-100 transition-all flex flex-col justify-center flex-grow min-h-[42px]">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" class="ext-cb w-5 h-5 text-amber-500 rounded border-gray-300 focus:ring-amber-400" onchange="toggleDutySelect(this, 'ext')">
+                <span class="ml-2 text-sm text-gray-700 cursor-pointer font-bold">值勤延長</span>
+              </label>
+              <select class="ext-sel hidden w-full mt-2 px-1 py-1 border border-amber-200 rounded-md bg-white text-amber-700 font-bold focus:ring-2 focus:ring-amber-400 outline-none" onchange="calculateTotals()">
+                <option value="" disabled selected>請選擇</option>
+                <option value="0.5">延長 0.5 小時</option>
+                <option value="1">延長 1 小時</option>
+                <option value="1.5">延長 1.5 小時</option>
+                <option value="2">延長 2 小時</option>
+                <option value="2.5">延長 2.5 小時</option>
+                <option value="3">延長 3 小時</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="md:col-span-2 lg:col-span-1">
+            <label class="block text-sm font-bold text-emerald-700 mb-2 whitespace-nowrap">區間小計</label>
+            <input type="text" class="hours-calc w-full px-3 h-[42px] bg-emerald-50 border border-emerald-100 rounded-md font-bold text-center text-emerald-700 text-base" value="0.00" readonly>
+          </div>
+
+          <button type="button" onclick="removePeriodRow('${rowId}')" class="absolute -top-3 -right-3 w-6 h-6 flex items-center justify-center bg-rose-100 text-rose-500 border border-rose-200 rounded-full hover:bg-rose-500 hover:text-white transition-colors shadow-md z-10" title="移除此時段">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', rowHTML);
+
+      const newRow = document.getElementById(rowId);
+      flatpickr(newRow.querySelector('.dates-input'), {
+        mode: "multiple",      
+        dateFormat: "Y-m-d (l)", 
+        locale: "zh_tw",       
+        onChange: calculateTotals 
+      });
+    }
+
+    function removePeriodRow(rowId) {
+      const container = document.getElementById('periodsContainer');
+      if (container.children.length > 1) {
+        document.getElementById(rowId).remove();
+        calculateTotals();
+      } else {
+        alert('請至少保留一個加班區間！');
+      }
+    }
+
+    // 💡 核心演算法升級：早晚分段獨立無條件進位
+    function calculateTotals() {
+      let totalRealHours = 0;
+      let totalBillableHours = 0;
+      const isExt = document.getElementById('isExternalUnit').checked;
+      
+      document.querySelectorAll('.time-row').forEach(row => {
+        const datesInput = row.querySelector('.dates-input');
+        const earlyCb = row.querySelector('.early-cb');
+        const earlySel = row.querySelector('.early-sel');
+        const extCb = row.querySelector('.ext-cb');
+        const extSel = row.querySelector('.ext-sel');
+        const hoursInput = row.querySelector('.hours-calc');
+        
+        const selectedDates = datesInput._flatpickr ? datesInput._flatpickr.selectedDates : [];
+        const numDays = selectedDates.length;
+        
+        let eH = (earlyCb.checked && earlySel.value) ? parseFloat(earlySel.value) : 0;
+        let extH = (extCb.checked && extSel.value) ? parseFloat(extSel.value) : 0;
+        
+        if (numDays > 0) {
+          let dailyReal = eH + extH;
+          // 💡 修改點：將早上的時數與下午的時數「分開進位」後再加總
+          let dailyBillable = isExt ? (Math.ceil(eH) + Math.ceil(extH)) : dailyReal;
+          
+          let rowRealTotal = dailyReal * numDays;
+          let rowBillableTotal = dailyBillable * numDays;
+          
+          totalRealHours += rowRealTotal;
+          totalBillableHours += rowBillableTotal;
+          hoursInput.value = rowRealTotal.toFixed(2);
+        } else {
+          hoursInput.value = '0.00';
+        }
+      });
+      
+      document.getElementById('totalHours').innerText = totalRealHours.toFixed(2);
+      document.getElementById('totalCost').innerText = Math.round(totalBillableHours * globalSettings.rate).toLocaleString();
+      
+      const billableDisplay = document.getElementById('billableDisplay');
+      if (isExt && totalRealHours !== totalBillableHours) {
+        billableDisplay.classList.remove('hidden');
+        document.getElementById('totalBillableHours').innerText = totalBillableHours.toFixed(2);
+      } else {
+        billableDisplay.classList.add('hidden');
+      }
+    }
+
+    function submitForm(e) {
+      e.preventDefault();
+      
+      let validPeriods = true;
+      document.querySelectorAll('.time-row').forEach(row => {
+        const datesInput = row.querySelector('.dates-input');
+        const numDays = (datesInput._flatpickr && datesInput._flatpickr.selectedDates.length > 0) ? datesInput._flatpickr.selectedDates.length : 0;
+        const eChecked = row.querySelector('.early-cb').checked;
+        const extChecked = row.querySelector('.ext-cb').checked;
+
+        if (numDays > 0 && !eChecked && !extChecked) {
+          alert('您已選擇了日期，但尚未勾選「提前值勤」或「值勤延長」！請補齊或刪除該列。');
+          validPeriods = false;
+        }
+      });
+      if (!validPeriods) return;
+
+      const totalHoursVal = parseFloat(document.getElementById('totalHours').innerText);
+      if (totalHoursVal <= 0) {
+        alert('總時數不能為零，請確認您的日期與時段皆已設定正確。');
+        return;
+      }
+
+      let selectedDepts = [];
+      document.querySelectorAll('.dept-cb:checked').forEach(cb => {
+        if (cb.value === '其他') {
+          let otherVal = document.getElementById('deptOtherText').value.trim();
+          if (otherVal) selectedDepts.push(otherVal);
+        } else {
+          selectedDepts.push(cb.value);
+        }
+      });
+      if (selectedDepts.length === 0) {
+        alert('請至少選擇一個所屬單位或申請地點！');
+        return;
+      }
+      
+      let deptString = selectedDepts.join('、'); 
+      const isExt = document.getElementById('isExternalUnit').checked;
+      if (isExt) deptString = '[校外單位] ' + deptString;
+
+      const paymentNode = document.querySelector('input[name="paymentMethod"]:checked');
+      const paymentMethod = paymentNode ? paymentNode.value : "未填寫";
+      const invoiceTitle = document.getElementById('invoiceTitle').value.trim();
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerText = '系統處理中，請稍候...';
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+      let recalculatedBillable = 0;
+      const periods = [];
+      document.querySelectorAll('.time-row').forEach(row => {
+        const earlyCb = row.querySelector('.early-cb');
+        const extCb = row.querySelector('.ext-cb');
+        const datesArr = row.querySelector('.dates-input').value.split(', ').filter(String);
+        
+        let eH = (earlyCb.checked && row.querySelector('.early-sel').value) ? parseFloat(row.querySelector('.early-sel').value) : 0;
+        let extH = (extCb.checked && row.querySelector('.ext-sel').value) ? parseFloat(row.querySelector('.ext-sel').value) : 0;
+        let dailyReal = eH + extH;
+        
+        if (datesArr.length > 0) {
+          // 💡 修改點：提交時也套用「早晚分開進位」的邏輯以確保資料庫正確
+          recalculatedBillable += (isExt ? (Math.ceil(eH) + Math.ceil(extH)) : dailyReal) * datesArr.length;
+        }
+        
+        periods.push({
+          dates: datesArr,
+          earlyHours: eH,
+          extendedHours: extH,
+          hours: row.querySelector('.hours-calc').value
+        });
+      });
+
+      const data = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        dept: deptString, 
+        phone: document.getElementById('phone').value,
+        reason: document.getElementById('reason').value,
+        periods: periods,
+        isExternal: isExt,
+        paymentMethod: paymentMethod,
+        invoiceTitle: invoiceTitle,
+        totalHours: totalHoursVal,
+        totalBillableHours: recalculatedBillable,
+        totalCost: document.getElementById('totalCost').innerText.replace(/,/g, '')
+      };
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          alert('✅ 申請成功！系統已將通知信寄至相關人員信箱。');
+          document.getElementById('appForm').reset();
+          document.querySelectorAll('.dept-cb').forEach(cb => cb.checked = false);
+          toggleOtherDept(); toggleExternalWarning(); toggleInvoice();
+          document.getElementById('periodsContainer').innerHTML = '';
+          addPeriodRow();
+          calculateTotals();
+          
+          btn.disabled = false;
+          btn.innerText = '送出申請單';
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        })
+        .withFailureHandler(function(error) {
+          alert('❌ 發生錯誤：' + error.message);
+          btn.disabled = false;
+          btn.innerText = '送出申請單';
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        })
+        .processForm(data);
+    }
+  </script>
+</body>
+</html>

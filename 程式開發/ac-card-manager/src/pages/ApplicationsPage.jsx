@@ -180,7 +180,7 @@ export default function ApplicationsPage() {
                     {app.reason}
                   </td>
                   <td>
-                    {app.status === 'pending' && <span className="badge badge-warning">待審核</span>}
+                    {app.status === 'pending' && <span className="badge badge-yellow">待審核</span>}
                     {app.status === 'approved' && <span className="badge badge-success">已核准</span>}
                     {app.status === 'rejected' && <span className="badge badge-danger">已婉拒</span>}
                   </td>
@@ -207,7 +207,7 @@ export default function ApplicationsPage() {
 
       {approveTarget && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
+          <div className="modal-box" style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <h3>✅ 核准並發放冷氣卡</h3>
               <button className="close-btn" onClick={() => setApproveTarget(null)}>×</button>
@@ -223,7 +223,7 @@ export default function ApplicationsPage() {
                   <label>第 {idx + 1} 張卡片號碼</label>
                   <input
                     type="text"
-                    className="input"
+                    className="form-input"
                     placeholder="請掃描或輸入卡號"
                     value={val}
                     onChange={(e) => handleCardIdChange(idx, e.target.value)}
