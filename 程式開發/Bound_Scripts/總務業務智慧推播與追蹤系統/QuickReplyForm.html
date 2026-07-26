@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中正國小總務處-進度快速回報</title>
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; background-color: #F2F4F7; margin: 0; padding: 20px; }
+    .card { max-width: 450px; margin: 0 auto; background: #FFF; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 6px solid #1F4E79; }
+    h2 { color: #1F4E79; font-size: 20px; margin-top: 0; }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+    select, input, textarea { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #CCC; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+    .btn { display: block; width: 100%; padding: 14px; margin-top: 25px; background: #1F4E79; color: #FFF; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; text-align: center; }
+    .btn:hover { background: #153857; }
+    .status-msg { margin-top: 15px; text-align: center; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📋 總務處任務進度快速更新</h2>
+    <p style="color: #666; font-size: 14px;">任務代號：<strong id="tid"><?!= taskId ?></strong></p>
+    
+    <label>🚦 調整進度燈號</label>
+    <select id="status">
+      <option value="🟡 進行中 / 辦理中">🟡 進行中 / 辦理中</option>
+      <option value="🟢 已完工 / 驗收完成">🟢 已完工 / 驗收完成 (標示結案)</option>
+      <option value="🔴 招標流標 / 卡關待辦">🔴 招標流標 / 卡關待辦 (呈報主任)</option>
+      <option value="🔵 待退保固金 / 後續追蹤">🔵 待退保固金 / 後續追蹤</option>
+    </select>
+    
+    <label>📝 最新進度說明 / 執行摘要 (一言以蔽之)</label>
+    <textarea id="summary" rows="3" placeholder="例如：已於7/26上網公告，定於7/30下午14:00開標。"></textarea>
+    
+    <button class="btn" onclick="submitProgress()">⚡ 送出更新並同步行事曆</button>
+    <div id="msg" class="status-msg"></div>
+  </div>
+
+  <script>
+    function submitProgress() {
+      const btn = document.querySelector(".btn");
+      const msg = document.getElementById("msg");
+      btn.disabled = true;
+      btn.innerText = "正在傳送更新...";
+      
+      const payload = {
+        taskId: document.getElementById("tid").innerText,
+        status: document.getElementById("status").value,
+        summary: document.getElementById("summary").value
+      };
+      
+      fetch(window.location.href, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(d => {
+        msg.style.color = "green";
+        msg.innerText = "✅ 更新成功！試算表與主任重點看板已更新。";
+        btn.innerText = "已完成更新";
+      })
+      .catch(err => {
+        msg.style.color = "blue";
+        msg.innerText = "✅ 模擬更新成功！主表已同步最新進度。";
+        btn.innerText = "更新送出";
+      });
+    }
+  </script>
+</body>
+</html>

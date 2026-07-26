@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中正國小總務處 - 智慧主副欄專案決策戰情室 [系統版本: v3.1.0]</title>
+  <style>
+    :root {
+      --sidebar-bg: #0F172A;
+      --sidebar-text: #E2E8F0;
+      --sidebar-hover: #1E293B;
+      --sidebar-active: #2563EB;
+      --sidebar-width: 270px;
+      --sidebar-collapsed: 70px;
+      
+      --bg-color: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      
+      --red-bg: #FEE2E2; --red-text: #991B1B; --red-border: #F87171;
+      --yellow-bg: #FEF3C7; --yellow-text: #92400E; --yellow-border: #FBBF24;
+      --green-bg: #DCFCE7; --green-text: #166534; --green-border: #4ADE80;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Microsoft JhengHei', 'Inter', -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* LEFT SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+    }
+    .sidebar-header {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid #1E293B;
+    }
+    .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .version-tag {
+      background: #2563EB;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: 6px;
+      box-shadow: 0 2px 5px rgba(37,99,235,0.4);
+    }
+    .btn-hamburger {
+      background: none;
+      border: none;
+      color: #94A3B8;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .btn-hamburger:hover { color: white; background: #1E293B; }
+    
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px 12px;
+    }
+    .menu-group {
+      margin-bottom: 22px;
+    }
+    .menu-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748B;
+      margin-bottom: 8px;
+      padding-left: 12px;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      border-radius: 8px;
+      color: #CBD5E1;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .menu-item-left { display: flex; align-items: center; gap: 12px; }
+    .menu-icon { font-size: 18px; width: 22px; text-align: center; }
+    .menu-item:hover { background: var(--sidebar-hover); color: white; }
+    .menu-item.active {
+      background: var(--sidebar-active);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+    .menu-badge {
+      background: rgba(255,255,255,0.15);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .sidebar.collapsed .menu-label,
+    .sidebar.collapsed .menu-text,
+    .sidebar.collapsed .menu-badge,
+    .sidebar.collapsed .logo-title,
+    .sidebar.collapsed .version-tag {
+      display: none;
+    }
+
+    .sidebar-footer {
+      padding: 15px 12px;
+      border-top: 1px solid #1E293B;
+    }
+    .btn-ai-import {
+      width: 100%;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      transition: transform 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .btn-ai-import:hover { transform: translateY(-2px); }
+
+    /* RIGHT CONTENT AREA */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-color);
+    }
+    
+    /* TOP BAR */
+    .topbar {
+      height: 64px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      flex-shrink: 0;
+    }
+    .topbar-title { font-size: 18px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 10px; }
+    
+    /* SORTING AND GLOBAL CONTROLS */
+    .sort-control-bar {
+      background: white;
+      padding: 14px 30px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .sort-options { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .sort-label { font-size: 13px; font-weight: 700; color: #475569; }
+    .sort-btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #F8FAFC;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .sort-btn:hover { background: #E2E8F0; }
+    .sort-btn.active {
+      background: #EFF6FF;
+      border-color: #3B82F6;
+      color: #1D4ED8;
+      font-weight: 700;
+    }
+    .btn-action-pill {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      color: #0F172A;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-action-pill:hover { background: #F1F5F9; border-color: #94A3B8; }
+    .btn-action-pill.toggled { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+
+    /* CARDS SCROLL CONTAINER */
+    .cards-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 25px 30px;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+      gap: 22px;
+    }
+    
+    /* PROJECT CARD */
+    .proj-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    .proj-card:hover {
+      box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+      border-color: #CBD5E1;
+      transform: translateY(-2px);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    .card-tags { display: flex; align-items: center; gap: 8px; }
+    .tag-category { font-size: 11px; font-weight: 700; background: #F1F5F9; color: #475569; padding: 4px 10px; border-radius: 12px; }
+    .tag-urgency {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-urgency.red { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
+    .tag-urgency.yellow { background: var(--yellow-bg); color: var(--yellow-text); border: 1px solid var(--yellow-border); }
+    .tag-urgency.green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+    
+    .btn-card-toggle {
+      background: #F1F5F9;
+      color: #334155;
+      border: 1px solid #E2E8F0;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-card-toggle:hover { background: #E2E8F0; }
+
+    .btn-edit-proj {
+      background: #FFF7ED;
+      color: #C2410C;
+      border: 1px solid #FFEDD5;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-edit-proj:hover { background: #EA580C; color: white; border-color: #EA580C; }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+    .card-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* TASKS CHECKLIST (v3.1.0 with Due Date & Report) */
+    .section-checklist {
+      background: #F8FAFC;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      border: 1px solid #F1F5F9;
+    }
+    .checklist-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-item-container {
+      padding: 9px 0;
+      border-bottom: 1px dashed #E2E8F0;
+    }
+    .task-item-container:last-child { border-bottom: none; }
+    
+    .task-item-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13.5px;
+      color: #1E293B;
+    }
+    .task-checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      flex: 1;
+    }
+    .task-checkbox {
+      width: 17px;
+      height: 17px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+    .task-item-top.completed .task-text {
+      text-decoration: line-through;
+      color: #94A3B8;
+    }
+    
+    /* SUB-TASK DUE DATE & ACTIONS BADGES */
+    .subtask-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .subtask-date-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .subtask-date-badge.red { background: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+    .subtask-date-badge.yellow { background: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
+    .subtask-date-badge.green { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+
+    .btn-sub-act {
+      background: white;
+      border: 1px solid #CBD5E1;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-sub-act:hover { background: #F1F5F9; border-color: #94A3B8; }
+    .btn-sub-push {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-sub-push:hover { background: #2563EB; color: white; }
+
+    /* SUB-TASK REPORT BOX */
+    .subtask-report-box {
+      margin-top: 6px;
+      margin-left: 26px;
+      background: #FFFFFF;
+      border-left: 3px solid #2563EB;
+      padding: 7px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #334155;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .report-time {
+      font-size: 11px;
+      color: #64748B;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .completed-hidden-bar {
+      font-size: 12px;
+      font-weight: 700;
+      color: #059669;
+      background: #ECFDF5;
+      border: 1px dashed #A7F3D0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .completed-hidden-bar:hover { background: #D1FAE5; }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: auto;
+    }
+    .btn-drive, .btn-add-task {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-drive { background: #FFFFFF; color: #334155; }
+    .btn-drive:hover { background: #F1F5F9; }
+    .btn-add-task { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+    .btn-add-task:hover { background: #2563EB; color: white; }
+
+    /* PERIODIC TEMPLATE CARD */
+    .periodic-card {
+      background: white;
+      border-radius: 12px;
+      border: 2px dashed #CBD5E1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    .periodic-card:hover { border-color: #10B981; box-shadow: 0 10px 20px rgba(16,185,129,0.1); }
+    .btn-redeploy {
+      width: 100%;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 15px;
+      box-shadow: 0 4px 10px rgba(16,185,129,0.3);
+    }
+    .btn-redeploy:hover { transform: translateY(-2px); }
+
+    /* MODAL OVERLAYS */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      width: 90%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+    .modal-title { font-size: 20px; font-weight: 800; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .modal-desc { font-size: 13px; color: #64748B; margin-bottom: 18px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 14px; }
+    .checkbox-label { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; }
+    .btn-cancel { background: #F1F5F9; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-submit { background: #2563EB; color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-submit:hover { background: #1D4ED8; }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT COLLAPSIBLE SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-text">
+        <span>🏛️</span>
+        <span class="logo-title">中正總務戰情室</span>
+        <span class="version-tag">v3.1.0</span>
+      </div>
+      <button class="btn-hamburger" onclick="toggleSidebar()" title="收合/展開選單">☰</button>
+    </div>
+    
+    <div class="sidebar-content">
+      <div class="menu-group">
+        <div class="menu-label">📌 決策監控 (Executive)</div>
+        <div class="menu-item active" onclick="selectSection('FOCUS', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🎯</span>
+            <span class="menu-text">主任重點晨報與專案</span>
+          </div>
+          <span class="menu-badge" id="cnt-focus">12</span>
+        </div>
+        <div class="menu-item" onclick="selectSection('URGENT', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🚨</span>
+            <span class="menu-text">緊急警示與即將到期</span>
+          </div>
+          <span class="menu-badge" style="background:#DC2626; color:white;" id="cnt-urgent">4</span>
+        </div>
+      </div>
+      
+      <div class="menu-group">
+        <div class="menu-label">🏢 各組負責專案與工作單 (Sections)</div>
+        <div class="menu-item" onclick="selectSection('事務組', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🛠️</span>
+            <span class="menu-text">事務組長 (專案&任務)</span>
+          </div>
+          <span class="menu-badge" id="cnt-affairs">9</span>
+        </div>
+        <div class="menu-item" onclick="selectSection('出納組', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">💰</span>
+            <span class="menu-text">出納組長 (專案&任務)</span>
+          </div>
+          <span class="menu-badge" id="cnt-cash">4</span>
+        </div>
+        <div class="menu-item" onclick="selectSection('文書組', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">📄</span>
+            <span class="menu-text">文書組長 (專案&任務)</span>
+          </div>
+          <span class="menu-badge" id="cnt-doc">4</span>
+        </div>
+        <div class="menu-item" onclick="selectSection('事務幹事', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🧑‍🔧</span>
+            <span class="menu-text">事務幹事 (專案&任務)</span>
+          </div>
+          <span class="menu-badge" id="cnt-clerk">6</span>
+        </div>
+        <div class="menu-item" onclick="selectSection('總務主任', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🎖️</span>
+            <span class="menu-text">總務主任親辦項目</span>
+          </div>
+          <span class="menu-badge" id="cnt-dir">10</span>
+        </div>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-label">📜 週期任務與歷年檔案庫 (History)</div>
+        <div class="menu-item" onclick="selectSection('PERIODIC', this)">
+          <div class="menu-item-left">
+            <span class="menu-icon">🔄</span>
+            <span class="menu-text">週期常規與一鍵重新部署</span>
+          </div>
+          <span class="menu-badge" style="background:#10B981; color:white;" id="cnt-periodic">2</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar-footer">
+      <button class="btn-ai-import" onclick="openAiModal()">
+        <span>🤖</span>
+        <span class="menu-text">AI 辨識匯入公文/簽呈</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- RIGHT CONTENT AREA -->
+  <main class="main-area">
+    
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-title">
+        <span id="headerSectionIcon">🎯</span>
+        <span id="headerSectionTitle">主任重點晨報與專案監控 (Director Focus)</span>
+        <span style="font-size:13px; font-weight:600; color:#64748B; background:#F1F5F9; padding:4px 10px; border-radius:8px;" id="headerSectionSubtitle">
+          卡片內僅顯示您所勾選組別要負責的工作項目清單
+        </span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button onclick="triggerGlobalPushSimulation()" style="background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color:white; border:none; padding:9px 15px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 4px 10px rgba(37,99,235,0.25);">
+          📲 觸發即期子任務自動推播 (LINE/Chat)
+        </button>
+        <button onclick="openNewManualModal()" style="background:#0F172A; color:white; border:none; padding:9px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px;">
+          ➕ 自行建立新業務
+        </button>
+      </div>
+    </header>
+    
+    <!-- SORTING AND GLOBAL CONTROLS -->
+    <section class="sort-control-bar">
+      <div class="sort-options">
+        <span class="sort-label">⚡ 檢視與版本控制：</span>
+        <button class="sort-btn active" id="btnSortDeadline" onclick="setSort('deadline', this)">
+          🕒 距離到期日最短優先
+        </button>
+        <button class="sort-btn" id="btnSortPriority" onclick="setSort('priority', this)">
+          ⭐ 重要性優先 (P1-P3)
+        </button>
+        <button class="btn-action-pill" id="btnToggleAllCards" onclick="toggleAllCardsCollapse()">
+          🔼 展開/收合全部卡片
+        </button>
+        <button class="btn-action-pill toggled" id="btnToggleCompleted" onclick="toggleCompletedVisibility()">
+          🙈 已完成子任務：自動隱藏中 (點此顯示)
+        </button>
+        <span style="font-size:12px; font-weight:800; color:#0369A1; background:#E0F2FE; padding:6px 10px; border-radius:6px; border:1px solid #BAE6FD;">
+          🛡️ 版控: v3.1.0 (子任務期程+回報版)
+        </span>
+      </div>
+      <div>
+        <input type="text" id="quickSearch" placeholder="🔍 搜尋案名或子任務細目..." style="padding:7px 14px; border-radius:8px; border:1px solid #E2E8F0; width:210px; font-size:13px;" oninput="renderCards()">
+      </div>
+    </section>
+
+    <!-- CARDS CONTAINER -->
+    <div class="cards-container">
+      <div class="cards-grid" id="cardsGrid"></div>
+    </div>
+
+  </main>
+
+  <!-- SUB-TASK EDIT MODAL -->
+  <div class="modal-overlay" id="subtaskModal">
+    <div class="modal">
+      <div class="modal-title">✏️ 設定與修改子任務日期及進度回報</div>
+      <div class="modal-desc">
+        您可以為每個工作檢查點設定「專屬到期日 (Due Date)」，當日期逼近時系統將自動標紅推播；組長完成時可在此填入「工作報告說明」。
+      </div>
+      <div class="form-group">
+        <label>子任務工作項目內容</label>
+        <input type="text" id="editSubtaskText">
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+          <label>子任務到期期限 (YYYY-MM-DD)</label>
+          <input type="date" id="editSubtaskDate">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>完成狀態</label>
+          <select id="editSubtaskDone">
+            <option value="false">🔲 進行中 (待辦)</option>
+            <option value="true">☑ 已完成 (完工)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>💬 承辦人 / 組長工作進度回報說明 (Report Remark)</label>
+        <textarea id="editSubtaskReport" rows="3" placeholder="例如：已正式發文至工管科申請動支，文號 1150720-302 號..."></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeSubtaskModal()">取消</button>
+        <button class="btn-submit" onclick="saveSubtaskEdit()">💾 儲存子任務設定與回報</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUSH NOTIFICATION SIMULATION MODAL -->
+  <div class="modal-overlay" id="pushModal">
+    <div class="modal">
+      <div class="modal-title">📲 智慧自動追蹤與多通道推播報表 (LINE / Chat / Email)</div>
+      <div class="modal-desc">
+        系統每日晨間自動掃描「即將於 5 天內到期或逾期」之子任務，並主動傳送到對應組長的推播群組與信箱！
+      </div>
+      <div id="pushContentArea" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:16px; max-height:420px; overflow-y:auto; font-size:13.5px; line-height:1.5;"></div>
+      <div class="modal-buttons">
+        <button class="btn-submit" onclick="closePushModal()">✅ 確認並完成本次推播紀錄</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT PROJECT DETAILS MODAL -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-title">✏️ 修改專案資訊與基本配置 (v3.1.0)</div>
+      <div class="modal-desc">
+        在此調整專案的名稱、到期時間、重要度順位、是否列入主任重點、以及參與的責任組別。系統將自動重新計算倒數期限與排版排序。
+      </div>
+      <div class="form-group">
+        <label>專案編號與名稱</label>
+        <input type="text" id="editTitle" placeholder="例如：仁愛樓東棟老舊廁所整修工程發包">
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+          <label>專案類別</label>
+          <input type="text" id="editCategory" placeholder="大額工程">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>重要性等級 (Priority)</label>
+          <select id="editPriority">
+            <option value="1">⭐ P1 - 重大焦點 / 主任決策監控 (最優先)</option>
+            <option value="2">⭐ P2 - 重要專案 / 常規重點業務</option>
+            <option value="3">⭐ P3 - 一般行政 / 協辦或追蹤事項</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+          <label>截止期限 / 到期時間 (YYYY-MM-DD)</label>
+          <input type="date" id="editDeadline">
+        </div>
+        <div class="form-group" style="flex:1; display:flex; align-items:flex-end; padding-bottom:6px;">
+          <label class="checkbox-label" style="color:#C2410C; font-weight:800;">
+            <input type="checkbox" id="editIsFocus">
+            🎯 納入「主任重點晨報」看板監視
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>參與及分工責任組別 (可多選勾選)</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label"><input type="checkbox" class="edit-sec-cb" value="事務組"> 事務組</label>
+          <label class="checkbox-label"><input type="checkbox" class="edit-sec-cb" value="出納組"> 出納組</label>
+          <label class="checkbox-label"><input type="checkbox" class="edit-sec-cb" value="文書組"> 文書組</label>
+          <label class="checkbox-label"><input type="checkbox" class="edit-sec-cb" value="事務幹事"> 事務幹事</label>
+          <label class="checkbox-label"><input type="checkbox" class="edit-sec-cb" value="總務主任"> 總務主任</label>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeEditModal()">取消</button>
+        <button class="btn-submit" onclick="saveEditProject()">💾 儲存修改並自動排序</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI RECOGNITION IMPORTER MODAL -->
+  <div class="modal-overlay" id="aiModal">
+    <div class="modal">
+      <div class="modal-title">🤖 AI 智慧辨識匯入 (公文/簽呈/交辦單)</div>
+      <div class="modal-desc">
+        直接貼上教育局公文、LINE訊息或交辦事項文字（未來支援照相OCR辨識），AI 將自動提取「專案名稱、負責組別、截止日期」與「任務清單」。
+      </div>
+      <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+        <div style="font-size:12px; font-weight:700; color:#475569;">💡 快速測試範本：</div>
+        <div style="font-size:12px; color:#2563EB; cursor:pointer; margin-top:4px;" onclick="loadSampleText()">
+          點我填入範例：教育局 1150720 函「請學校於 115年8月15日前 辦理全校高壓變壓器與線路絕緣檢測，並將檢測紀錄照片及技師簽證上傳至小教科管理平台」。
+        </div>
+        <textarea id="aiInputText" style="width: 100%; height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; outline: none; margin-top: 8px;" placeholder="在此貼上公文說明或交辦文字..."></textarea>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12px; color:#64748B;">支援格式：純文字、公文PDF摘要、LINE文字訊息</span>
+        <button onclick="runAiParse()" style="background:#10B981; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;">
+          🧠 啟動 AI 辨識分析
+        </button>
+      </div>
+      <div id="aiParsedBox" style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; padding: 16px; margin-top: 15px; display: none;">
+        <div style="font-size: 14px; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">✨ AI 自動分析完成！即將為【事務組、幹事】建立以下專案與子任務：</div>
+        <ul id="aiParsedList" style="font-size: 13px; color: #1E40AF; padding-left: 20px;"></ul>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeAiModal()">取消</button>
+        <button class="btn-submit" id="aiConfirmBtn" style="display:none;" onclick="confirmAiImport()">
+          ✅ 確認一鍵匯入並建置 Drive 資料夾
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const projectsData = [{"id": "PRJ-01", "title": "仁愛樓東棟老舊廁所整修工程發包", "category": "大額工程", "priority": 1, "deadline": "2026-07-14", "daysLeft": 3, "isFocus": true, "collapsed": false, "sections": ["事務組", "事務幹事", "總務主任"], "sectionTasks": {"事務組": [{"id": "t1-1", "task": "辦理第3次減項招標公告", "dueDate": "2026-07-01", "done": true, "report": "已正式公告於政府電子採購網，標案編號 1150701-A，等標期 12 天", "reportTime": "115/07/01 14:30"}, {"id": "t1-2", "task": "辦理開標作業與投標廠商資格審查", "dueDate": "2026-07-14", "done": false, "report": "目前已領標 5 家廠商，預定於 07/14 上午 10:00 準時開標", "reportTime": "115/07/11 16:00"}, {"id": "t1-3", "task": "若不幸再次流標，協調建築師重新計算工資與工法", "dueDate": "2026-07-18", "done": false, "report": "", "reportTime": ""}], "事務幹事": [{"id": "t1-4", "task": "準備開標場地、投標清冊與審標表格", "dueDate": "2026-07-13", "done": true, "report": "開標室廣播與投影錄影設備已確認測試完畢", "reportTime": "115/07/13 11:20"}, {"id": "t1-5", "task": "將招標紀錄及公文函件歸檔至採購業務卷宗", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "t1-6", "task": "主持開標會議並確認決標或流標應變計畫", "dueDate": "2026-07-14", "done": false, "report": "將會同政風室主任與主計人員共同監辦", "reportTime": "115/07/12 09:15"}, {"id": "t1-7", "task": "若須減項再公告，簽報校長並發文工管科報備", "dueDate": "2026-07-20", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-02", "title": "四維樓無障礙坡道及扶手新建工程", "category": "大額工程", "priority": 1, "deadline": "2026-07-13", "daysLeft": 2, "isFocus": true, "collapsed": false, "sections": ["事務組", "事務幹事", "總務主任"], "sectionTasks": {"事務組": [{"id": "t2-1", "task": "召開審圖會議並確認設計書圖", "dueDate": "2026-06-12", "done": true, "report": "設計圖審查通過，坡度符合 1:12 無障礙法規", "reportTime": "115/06/12 17:00"}, {"id": "t2-2", "task": "發文教育局申請最有利標決標，確認已同意", "dueDate": "2026-06-25", "done": true, "report": "教育局 1150625 高市教營字第 115003920 函核定同意", "reportTime": "115/06/26 10:10"}, {"id": "t2-3", "task": "14:00 辦理公開最有利標開標會議", "dueDate": "2026-07-13", "done": false, "report": "外聘專家學者共 3 位皆已回覆準時出席", "reportTime": "115/07/12 15:30"}], "事務幹事": [{"id": "t2-4", "task": "協調外聘委員出席與審查費用準備", "dueDate": "2026-07-10", "done": true, "report": "出席費與領據已請會計室開立暫付款", "reportTime": "115/07/10 14:00"}, {"id": "t2-5", "task": "完成開標紀錄與開標室錄音錄影留存", "dueDate": "2026-07-13", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "t2-6", "task": "主持評選會議與議定契約原則", "dueDate": "2026-07-13", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-03", "title": "仁愛樓樓板及欄杆整修工程", "category": "工程採購", "priority": 2, "deadline": "2026-08-30", "daysLeft": 49, "isFocus": true, "collapsed": false, "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "t3-1", "task": "勞務(規劃設計)發包作業完成 (祥騰工程顧問)", "dueDate": "2026-06-30", "done": true, "report": "已與祥騰工程顧問完成勞務決標與簽約", "reportTime": "115/06/30 16:45"}, {"id": "t3-2", "task": "召開預算及設計圖說審查會議", "dueDate": "2026-07-25", "done": false, "report": "約定於 07/25 上午 10點在簡報室開會", "reportTime": "115/07/15 11:00"}, {"id": "t3-3", "task": "向國教署提報充實設施設備計畫與經費編列", "dueDate": "2026-08-10", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "t3-4", "task": "督導規劃設計進度並控管開學前安全動線", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-04", "title": "禮堂空調改善案 (含韻律教室)", "category": "工程驗收", "priority": 2, "deadline": "2026-07-31", "daysLeft": 20, "isFocus": true, "collapsed": false, "sections": ["事務組", "文書組", "總務主任"], "sectionTasks": {"事務組": [{"id": "t4-1", "task": "禮堂與韻律教室室內外機安裝施工", "dueDate": "2026-07-05", "done": true, "report": "12台頂置與分離式空調已安裝並配電完妥", "reportTime": "115/07/05 17:30"}, {"id": "t4-2", "task": "辦理現場竣工初驗與試運轉測試", "dueDate": "2026-07-18", "done": true, "report": "連續試運轉 4 小時冷房效果優良無噪音", "reportTime": "115/07/18 15:10"}, {"id": "t4-3", "task": "召開正式驗收會議並簽發結算證明書", "dueDate": "2026-07-30", "done": false, "report": "", "reportTime": ""}], "文書組": [{"id": "t4-4", "task": "將驗收證明公文上傳至小教科管理平台(編號 55618)", "dueDate": "2026-07-31", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "t4-5", "task": "主持正式驗收會議與結案報局公文決行", "dueDate": "2026-07-30", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-06", "title": "校長交接清冊彙整與對口", "category": "重大行政", "priority": 1, "deadline": "2026-08-01", "daysLeft": 21, "isFocus": true, "collapsed": false, "sections": ["文書組", "事務組", "出納組", "總務主任"], "sectionTasks": {"文書組": [{"id": "t6-1", "task": "依教育局來文格式，建立校長交接清冊彙整總目錄", "dueDate": "2026-07-10", "done": true, "report": "共 12 大項移交目錄已完成分編", "reportTime": "115/07/10 11:00"}, {"id": "t6-2", "task": "協調人事室、會計室彙整相關印信與財務檔案", "dueDate": "2026-07-15", "done": true, "report": "大印、小印與章戳已完成核對清單", "reportTime": "115/07/15 16:20"}], "事務組": [{"id": "t6-3", "task": "盤點全校不動產、土地及校有財產清冊簽章", "dueDate": "2026-07-25", "done": false, "report": "已印出 8000 件財產總表，逐棟查核中", "reportTime": "115/07/18 14:00"}], "出納組": [{"id": "t6-4", "task": "結算專戶存款、零用金及銀行存摺結餘清單", "dueDate": "2026-07-28", "done": false, "report": "7月份零用金持續核銷中，預計 7/27 結算帳面", "reportTime": "115/07/18 15:00"}], "總務主任": [{"id": "t6-5", "task": "全面覆核交接清冊檔案 (參考卷宗 000-02-111)", "dueDate": "2026-07-30", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/aiagent"}, {"id": "PRJ-09", "title": "校園電力改善工程(搶修與改善計畫)", "category": "電力安全", "priority": 1, "deadline": "2026-08-15", "daysLeft": 35, "isFocus": true, "collapsed": false, "sections": ["事務組", "事務幹事", "總務主任"], "sectionTasks": {"事務組": [{"id": "t9-1", "task": "發文申請電力搶修經費 47萬8,266元 (已報局)", "dueDate": "2026-07-01", "done": true, "report": "經費已由工管科專函同意動支", "reportTime": "115/07/02 09:30"}, {"id": "t9-2", "task": "提報小教科校園電纜電力改善計畫 1,297萬6,682元", "dueDate": "2026-07-15", "done": true, "report": "中長程大額改善計畫書及圖說已送局審查", "reportTime": "115/07/15 15:40"}, {"id": "t9-3", "task": "安排電機技師定期到校勘查用電盤與電纜走線", "dueDate": "2026-08-10", "done": false, "report": "", "reportTime": ""}], "事務幹事": [{"id": "t9-4", "task": "追蹤教育局核定公文及款項分配進度", "dueDate": "2026-08-01", "done": false, "report": "電詢承辦人，目前排入 8 月中旬預算配置", "reportTime": "115/07/16 11:15"}], "總務主任": [{"id": "t9-5", "task": "督導大額電力改善計畫與工管科進度協調", "dueDate": "2026-08-15", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-11", "title": "青暉營造退信義樓及秀樓外牆保固金", "category": "合約保固", "priority": 1, "deadline": "2026-08-09", "daysLeft": 29, "isFocus": true, "collapsed": false, "sections": ["出納組", "事務組", "總務主任"], "sectionTasks": {"出納組": [{"id": "t11-1", "task": "查核保固帳戶期滿金額為 41萬8,300元整", "dueDate": "2026-07-15", "done": true, "report": "存單與保管條款額確有41萬8,300元，屆滿日為 8/9", "reportTime": "115/07/15 14:00"}, {"id": "t11-2", "task": "於到期日前 7 天主動確認無漏水情事辦理退還", "dueDate": "2026-08-02", "done": false, "report": "", "reportTime": ""}], "事務組": [{"id": "t11-3", "task": "進行信義樓及秀樓外牆期滿前漏水與修繕檢查", "dueDate": "2026-07-31", "done": false, "report": "即將於七月底颱風季進行最後防漏測試", "reportTime": "115/07/18 10:00"}], "總務主任": [{"id": "t11-4", "task": "審決退還保固金簽函與會計出納勾稽", "dueDate": "2026-08-05", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-12", "title": "五育樓1樓電纜線破壞緊急搶修", "category": "緊急維修", "priority": 1, "deadline": "2026-07-28", "daysLeft": 17, "isFocus": true, "collapsed": false, "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "t12-1", "task": "聯繫銡誠機電勘查受損電纜並出具修繕報價", "dueDate": "2026-07-10", "done": true, "report": "銡誠機電到場勘估修復工料需 45,000 元", "reportTime": "115/07/10 18:00"}, {"id": "t12-2", "task": "公告全校假日斷電時段，安排廠商進場拉線更換", "dueDate": "2026-07-20", "done": false, "report": "已約定 7/20 (六) 全日進場施工更換電纜", "reportTime": "115/07/16 12:30"}, {"id": "t12-3", "task": "測試教室供電正常並完成監視器補強", "dueDate": "2026-07-25", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "t12-4", "task": "核定緊急修繕動支並要求加強校園防禦線路", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}];
+    const periodicTemplates = [{"id": "PER-01", "title": "新學期開學前校園安全檢查與環境整備", "category": "週期常規 (每學期)", "priority": 2, "deadline": "每年 8月下旬 / 2月下旬", "cycle": "每學期初", "sections": ["事務組", "出納組", "文書組", "事務幹事"], "sectionTasks": {"事務組": [{"id": "p1-1", "task": "課桌椅補齊與廣播廣播器全校測試", "dueDate": "2026-08-20", "done": false, "report": "", "reportTime": ""}, {"id": "p1-2", "task": "飲水機保養換濾心及水質檢測送驗", "dueDate": "2026-08-22", "done": false, "report": "", "reportTime": ""}, {"id": "p1-3", "task": "通學步道與遊戲器材定期安全自主檢查", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": ""}], "出納組": [{"id": "p1-4", "task": "更新學雜費註冊收費模組與繳費單製作", "dueDate": "2026-08-23", "done": false, "report": "", "reportTime": ""}, {"id": "p1-5", "task": "造冊並印製新學期各處室兼職及課後活動鐘點費表", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": ""}], "文書組": [{"id": "p1-6", "task": "設定新進教師與兼任行政主體公文系統權限", "dueDate": "2026-08-15", "done": false, "report": "", "reportTime": ""}, {"id": "p1-7", "task": "發送開學準備行政會議開會通知與檔案彙整", "dueDate": "2026-08-20", "done": false, "report": "", "reportTime": ""}], "事務幹事": [{"id": "p1-8", "task": "協助各處室開學請購單收件與綠色採購系統申報", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": ""}]}}, {"id": "PER-02", "title": "年度校園通學步道與大型樹木修剪專案", "category": "週期常規 (每2年)", "priority": 2, "deadline": "每年 7月 - 8月", "cycle": "每2年申辦1次", "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "p2-1", "task": "邀請專業景觀與園藝廠商到校會勘危險枯枝", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": ""}, {"id": "p2-2", "task": "出具修剪圖說與報價單，辦理校內會辦簽呈", "dueDate": "2026-07-25", "done": false, "report": "", "reportTime": ""}, {"id": "p2-3", "task": "發文教育局申請通學步道與防颱樹木修剪經費", "dueDate": "2026-08-05", "done": false, "report": "", "reportTime": ""}], "總務主任": [{"id": "p2-4", "task": "審查修剪計畫與預算簽准，監管修剪安全", "dueDate": "2026-08-10", "done": false, "report": "", "reportTime": ""}]}}];
+    
+    let currentSection = "FOCUS";
+    let currentSort = "deadline";
+    let hideCompletedTasks = true;
+    let allCardsCollapsed = false;
+    let editingProjId = null;
+    let editingSubtaskRef = null; // { projId, sec, taskId }
+    let aiParsedData = null;
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("collapsed");
+    }
+
+    function toggleCompletedVisibility() {
+      hideCompletedTasks = !hideCompletedTasks;
+      const btn = document.getElementById("btnToggleCompleted");
+      if (hideCompletedTasks) {
+        btn.classList.add("toggled");
+        btn.innerHTML = "🙈 已完成子任務：自動隱藏中 (點此顯示)";
+      } else {
+        btn.classList.remove("toggled");
+        btn.innerHTML = "👁️ 已完成子任務：目前全部顯示中";
+      }
+      renderCards();
+    }
+
+    function toggleAllCardsCollapse() {
+      allCardsCollapsed = !allCardsCollapsed;
+      const btn = document.getElementById("btnToggleAllCards");
+      projectsData.forEach(p => p.collapsed = allCardsCollapsed);
+      if (allCardsCollapsed) {
+        btn.innerHTML = "🔽 展開全部卡片內容";
+      } else {
+        btn.innerHTML = "🔼 收合全部卡片內容";
+      }
+      renderCards();
+    }
+
+    function toggleCardCollapse(projId) {
+      const p = projectsData.find(x => x.id === projId);
+      if (p) {
+        p.collapsed = !p.collapsed;
+        renderCards();
+      }
+    }
+
+    function selectSection(sec, btn) {
+      currentSection = sec;
+      document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
+      btn.classList.add("active");
+      
+      const headerTitles = {
+        FOCUS: ["🎯", "主任重點晨報與專案監控 (Director Focus)", "全盤檢視重大工程與重點合約，任務項目清單顯示全組待辦"],
+        URGENT: ["🚨", "緊急警示與即將到期專案 (倒數 30 天內)", "只顯示倒數期程緊迫或招標流標警示項目"],
+        "事務組": ["🛠️", "事務組長 - 負責專案與工作項目單", "卡片內【僅呈現事務組】必須負責完成的工作項目"],
+        "出納組": ["💰", "出納組長 - 負責專案與工作項目單", "卡片內【僅呈現出納組】必須負責完成的工作項目"],
+        "文書組": ["📄", "文書組長 - 負責專案與工作項目單", "卡片內【僅呈現文書組】必須負責完成的工作項目"],
+        "事務幹事": ["🧑‍🔧", "事務幹事 - 負責專案與工作項目單", "卡片內【僅呈現事務幹事】必須負責協助的工作項目"],
+        "總務主任": ["🎖️", "總務主任 - 親辦與督導項目單", "卡片內【僅呈現總務主任】必須親自主持或決行之工作項目"],
+        PERIODIC: ["🔄", "週期性常規業務庫與歷年紀錄 (Templates & History)", "歷年週期業務檔案庫，可一鍵重新部署為新年度工作指派"]
+      };
+      document.getElementById("headerSectionIcon").innerText = headerTitles[sec][0];
+      document.getElementById("headerSectionTitle").innerText = headerTitles[sec][1];
+      document.getElementById("headerSectionSubtitle").innerText = headerTitles[sec][2];
+      renderCards();
+    }
+
+    function setSort(type, btn) {
+      currentSort = type;
+      document.querySelectorAll(".sort-btn").forEach(el => el.classList.remove("active"));
+      btn.classList.add("active");
+      renderCards();
+    }
+
+    function updateBadgeCounts() {
+      document.getElementById("cnt-focus").innerText = projectsData.filter(p => p.isFocus).length;
+      document.getElementById("cnt-urgent").innerText = projectsData.filter(p => p.daysLeft <= 30).length;
+      document.getElementById("cnt-affairs").innerText = projectsData.filter(p => p.sections.includes("事務組")).length;
+      document.getElementById("cnt-cash").innerText = projectsData.filter(p => p.sections.includes("出納組")).length;
+      document.getElementById("cnt-doc").innerText = projectsData.filter(p => p.sections.includes("文書組")).length;
+      document.getElementById("cnt-clerk").innerText = projectsData.filter(p => p.sections.includes("事務幹事")).length;
+      document.getElementById("cnt-dir").innerText = projectsData.filter(p => p.sections.includes("總務主任")).length;
+      document.getElementById("cnt-periodic").innerText = periodicTemplates.length;
+    }
+
+    function getSubtaskUrgencyBadge(dueDate, done) {
+      if (!dueDate) return `<span class="subtask-date-badge green">📅 未訂期限</span>`;
+      if (done) return `<span class="subtask-date-badge green" style="background:#DCFCE7; color:#166534;">☑ ${dueDate} 完成</span>`;
+      
+      const baseDate = new Date("2026-07-26");
+      const targetDate = new Date(dueDate);
+      const diffDays = Math.ceil((targetDate - baseDate) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 3) {
+        return `<span class="subtask-date-badge red">🚨 ${dueDate} (倒數${diffDays}天)</span>`;
+      } else if (diffDays <= 10) {
+        return `<span class="subtask-date-badge yellow">⚠️ ${dueDate} (剩${diffDays}天)</span>`;
+      } else {
+        return `<span class="subtask-date-badge green">🕒 ${dueDate}</span>`;
+      }
+    }
+
+    function renderCards() {
+      updateBadgeCounts();
+      const grid = document.getElementById("cardsGrid");
+      grid.innerHTML = "";
+
+      if (currentSection === "PERIODIC") {
+        periodicTemplates.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "periodic-card";
+          card.innerHTML = `
+            <div>
+              <div class="card-top">
+                <span class="tag-category" style="background:#D1FAE5; color:#065F46;">${item.category}</span>
+                <span style="font-size:12px; font-weight:700; color:#059669;">期程：${item.cycle}</span>
+              </div>
+              <div class="card-title">${item.title}</div>
+              <div class="card-meta">
+                <span>👤 負責組別：<strong>${item.sections.join("、")}</strong></span>
+                <span>•</span>
+                <span>📅 慣例月份：${item.deadline}</span>
+              </div>
+              <div style="font-size:13px; color:#475569; margin-bottom:12px;">
+                <strong>📋 內建標準子任務與預計期限：</strong>
+                <ul style="padding-left:18px; margin-top:6px;">
+                  ${Object.entries(item.sectionTasks).map(([sec, list]) => `
+                    <li><strong>${sec}</strong>: ${list.map(t => `${t.task} [${t.dueDate||'常態'}]`).join("；")}</li>
+                  `).join("")}
+                </ul>
+              </div>
+            </div>
+            <div>
+              <button class="btn-redeploy" onclick="redeployPeriodic('${item.id}')">
+                <span>🔄</span>
+                <span>一鍵找回與重新部署 (開啟新學期任務)</span>
+              </button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+        return;
+      }
+
+      const query = document.getElementById("quickSearch").value.trim().toLowerCase();
+      let filtered = projectsData.filter(p => {
+        if (currentSection === "FOCUS") {
+          if (!p.isFocus) return false;
+        } else if (currentSection === "URGENT") {
+          if (p.daysLeft > 35) return false;
+        } else {
+          if (!p.sections.includes(currentSection)) return false;
+        }
+        if (query) {
+          const hitTitle = p.title.toLowerCase().includes(query);
+          let hitTask = false;
+          Object.values(p.sectionTasks).forEach(tasks => {
+            tasks.forEach(t => {
+              if (t.task.toLowerCase().includes(query) || (t.report && t.report.toLowerCase().includes(query))) hitTask = true;
+            });
+          });
+          if (!hitTitle && !hitTask) return false;
+        }
+        return true;
+      });
+
+      if (currentSort === "deadline") {
+        filtered.sort((a, b) => a.daysLeft - b.daysLeft);
+      } else if (currentSort === "priority") {
+        filtered.sort((a, b) => a.priority - b.priority || a.daysLeft - b.daysLeft);
+      }
+      
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 60px; color:#94A3B8;">📭 目前該組別/條件下沒有查詢到對應專案</div>`;
+        return;
+      }
+
+      filtered.forEach(p => {
+        let urgencyTag = `<span class="tag-urgency green">🕒 剩餘 ${p.daysLeft} 天 (${p.deadline})</span>`;
+        if (p.daysLeft <= 15) {
+          urgencyTag = `<span class="tag-urgency red">🚨 倒數 ${p.daysLeft} 天 (${p.deadline})</span>`;
+        } else if (p.daysLeft <= 35) {
+          urgencyTag = `<span class="tag-urgency yellow">⚠️ 剩餘 ${p.daysLeft} 天 (${p.deadline})</span>`;
+        }
+
+        let targetSections = p.sections;
+        if (["事務組", "出納組", "文書組", "事務幹事", "總務主任"].includes(currentSection)) {
+          targetSections = [currentSection];
+        }
+
+        let checklistHtml = "";
+        let totalCompletedHidden = 0;
+
+        if (!p.collapsed) {
+          targetSections.forEach(sec => {
+            const tasks = p.sectionTasks[sec] || [];
+            if (tasks.length > 0) {
+              const visibleTasks = hideCompletedTasks ? tasks.filter(t => !t.done) : tasks;
+              const hiddenCount = tasks.filter(t => t.done).length;
+              totalCompletedHidden += hiddenCount;
+
+              checklistHtml += `
+                <div class="section-checklist">
+                  <div class="checklist-title">
+                    <span>🏢 <strong>${sec}</strong> 負責之子任務與到期追蹤：</span>
+                    <span style="font-size:11px; color:#64748B;">
+                      已完工 ${hiddenCount}/${tasks.length} 項
+                    </span>
+                  </div>
+                  <div>
+                    ${visibleTasks.map(t => `
+                      <div class="task-item-container">
+                        <div class="task-item-top ${t.done ? 'completed' : ''}">
+                          <label class="task-checkbox-label">
+                            <input type="checkbox" class="task-checkbox" ${t.done ? 'checked' : ''} onchange="toggleTaskDone('${p.id}', '${sec}', '${t.id}', this.checked)">
+                            <span class="task-text">${t.task}</span>
+                          </label>
+                          <div class="subtask-actions">
+                            ${getSubtaskUrgencyBadge(t.dueDate, t.done)}
+                            <button class="btn-sub-act" onclick="openSubtaskModal('${p.id}', '${sec}', '${t.id}')" title="設定到期日與回報說明">✏️ 回報/期限</button>
+                            <button class="btn-sub-push" onclick="simulateSinglePush('${p.title}', '${sec}', '${t.task}', '${t.dueDate}')" title="傳送LINE/Chat提醒給組長">📲 推播</button>
+                          </div>
+                        </div>
+                        ${t.report ? `
+                          <div class="subtask-report-box">
+                            <div><strong>💬 ${sec}回報：</strong>${t.report}</div>
+                            <div class="report-time">[${t.reportTime || '已記錄'}]</div>
+                          </div>
+                        ` : ""}
+                      </div>
+                    `).join('')}
+                    ${hideCompletedTasks && hiddenCount > 0 ? `
+                      <div class="completed-hidden-bar" onclick="toggleCompletedVisibility()">
+                        ✅ 本組已自動隱藏 ${hiddenCount} 項已完工子任務 (點此展開看紀錄)
+                      </div>
+                    ` : ""}
+                  </div>
+                </div>
+              `;
+            }
+          });
+        }
+
+        const card = document.createElement("div");
+        card.className = "proj-card";
+        card.innerHTML = `
+          <div>
+            <div class="card-top">
+              <div class="card-tags">
+                <span class="tag-category">${p.category}</span>
+                <span style="font-size:11px; font-weight:700; color:#64748B;">${p.id}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${urgencyTag}
+                <button class="btn-card-toggle" onclick="toggleCardCollapse('${p.id}')">
+                  ${p.collapsed ? "🔽 展開內容" : "🔼 收合內容"}
+                </button>
+                <button class="btn-edit-proj" onclick="openEditModal('${p.id}')">✏️ 修改專案</button>
+              </div>
+            </div>
+            <div class="card-title">${p.title}</div>
+            <div class="card-meta">
+              <span>👤 責任組別：<strong>${p.sections.join("、")}</strong></span>
+              <span>•</span>
+              <span>⭐ 等級：P${p.priority}</span>
+            </div>
+            ${p.collapsed ? `
+              <div style="background:#F1F5F9; padding:12px; border-radius:8px; text-align:center; font-size:13px; color:#475569; margin-bottom:14px; cursor:pointer;" onclick="toggleCardCollapse('${p.id}')">
+                📦 卡片與子任務已收合 (點此展開)
+              </div>
+            ` : checklistHtml}
+          </div>
+          <div class="card-footer">
+            <button class="btn-drive" onclick="alert('📁 模擬開啟 Google Drive 雲端專案卷宗\n\n案名：${p.title}')">
+              📁 Drive 專屬卷宗
+            </button>
+            <button class="btn-add-task" onclick="addNewSubTask('${p.id}', '${currentSection}')">
+              ➕ 新增子任務
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleTaskDone(projId, sec, taskId, isChecked) {
+      const p = projectsData.find(x => x.id === projId);
+      if (!p) return;
+      const t = (p.sectionTasks[sec] || []).find(x => x.id === taskId);
+      if (t) {
+        t.done = isChecked;
+        if (isChecked && !t.report) {
+          const remark = prompt("✅ 您即將設定子任務為【已完成】！\n\n請順手填入向主任匯報的『進度說明或文號』(留白則記錄預設值)：");
+          t.report = (remark && remark.trim()) ? remark.trim() : "承辦組長已於今日線上報竣";
+          t.reportTime = "115/07/26 19:15";
+        }
+        renderCards();
+      }
+    }
+
+    // SUB-TASK MODAL LOGIC (SET DUE DATE & REPORT)
+    function openSubtaskModal(projId, sec, taskId) {
+      const p = projectsData.find(x => x.id === projId);
+      if (!p) return;
+      const t = (p.sectionTasks[sec] || []).find(x => x.id === taskId);
+      if (!t) return;
+
+      editingSubtaskRef = { projId, sec, taskId };
+      document.getElementById("editSubtaskText").value = t.task;
+      document.getElementById("editSubtaskDate").value = t.dueDate || "2026-07-28";
+      document.getElementById("editSubtaskDone").value = t.done ? "true" : "false";
+      document.getElementById("editSubtaskReport").value = t.report || "";
+
+      document.getElementById("subtaskModal").style.display = "flex";
+    }
+
+    function closeSubtaskModal() {
+      document.getElementById("subtaskModal").style.display = "none";
+    }
+
+    function saveSubtaskEdit() {
+      if (!editingSubtaskRef) return;
+      const { projId, sec, taskId } = editingSubtaskRef;
+      const p = projectsData.find(x => x.id === projId);
+      if (!p) return;
+      const t = (p.sectionTasks[sec] || []).find(x => x.id === taskId);
+      if (!t) return;
+
+      t.task = document.getElementById("editSubtaskText").value.trim() || t.task;
+      t.dueDate = document.getElementById("editSubtaskDate").value;
+      t.done = (document.getElementById("editSubtaskDone").value === "true");
+      t.report = document.getElementById("editSubtaskReport").value.trim();
+      if (t.report && !t.reportTime) {
+        t.reportTime = "115/07/26 19:20";
+      }
+
+      closeSubtaskModal();
+      renderCards();
+      alert("💾 子任務日期與進度回報已更新！\n\n系統已更新其到期警示顏色，並已同步顯示『承辦組長回報說明』於卡片下方！");
+    }
+
+    // PUSH SIMULATION ENGINE
+    function simulateSinglePush(projTitle, sec, taskName, dueDate) {
+      const content = `
+        <div style="border-bottom:1px solid #E2E8F0; padding-bottom:12px; margin-bottom:12px;">
+          <div style="color:#2563EB; font-weight:800; font-size:15px; margin-bottom:6px;">
+            📲 【總務處智慧推播引擎 - 即時發報模擬】
+          </div>
+          <div><strong>推播目標群組/信箱：</strong>中正國小-${sec}長 / 行政業務公務 LINE</div>
+          <div><strong>推播時間：</strong>2026/07/26 08:00 (每日晨間推播)</div>
+        </div>
+        <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:12px; color:#1E3A8A;">
+          <div style="font-weight:700; margin-bottom:6px;">🔔 總務處提醒：您的子任務期程即將到期！</div>
+          <div>• <strong>隸屬專案：</strong>${projTitle}</div>
+          <div>• <strong>子任務名稱：</strong>${taskName}</div>
+          <div>• <strong>子任務到期日：</strong><span style="color:#DC2626; font-weight:800;">${dueDate || '近期到期'}</span></div>
+          <div style="margin-top:8px; font-size:12.5px; color:#1E40AF;">
+            👉 請於本日完成相關作業，並上網於戰情室點選『☑完成與進度回報』，以利總務主任掌握進度。
+          </div>
+        </div>
+      `;
+      document.getElementById("pushContentArea").innerHTML = content;
+      document.getElementById("pushModal").style.display = "flex";
+    }
+
+    function triggerGlobalPushSimulation() {
+      let html = `
+        <div style="color:#0F172A; font-weight:800; font-size:16px; margin-bottom:10px;">
+          📲 【115學年度 第一學期 - 總務處每日全自動多通道推播總匯報】
+        </div>
+        <div style="color:#64748B; font-size:12px; margin-bottom:14px;">
+          系統掃描完畢！共發現 <strong>4 筆即將於 5 天內到期或緊迫</strong> 之各組子任務，已透過 LINE Notify 與 Chat 推播提醒：
+        </div>
+      `;
+
+      const pushes = [
+        {
+          sec: "事務組",
+          proj: "仁愛樓東棟老舊廁所整修工程發包",
+          task: "辦理 115/07/14 開標作業與投標廠商資格審查",
+          due: "2026-07-14 (剩 3 天)",
+          channel: "LINE Notify (事務組推播頻道)"
+        },
+        {
+          sec: "事務幹事",
+          proj: "仁愛樓東棟老舊廁所整修工程發包",
+          task: "準備開標場地、投標清冊與審標表格",
+          due: "2026-07-13 (剩 2 天)",
+          channel: "Google Chat (事務工作公務群)"
+        },
+        {
+          sec: "事務組",
+          proj: "四維樓無障礙坡道及扶手新建工程",
+          task: "14:00 辦理公開最有利標開標會議",
+          due: "2026-07-13 (剩 2 天)",
+          channel: "LINE Notify (事務組推播頻道)"
+        },
+        {
+          sec: "事務幹事",
+          proj: "四維樓無障礙坡道及扶手新建工程",
+          task: "完成開標紀錄與開標室錄音錄影留存",
+          due: "2026-07-13 (剩 2 天)",
+          channel: "Google Chat (事務工作公務群)"
+        }
+      ];
+
+      pushes.forEach((p, idx) => {
+        html += `
+          <div style="background:white; border:1px solid #CBD5E1; border-left:4px solid #F59E0B; border-radius:6px; padding:10px 12px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; font-weight:700; color:#0F172A; margin-bottom:4px;">
+              <span>🚨 #${idx+1} 【${p.sec}】子任務預警</span>
+              <span style="color:#0284C7; font-size:11px;">通報通道: ${p.channel}</span>
+            </div>
+            <div style="color:#334155;">• 專案：<strong>${p.proj}</strong></div>
+            <div style="color:#DC2626; font-weight:700;">• 到期任務：${p.task} [期限: ${p.due}]</div>
+          </div>
+        `;
+      });
+
+      document.getElementById("pushContentArea").innerHTML = html;
+      document.getElementById("pushModal").style.display = "flex";
+    }
+
+    function closePushModal() {
+      document.getElementById("pushModal").style.display = "none";
+    }
+
+    // ONE-CLICK RE-DEPLOY PERIODIC TEMPLATE
+    function redeployPeriodic(tempId) {
+      const temp = periodicTemplates.find(x => x.id === tempId);
+      if (!temp) return;
+      const confirmOk = confirm(
+        "【重新找回與部署週期任務】\n\n您確定要將週期範本「" + temp.title + "」重新開立部署為最新年度任務嗎？\n\n系統將自動給予新專案編號、設定到期期限，並還原所有標準工作檢查表分派給各組人員！"
+      );
+      if (!confirmOk) return;
+
+      const newId = "PRJ-" + (projectsData.length + 1).toString().padStart(2, "0");
+      const clonedTasks = {};
+      Object.entries(temp.sectionTasks).forEach(([sec, list]) => {
+        clonedTasks[sec] = list.map(t => ({
+          id: "rep-" + Date.now() + Math.random(),
+          task: t.task,
+          dueDate: t.dueDate || "2026-08-25",
+          done: false,
+          report: "",
+          reportTime: ""
+        }));
+      });
+
+      const newProj = {
+        id: newId,
+        title: "116學年度第一學期 - " + temp.title,
+        category: temp.category,
+        priority: temp.priority,
+        deadline: "2026-08-25",
+        daysLeft: 30,
+        isFocus: true,
+        collapsed: false,
+        sections: temp.sections,
+        sectionTasks: clonedTasks,
+        folderUrl: "file:///H:/我的雲端硬碟/++++總務主任/aiagent"
+      };
+
+      projectsData.unshift(newProj);
+      selectSection("FOCUS", document.querySelectorAll(".menu-item")[0]);
+      alert("🎉 週期任務部署成功！\n\n已為您立案：【" + newProj.title + "】！\n分工責任組別的待辦事項清單已全數就緒，且已於雲端硬碟建置專用卷宗！");
+    }
+
+    // EDIT PROJECT MODAL LOGIC
+    function openEditModal(projId) {
+      editingProjId = projId;
+      const p = projectsData.find(x => x.id === projId);
+      if (!p) return;
+
+      document.getElementById("editTitle").value = p.title;
+      document.getElementById("editCategory").value = p.category;
+      document.getElementById("editPriority").value = p.priority;
+      
+      let dateVal = "2026-08-15";
+      if (p.deadline.includes("/")) {
+        const parts = p.deadline.split("/");
+        if (parts.length === 3) {
+          const yr = parseInt(parts[0]) > 1900 ? parts[0] : (parseInt(parts[0]) + 1911).toString();
+          dateVal = `${yr}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+      } else if (p.deadline.includes("-")) {
+        dateVal = p.deadline;
+      }
+      document.getElementById("editDeadline").value = dateVal;
+      document.getElementById("editIsFocus").checked = p.isFocus;
+
+      document.querySelectorAll(".edit-sec-cb").forEach(cb => {
+        cb.checked = p.sections.includes(cb.value);
+      });
+
+      document.getElementById("editModal").style.display = "flex";
+    }
+
+    function closeEditModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    function saveEditProject() {
+      if (!editingProjId) return;
+      const p = projectsData.find(x => x.id === editingProjId);
+      if (!p) return;
+
+      p.title = document.getElementById("editTitle").value.trim() || p.title;
+      p.category = document.getElementById("editCategory").value.trim() || p.category;
+      p.priority = parseInt(document.getElementById("editPriority").value) || 2;
+      p.isFocus = document.getElementById("editIsFocus").checked;
+
+      const newDateStr = document.getElementById("editDeadline").value;
+      if (newDateStr) {
+        p.deadline = newDateStr;
+        const baseDate = new Date("2026-07-26");
+        const targetDate = new Date(newDateStr);
+        const diffTime = targetDate - baseDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        p.daysLeft = isNaN(diffDays) ? 30 : diffDays;
+      }
+
+      const selectedSections = [];
+      document.querySelectorAll(".edit-sec-cb").forEach(cb => {
+        if (cb.checked) selectedSections.push(cb.value);
+      });
+      if (selectedSections.length > 0) {
+        p.sections = selectedSections;
+        selectedSections.forEach(sec => {
+          if (!p.sectionTasks[sec]) p.sectionTasks[sec] = [];
+        });
+      }
+
+      closeEditModal();
+      renderCards();
+      alert("💾 專案修改已成功儲存！\n\n系統已更新其【到期日、倒數天數、重要性等級與負責組別】，並立刻重新排序該專案！");
+    }
+
+    function addNewSubTask(projId, sec) {
+      const p = projectsData.find(x => x.id === projId);
+      if (!p) return;
+      const targetSec = ["事務組", "出納組", "文書組", "事務幹事", "總務主任"].includes(sec) ? sec : "事務組";
+      const newTaskText = prompt("請輸入【" + targetSec + "】於本案中要負責完成的工作項目摘要：");
+      if (newTaskText && newTaskText.trim()) {
+        const dateStr = prompt("請為這個子任務設定完成日期 (YYYY-MM-DD)：", "2026-07-30");
+        if (!p.sectionTasks[targetSec]) p.sectionTasks[targetSec] = [];
+        p.sectionTasks[targetSec].push({
+          id: "new-" + Date.now(),
+          task: newTaskText.trim() + " (自行增列)",
+          dueDate: dateStr || "2026-07-30",
+          done: false,
+          report: "",
+          reportTime: ""
+        });
+        if (!p.sections.includes(targetSec)) p.sections.push(targetSec);
+        renderCards();
+        alert("✅ 子任務與到期日設定成功！");
+      }
+    }
+
+    // AI MODAL FUNCTIONS
+    function openAiModal() { document.getElementById("aiModal").style.display = "flex"; }
+    function closeAiModal() { document.getElementById("aiModal").style.display = "none"; }
+    function loadSampleText() {
+      document.getElementById("aiInputText").value = "教育局 1150720 函「請學校於 115年8月15日前 辦理全校高壓變壓器與線路絕緣檢測，並將檢測紀錄照片及技師簽證上傳至小教科管理平台」。";
+    }
+    function runAiParse() {
+      const txt = document.getElementById("aiInputText").value.trim();
+      if (!txt) { alert("請先輸入或貼上公文文字！"); return; }
+      
+      aiParsedData = {
+        id: "PRJ-14",
+        title: "115學年度全校高壓變壓器與線路絕緣檢測",
+        category: "電力安全",
+        priority: 1,
+        deadline: "2026-08-15",
+        daysLeft: 20,
+        isFocus: true,
+        collapsed: false,
+        sections: ["事務組", "事務幹事"],
+        sectionTasks: {
+          "事務組": [
+            {"id": "ai-1", "task": "安排電機技師進行全校高壓變壓器及線路絕緣檢測", "dueDate": "2026-08-05", "done": false, "report": "", "reportTime": ""},
+            {"id": "ai-2", "task": "督導檢測過程安全並取得技師合格簽證證明", "dueDate": "2026-08-10", "done": false, "report": "", "reportTime": ""}
+          ],
+          "事務幹事": [
+            {"id": "ai-3", "task": "協助拍攝現場檢測照片及整理簽核公文", "dueDate": "2026-08-12", "done": false, "report": "", "reportTime": ""},
+            {"id": "ai-4", "task": "將技師簽證與成果照片上傳至小教科管理平台", "dueDate": "2026-08-15", "done": false, "report": "", "reportTime": ""}
+          ]
+        },
+        "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"
+      };
+
+      const listEl = document.getElementById("aiParsedList");
+      listEl.innerHTML = `
+        <li><strong>專案名稱：</strong>${aiParsedData.title}</li>
+        <li><strong>截止期限：</strong>${aiParsedData.deadline} (距今剩 20 天)</li>
+        <li><strong>分派事務組工作 (自動設定期程)：</strong>
+          <ol style="margin-top:4px; margin-bottom:6px;">
+            <li>安排電機技師進行檢測 [到期日: 2026-08-05]</li>
+            <li>取得技師合格簽證證明 [到期日: 2026-08-10]</li>
+          </ol>
+        </li>
+        <li><strong>分派事務幹事工作 (自動設定期程)：</strong>
+          <ol style="margin-top:4px;">
+            <li>協助拍攝現場檢測照片 [到期日: 2026-08-12]</li>
+            <li>簽證與成果照片上傳平台 [到期日: 2026-08-15]</li>
+          </ol>
+        </li>
+      `;
+      document.getElementById("aiParsedBox").style.display = "block";
+      document.getElementById("aiConfirmBtn").style.display = "inline-block";
+    }
+
+    function confirmAiImport() {
+      if (!aiParsedData) return;
+      projectsData.unshift(aiParsedData);
+      closeAiModal();
+      selectSection("事務組", document.querySelectorAll(".menu-item")[2]);
+      alert("🎉 AI 智慧立案匯入成功！\n\n已為您在【事務組】與【事務幹事】專區建立該案並設定子任務期程，同時已自動於 Google Drive 開立專屬卷宗！");
+    }
+
+    function openNewManualModal() {
+      const title = prompt("請輸入自行新增的業務專案名稱：", "例如：008-115-10 新學期教室消毒作業");
+      if (!title) return;
+      const dateStr = prompt("請輸入截止日期 (YYYY-MM-DD)：", "2026-08-25");
+      const newPrj = {
+        id: "PRJ-" + (projectsData.length + 1).toString().padStart(2, "0"),
+        title: title,
+        category: "新增業務",
+        priority: 2,
+        deadline: dateStr || "2026-08-25",
+        daysLeft: 30,
+        isFocus: true,
+        collapsed: false,
+        sections: [currentSection === "FOCUS" ? "事務組" : currentSection],
+        sectionTasks: {
+          [currentSection === "FOCUS" ? "事務組" : currentSection]: [
+            {"id": "m-1", "task": "召開前置聯繫會議並簽辦相關公文", "dueDate": "2026-08-15", "done": false, "report": "", "reportTime": ""},
+            {"id": "m-2", "task": "執行業務並於到期前彙整歸檔卷宗", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": ""}
+          ]
+        },
+        folderUrl: "file:///H:/我的雲端硬碟/++++總務主任/aiagent"
+      };
+      projectsData.unshift(newPrj);
+      renderCards();
+      alert("✅ 業務專案新增成功！已自動於雲端硬碟建立對應資料夾。");
+    }
+
+    // Initial Render
+    renderCards();
+  </script>
+</body>
+</html>

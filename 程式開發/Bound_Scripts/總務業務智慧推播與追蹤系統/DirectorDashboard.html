@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>中正國小總務處 - 智慧主副欄專案決策戰情室 [系統版本: v3.3.1]</title>
+  <style>
+    :root {
+      --sidebar-bg: #0F172A;
+      --sidebar-text: #E2E8F0;
+      --sidebar-hover: #1E293B;
+      --sidebar-active: #2563EB;
+      --sidebar-width: 290px;
+      --sidebar-collapsed: 70px;
+      
+      --bg-color: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --border-color: #E2E8F0;
+      
+      --p1-bg: #FEF2F2; --p1-text: #DC2626; --p1-border: #FCA5A5;
+      --p2-bg: #FFFBEB; --p2-text: #D97706; --p2-border: #FDE68A;
+      --p3-bg: #F0FDF4; --p3-text: #16A34A; --p3-border: #BBF7D0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* TOP BAR (Clean & Production-Ready) */
+    .topbar {
+      height: 64px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .mobile-menu-toggle {
+      display: none;
+      background: #1E293B;
+      color: white;
+      border: none;
+      font-size: 22px;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+    }
+    .topbar-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar-version {
+      font-size: 11px;
+      background: #EFF6FF;
+      color: #2563EB;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+      border: 1px solid #BFDBFE;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* APP WRAPPER */
+    .app-wrapper {
+      display: flex;
+      flex: 1;
+      min-height: calc(100vh - 64px);
+      position: relative;
+    }
+
+    /* SIDEBAR OVERLAY BACKDROP FOR MOBILE/TABLET */
+    .sidebar-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 990;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .sidebar-overlay.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* SIDEBAR (Desktop Side-by-side / Mobile Off-canvas Drawer) */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-right: 1px solid #1E293B;
+      z-index: 1000;
+    }
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+    }
+    .sidebar.collapsed .logo-title,
+    .sidebar.collapsed .version-tag,
+    .sidebar.collapsed .menu-text,
+    .sidebar.collapsed .menu-badge,
+    .sidebar.collapsed .menu-label,
+    .sidebar.collapsed .btn-push-settings span:nth-child(2) {
+      display: none;
+    }
+    .sidebar.collapsed .menu-item {
+      justify-content: center;
+      padding: 12px 0;
+    }
+    .sidebar.collapsed .menu-item-left {
+      justify-content: center;
+    }
+    .sidebar.collapsed .logo-container {
+      justify-content: center;
+    }
+
+    .logo-container {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid #1E293B;
+      background: #0F172A;
+    }
+    .logo-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 15px;
+      color: white;
+      flex: 1;
+      min-width: 0;
+    }
+    .logo-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .version-tag {
+      background: #2563EB;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .btn-hamburger {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .btn-hamburger:hover { background: #1E293B; color: white; }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 10px;
+    }
+    .menu-group {
+      margin-bottom: 24px;
+    }
+    .menu-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 10px;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      border-radius: 8px;
+      color: #CBD5E1;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+      font-size: 13.5px;
+      margin-bottom: 4px;
+    }
+    .menu-item:hover { background: var(--sidebar-hover); color: white; }
+    .menu-item.active {
+      background: var(--sidebar-active);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .menu-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .menu-icon { font-size: 17px; flex-shrink: 0; }
+    .menu-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .menu-badge {
+      background: #334155;
+      color: #F8FAFC;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid #1E293B;
+      background: #0B1120;
+    }
+    .btn-push-settings {
+      width: 100%;
+      background: #1E293B;
+      color: #38BDF8;
+      border: 1px solid #0284C7;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-push-settings:hover { background: #0284C7; color: white; }
+
+    /* MAIN AREA (Right-Hand Information Area) */
+    .main-area {
+      flex: 1;
+      background: var(--bg-color);
+      padding: 24px;
+      overflow-y: auto;
+      min-width: 0;
+    }
+
+    /* TOOLBAR CONTROL BAR */
+    .toolbar-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sort-label { font-size: 13.5px; font-weight: 700; color: #475569; }
+    .sort-select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      font-size: 13.5px;
+      font-weight: 600;
+      background: white;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    .search-input {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      font-size: 13.5px;
+      width: 220px;
+      transition: width 0.2s;
+    }
+    .search-input:focus { width: 280px; border-color: var(--primary); outline: none; }
+    .btn-action {
+      background: #1E293B;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-action:hover { background: #0F172A; }
+    .btn-push { background: #10B981; color: white; }
+    .btn-push:hover { background: #059669; }
+    .btn-toggle-all { background: #3B82F6; color: white; }
+    .btn-toggle-all:hover { background: #2563EB; }
+
+    /* PROJECT CARDS GRID (Responsive auto-fit) */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      background: #F8FAFC;
+      gap: 12px;
+    }
+    .card-header-left { flex: 1; min-width: 0; }
+    .project-category {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      display: inline-block;
+      background: #EFF6FF;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .project-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .card-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .priority-badge {
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .priority-1 { background: var(--p1-bg); color: var(--p1-text); border: 1px solid var(--p1-border); }
+    .priority-2 { background: var(--p2-bg); color: var(--p2-text); border: 1px solid var(--p2-border); }
+    .priority-3 { background: var(--p3-bg); color: var(--p3-text); border: 1px solid var(--p3-border); }
+
+    .btn-fold {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-fold:hover { background: #E2E8F0; }
+
+    .card-meta-bar {
+      padding: 10px 20px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .deadline-text strong { color: var(--text-main); }
+    .countdown-badge {
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .cnt-urgent { background: #FEE2E2; color: #DC2626; }
+    .cnt-warning { background: #FEF3C7; color: #D97706; }
+    .cnt-normal { background: #F0FDF4; color: #16A34A; }
+
+    /* SUB-TASKS CHECKLIST */
+    .card-body {
+      padding: 18px 20px;
+      flex: 1;
+    }
+    .section-checklist {
+      background: #F8FAFC;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      border: 1px solid #F1F5F9;
+    }
+    .checklist-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #334155;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-item-container {
+      padding: 10px 0;
+      border-bottom: 1px dashed #E2E8F0;
+    }
+    .task-item-container:last-child { border-bottom: none; }
+    
+    .task-item-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13.5px;
+      color: #1E293B;
+      flex-wrap: wrap;
+    }
+    .task-checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 220px;
+    }
+    .task-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .task-item-top.completed .task-text {
+      text-decoration: line-through;
+      color: #94A3B8;
+    }
+    
+    .subtask-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .subtask-date-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .subtask-date-badge.red { background: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+    .subtask-date-badge.yellow { background: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
+    .subtask-date-badge.green { background: #F0FDF4; color: #166534; border: 1px solid #86EFAC; }
+
+    .btn-sub-edit {
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-sub-edit:hover { background: #2563EB; color: white; }
+
+    /* DIRECTOR NOTES HIGHLIGHT BOX */
+    .director-note-box {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #FFFBEB;
+      border-left: 4px solid #F59E0B;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: #92400E;
+      font-weight: 700;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .report-log-box {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #EFF6FF;
+      border-left: 3px solid #3B82F6;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: #1E40AF;
+    }
+    .report-time-tag { font-weight: 800; font-size: 11px; color: #64748B; margin-left: 8px; }
+
+    .card-footer {
+      padding: 14px 20px;
+      background: #F8FAFC;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn-add-subtask {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-add-subtask:hover { background: #1D4ED8; }
+    
+    .btn-drive {
+      color: #475569;
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-drive:hover { color: var(--primary); }
+
+    /* MODAL OVERLAYS */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 15px;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3);
+    }
+    .modal-title { font-size: 20px; font-weight: 800; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .modal-desc { font-size: 13px; color: #64748B; margin-bottom: 18px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 15px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+    .btn-cancel { background: #F1F5F9; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-submit { background: #2563EB; color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+    /* PUSH CHANNELS TABLE */
+    .push-config-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13.5px;
+    }
+    .push-config-table th, .push-config-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #E2E8F0;
+      text-align: center;
+    }
+    .push-config-table th { background: #F8FAFC; font-weight: 700; color: #334155; }
+    .push-config-table td.sec-name { text-align: left; font-weight: 700; color: #0F172A; }
+
+    /* =========================================================================
+       RESPONSIVE MEDIA QUERIES (RWD / 響應式裝置適配 - TABLET & MOBILE)
+       ========================================================================= */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Tablets & Laptops (max-width: 1024px) */
+    @media (max-width: 1024px) {
+      /* Topbar shows hamburger button to open slide-over sidebar */
+      .mobile-menu-toggle {
+        display: flex !important;
+      }
+      .topbar {
+        padding: 10px 16px;
+      }
+      
+      /* Sidebar transforms into fixed off-canvas slide-over drawer */
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px !important;
+        transform: translateX(-100%);
+        box-shadow: 15px 0 35px rgba(0,0,0,0.6);
+        z-index: 1000;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      /* Main area takes 100% full width! No clipping! */
+      .main-area {
+        width: 100%;
+        padding: 18px 14px;
+      }
+      
+      .projects-grid {
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      }
+    }
+
+    /* Mobile Phones (max-width: 768px) */
+    @media (max-width: 768px) {
+      .topbar-title {
+        font-size: 15px;
+      }
+      .topbar-version {
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+
+      /* Strict single column for cards */
+      .projects-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      
+      /* Toolbar responsive layout */
+      .toolbar-container {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        gap: 10px;
+      }
+      .toolbar-left, .toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .search-input {
+        width: 100%;
+        margin-top: 4px;
+      }
+      .btn-action {
+        flex: 1;
+        justify-content: center;
+      }
+
+      /* Card layout adjustments */
+      .card-header { padding: 14px; }
+      .card-body { padding: 14px; }
+      .card-footer {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn-add-subtask {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+      }
+      .btn-drive {
+        justify-content: center;
+        margin-top: 4px;
+      }
+
+      /* Task items stack */
+      .task-item-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .subtask-actions {
+        justify-content: flex-end;
+        width: 100%;
+        padding-top: 4px;
+        border-top: 1px dotted #F1F5F9;
+      }
+
+      /* Modals full width */
+      .modal {
+        padding: 20px 14px;
+        width: 96vw;
+      }
+      .modal-buttons {
+        flex-direction: column;
+      }
+      .btn-cancel, .btn-submit {
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    /* Small screens (iPhone SE, narrow screens - max-width: 480px) */
+    @media (max-width: 480px) {
+      .topbar-title span:nth-child(3) { display: none; } /* hide version badge on very narrow screens */
+      .project-title { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- TOP BAR (No Device Simulator, Pure RWD) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="mobile-menu-toggle" onclick="openMobileSidebar()" title="開啟導覽選單">☰</button>
+      <div class="topbar-title">
+        <span>🏛️</span>
+        <span>中正國小總務處決策戰情室</span>
+        <span class="topbar-version">v3.3.1</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button class="btn-action btn-push" onclick="triggerPushNotify()">📲 觸發推播匯報</button>
+      <button class="btn-action" onclick="loadDashboardDataFromServer()" style="background:#059669; color:white;" title="自雲端 Google Sheets 重載數據">🔄 雲端同步</button>
+      <button class="btn-action" onclick="initCloudDatabase()" style="background:#475569; color:white;" title="在 Google Sheets 建立資料庫表單">🛠️ 初始試算表</button>
+    </div>
+  </header>
+
+  <div class="app-wrapper">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <div class="logo-container">
+        <div class="logo-text">
+          <span>🛡️</span>
+          <span class="logo-title">中正總務戰情室</span>
+          <span class="version-tag">v3.3.1</span>
+        </div>
+        <button class="btn-hamburger" onclick="handleHamburgerClick()" title="收合/展開選單">☰</button>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="menu-group">
+          <div class="menu-label">📌 決策監控 (Executive)</div>
+          <div class="menu-item active" onclick="selectSection('FOCUS', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🎯</span>
+              <span class="menu-text">主任重點晨報與專案</span>
+            </div>
+            <span class="menu-badge" id="cnt-focus">12</span>
+          </div>
+          <div class="menu-item" onclick="selectSection('URGENT', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🚨</span>
+              <span class="menu-text">緊急警示與即將到期</span>
+            </div>
+            <span class="menu-badge" style="background:#DC2626; color:white;" id="cnt-urgent">4</span>
+          </div>
+        </div>
+        
+        <div class="menu-group">
+          <div class="menu-label">🏢 各組負責專案與工作單 (Sections)</div>
+          <div class="menu-item" onclick="selectSection('事務組', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🛠️</span>
+              <span class="menu-text">事務組長 (專案&任務)</span>
+            </div>
+            <span class="menu-badge" id="cnt-affairs">9</span>
+          </div>
+          <div class="menu-item" onclick="selectSection('出納組', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">💰</span>
+              <span class="menu-text">出納組長 (專案&任務)</span>
+            </div>
+            <span class="menu-badge" id="cnt-cash">4</span>
+          </div>
+          <div class="menu-item" onclick="selectSection('文書組', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">📄</span>
+              <span class="menu-text">文書組長 (專案&任務)</span>
+            </div>
+            <span class="menu-badge" id="cnt-doc">4</span>
+          </div>
+          <div class="menu-item" onclick="selectSection('事務幹事', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🧑‍🔧</span>
+              <span class="menu-text">事務幹事 (專案&任務)</span>
+            </div>
+            <span class="menu-badge" id="cnt-clerk">6</span>
+          </div>
+          <div class="menu-item" onclick="selectSection('總務主任', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🎖️</span>
+              <span class="menu-text">總務主任親辦項目</span>
+            </div>
+            <span class="menu-badge" id="cnt-dir">10</span>
+          </div>
+        </div>
+
+        <div class="menu-group">
+          <div class="menu-label">📜 週期任務與歷年檔案庫 (History)</div>
+          <div class="menu-item" onclick="selectSection('PERIODIC', this)">
+            <div class="menu-item-left">
+              <span class="menu-icon">🔄</span>
+              <span class="menu-text">週期常規與一鍵重新部署</span>
+            </div>
+            <span class="menu-badge" style="background:#10B981; color:white;" id="cnt-periodic">6</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button class="btn-push-settings" onclick="openPushConfigModal()">
+          <span>⚙️</span>
+          <span>各組推播設定 (LINE/Chat)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN AREA (100% full width on mobile/tablet!) -->
+    <div class="main-area">
+      <div class="toolbar-container">
+        <div class="toolbar-left">
+          <span class="sort-label">🔄 排序：</span>
+          <select class="sort-select" id="sort-select" onchange="renderCards()">
+            <option value="dual">🔥 優先到期 + 重要性雙重倒數</option>
+            <option value="deadline">📅 僅按到期時間最近</option>
+            <option value="priority">🚨 僅按重要性排序 (P1優先)</option>
+          </select>
+          <input type="text" class="search-input" id="search-input" placeholder="🔍 關鍵字查詢專案/任務..." oninput="renderCards()">
+        </div>
+        
+        <div class="toolbar-right">
+          <button class="btn-action btn-toggle-all" onclick="toggleAllCards()">🔼 展開/收合全部</button>
+        </div>
+      </div>
+
+      <!-- PROJECT CARDS RENDER GRID -->
+      <div class="projects-grid" id="projects-container"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: EDIT / REPORT SUBTASK -->
+  <div class="modal-overlay" id="edit-subtask-modal">
+    <div class="modal">
+      <div class="modal-title">✏️ 子任務限期與承辦進度回報</div>
+      <div class="modal-desc" id="edit-subtask-desc">修改各組檢核點期限或回報最新公文執行狀態</div>
+      
+      <input type="hidden" id="edit-proj-id">
+      <input type="hidden" id="edit-section-name">
+      <input type="hidden" id="edit-task-id">
+
+      <div class="form-group">
+        <label>任務項目內容：</label>
+        <input type="text" id="edit-task-text" placeholder="具體辦理項目">
+      </div>
+      <div class="form-group">
+        <label>限期完成日期 (YYYY-MM-DD)：</label>
+        <input type="date" id="edit-task-duedate">
+      </div>
+      <div class="form-group">
+        <label>主任注意事項 / 法規提醒重點：</label>
+        <textarea id="edit-task-note" rows="2" placeholder="例：本次採購涉及專款，請會同主計與政風室辦理..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>最新公文與進度回報紀錄：</label>
+        <textarea id="edit-task-report" rows="3" placeholder="例：已於 7/11 完成招標公告，等標期 12 天..."></textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeEditSubtaskModal()">取消返回</button>
+        <button class="btn-submit" onclick="saveSubtaskEdit()">💾 儲存並更新卡片</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: DIRECTOR ADD SUBTASK -->
+  <div class="modal-overlay" id="add-subtask-modal">
+    <div class="modal">
+      <div class="modal-title">➕ 主任交辦 / 派發新子任務</div>
+      <div class="modal-desc" id="add-subtask-desc">為專案派發子任務，可指定責任組別與主任提醒重點</div>
+      
+      <input type="hidden" id="add-proj-id">
+
+      <div class="form-group">
+        <label>承辦責任組別：</label>
+        <select id="add-task-section">
+          <option value="事務組">🛠️ 事務組</option>
+          <option value="出納組">💰 出納組</option>
+          <option value="文書組">📄 文書組</option>
+          <option value="事務幹事">🧑‍🔧 事務幹事</option>
+          <option value="總務主任">🎖️ 總務主任</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>限期完成日期 (YYYY-MM-DD)：</label>
+        <input type="date" id="add-task-duedate" value="2026-07-20">
+      </div>
+      <div class="form-group">
+        <label>交辦任務內容：</label>
+        <input type="text" id="add-task-text" placeholder="輸入具體工作項目...">
+      </div>
+      <div class="form-group">
+        <label>主任注意事項 / 法規提醒重點 (高亮呈現)：</label>
+        <textarea id="add-task-note" rows="2" placeholder="輸入需特別叮嚀的重點說明..."></textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeAddSubtaskModal()">取消</button>
+        <button class="btn-submit" onclick="saveNewDirectorSubtask()">🚀 派發並同步推播</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: PUSH CHANNELS CONFIG -->
+  <div class="modal-overlay" id="push-config-modal">
+    <div class="modal">
+      <div class="modal-title">⚙️ 各組推播管道與推播頻率設定</div>
+      <div class="modal-desc">自閱或設定各組通知頻道勾選 (LINE Notify / Google Chat Webhook / Email 公文提醒)</div>
+      
+      <div class="table-responsive">
+        <table class="push-config-table">
+          <thead>
+            <tr>
+              <th>承辦組別</th>
+              <th>LINE 提醒</th>
+              <th>Google Chat</th>
+              <th>Email 提醒</th>
+              <th>警示倒數日數</th>
+            </tr>
+          </thead>
+          <tbody id="push-config-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closePushConfigModal()">關閉</button>
+        <button class="btn-submit" onclick="savePushConfig()">💾 儲存並啟用設定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let projectsData = [{"id": "PRJ-01", "title": "仁愛樓東棟老舊廁所整修工程發包", "category": "大額工程", "priority": 1, "deadline": "2026-07-14", "daysLeft": 3, "isFocus": true, "collapsed": false, "sections": ["事務組", "事務幹事", "總務主任"], "sectionTasks": {"事務組": [{"id": "t1-1", "task": "辦理第3次減項招標公告", "dueDate": "2026-07-01", "done": true, "report": "已正式公告於政府電子採購網，標案編號 1150701-A，等標期 12 天", "reportTime": "115/07/01 14:30", "note": "本次招標含教育部核定專款，公告日數不得縮短"}, {"id": "t1-2", "task": "辦理開標作業與投標廠商資格審查", "dueDate": "2026-07-14", "done": false, "report": "目前已領標 5 家廠商，預定於 07/14 上午 10:00 準時開標", "reportTime": "115/07/11 16:00", "note": "⚠️ 需會同主計與政風室主任共同監辦，嚴格審查三用文件與押標金"}, {"id": "t1-3", "task": "若不幸再次流標，協調建築師重新計算工資與工法", "dueDate": "2026-07-18", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "t1-4", "task": "準備開標場地、投標清冊與審標表格", "dueDate": "2026-07-13", "done": true, "report": "開標室廣播與投影錄影設備已確認測試完畢", "reportTime": "115/07/13 11:20", "note": ""}, {"id": "t1-5", "task": "將招標紀錄及公文函件歸檔至採購業務卷宗", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": "", "note": ""}], "總務主任": [{"id": "t1-6", "task": "主持開標會議並確認決標或流標應變計畫", "dueDate": "2026-07-14", "done": false, "report": "將會同政風室主任與主計人員共同監辦", "reportTime": "115/07/12 09:15", "note": "請掌握工程發包進度，開標後立即向校長口頭回報結果"}, {"id": "t1-7", "task": "若須減項再公告，簽報校長並發文工管科報備", "dueDate": "2026-07-20", "done": false, "report": "", "reportTime": "", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/採購業務"}, {"id": "PRJ-02", "title": "四維樓無障礙坡道及扶手新建工程", "category": "大額工程", "priority": 1, "deadline": "2026-07-13", "daysLeft": 2, "isFocus": true, "collapsed": false, "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "t2-1", "task": "檢視坡道面層止滑係數與扶手連續性", "dueDate": "2026-07-10", "done": true, "report": "現場檢測止滑係數符合建築技術規則 BSR 等級", "reportTime": "115/07/10 15:00", "note": ""}, {"id": "t2-2", "task": "辦理竣工結算與正式初驗作業", "dueDate": "2026-07-13", "done": false, "report": "已聯絡監造技師及營造廠於 7/13 下午現場勘查", "reportTime": "115/07/11 09:00", "note": "請務必量測無障礙斜率比例是否符合 1:12"}], "總務主任": [{"id": "t2-3", "task": "確認特教老師與輪椅學生實際試行反饋", "dueDate": "2026-07-13", "done": false, "report": "已與輔導處特教組約定試行時間", "reportTime": "115/07/09 11:00", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/修繕工程"}, {"id": "PRJ-03", "title": "全校高低壓電力系統及消防設備檢修", "category": "安全消防", "priority": 1, "deadline": "2026-07-20", "daysLeft": 9, "isFocus": true, "collapsed": false, "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "t3-1", "task": "協調各棟教室斷電檢驗時間並發布停電通知", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": "", "note": "請避開暑期課後班上課時段"}, {"id": "t3-2", "task": "檢驗緊急發電機啟動及消防幫浦水壓", "dueDate": "2026-07-19", "done": false, "report": "", "reportTime": "", "note": ""}], "總務主任": [{"id": "t3-3", "task": "審閱機電技師簽證之法定檢驗申報書", "dueDate": "2026-07-20", "done": false, "report": "", "reportTime": "", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/消防安全"}, {"id": "PRJ-04", "title": "115學年度中央廚房午餐食材供應採購", "category": "年度招標", "priority": 2, "deadline": "2026-07-25", "daysLeft": 14, "isFocus": false, "collapsed": false, "sections": ["事務組", "出納組"], "sectionTasks": {"事務組": [{"id": "t4-1", "task": "完成招標標價清單與契約草案擬定", "dueDate": "2026-07-15", "done": true, "report": "午餐秘書已確認四章一Q食安規範納入契約", "reportTime": "115/07/08 14:00", "note": ""}, {"id": "t4-2", "task": "上傳政府採購網進行招標公告", "dueDate": "2026-07-25", "done": false, "report": "", "reportTime": "", "note": ""}], "出納組": [{"id": "t4-3", "task": "核對午餐保證金與廠商押標金帳務", "dueDate": "2026-07-25", "done": false, "report": "", "reportTime": "", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/午餐專案"}, {"id": "PRJ-05", "title": "全校冷氣電費雲端監控與分卡結算系統", "category": "財務經費", "priority": 2, "deadline": "2026-07-18", "daysLeft": 7, "isFocus": false, "collapsed": false, "sections": ["出納組", "事務幹事"], "sectionTasks": {"出納組": [{"id": "t5-1", "task": "產出各班級冷氣 IC 卡扣款名冊", "dueDate": "2026-07-15", "done": true, "report": "名冊已對照教務處學籍表審閱完成", "reportTime": "115/07/06 17:00", "note": ""}, {"id": "t5-2", "task": "對帳超額用電補繳清單並出具繳費單", "dueDate": "2026-07-18", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "t5-3", "task": "檢查雲端儲值主機紀錄與電表數值匯入", "dueDate": "2026-07-16", "done": false, "report": "", "reportTime": "", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/經費核銷"}, {"id": "PRJ-06", "title": "115學年度第1學期教科書進貨點收與配發", "category": "行政事務", "priority": 3, "deadline": "2026-08-15", "daysLeft": 35, "isFocus": false, "collapsed": false, "sections": ["文書組", "事務幹事"], "sectionTasks": {"文書組": [{"id": "t6-1", "task": "核對出版商公文送貨運單與領書通知發布", "dueDate": "2026-08-01", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "t6-2", "task": "規劃書庫場地與開放各學年分流領書", "dueDate": "2026-08-10", "done": false, "report": "", "reportTime": "", "note": ""}]}, "folderUrl": "file:///H:/我的雲端硬碟/++++總務主任/文書檔案"}];
+    let periodicTemplates = [{"id": "PER-01", "title": "新學期開學前校園安全檢查與環境整備", "category": "週期常規 (學期)", "priority": 1, "deadline": "每年 8月 / 2月", "cycle": "每學期初固定開展", "sections": ["事務組", "出納組", "文書組", "事務幹事"], "sectionTasks": {"事務組": [{"id": "p1-1", "task": "各班級課桌椅檢查修繕與調撥", "dueDate": "2026-08-22", "done": false, "report": "", "reportTime": "", "note": "務必檢查椅腳橡膠墊"}, {"id": "p1-2", "task": "全校飲水機水質送驗及濾心更換維護", "dueDate": "2026-08-25", "done": false, "report": "", "reportTime": "", "note": "水質報告須公佈於飲水機前"}, {"id": "p1-3", "task": "校園周邊通學步道及無障礙設施檢視", "dueDate": "2026-08-26", "done": false, "report": "", "reportTime": "", "note": ""}], "出納組": [{"id": "p1-4", "task": "設定新學期註冊繳費模組與四合一單據", "dueDate": "2026-08-20", "done": false, "report": "", "reportTime": "", "note": ""}], "文書組": [{"id": "p1-5", "task": "完成校務會議及總務通知公文派送", "dueDate": "2026-08-27", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "p1-6", "task": "檢查綠色採購年度執行百分比與申報", "dueDate": "2026-08-28", "done": false, "report": "", "reportTime": "", "note": ""}]}}, {"id": "PER-02", "title": "年度校園通學步道與大型樹木修剪防颱專案", "category": "週期常規 (年度)", "priority": 1, "deadline": "每年 7月 - 8月", "cycle": "每年暑假颱風季前", "sections": ["事務組", "總務主任"], "sectionTasks": {"事務組": [{"id": "p2-1", "task": "會勘全校高大枯死危木與外圍喬木", "dueDate": "2026-07-20", "done": false, "report": "", "reportTime": "", "note": "需拍攝施工前照片"}, {"id": "p2-2", "task": "完成採購修剪招標及高空車作業安全警示", "dueDate": "2026-07-30", "done": false, "report": "", "reportTime": "", "note": ""}], "總務主任": [{"id": "p2-3", "task": "現場勘查修剪品質與確認交通維持計畫", "dueDate": "2026-08-01", "done": false, "report": "", "reportTime": "", "note": ""}]}}, {"id": "PER-03", "title": "全校不動產、土地與校有財產年度大盤點", "category": "週期常規 (年度)", "priority": 2, "deadline": "每年 6月 - 7月", "cycle": "每會計年度盤查", "sections": ["事務組", "出納組", "事務幹事"], "sectionTasks": {"事務組": [{"id": "p3-1", "task": "編印全校各班級及專科教室財產盤點表", "dueDate": "2026-06-25", "done": false, "report": "", "reportTime": "", "note": ""}, {"id": "p3-2", "task": "實地現場抽查電腦及視聽設備與報廢審認", "dueDate": "2026-07-05", "done": false, "report": "", "reportTime": "", "note": "逾齡毀損已無利用價值者列報廢"}], "出納組": [{"id": "p3-3", "task": "核扣相關設備保固金帳務清算", "dueDate": "2026-07-10", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "p3-4", "task": "登錄高雄市財產管理系統報表與標籤補貼", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": "", "note": ""}]}}, {"id": "PER-04", "title": "國家防災日複合式地震與消防避難疏散演練", "category": "週期常規 (學期)", "priority": 1, "deadline": "每年 9月21日", "cycle": "每學年度第一學期", "sections": ["事務組", "文書組", "事務幹事"], "sectionTasks": {"事務組": [{"id": "p4-1", "task": "警報廣播與不斷電系統及備用發電機測試", "dueDate": "2026-09-15", "done": false, "report": "", "reportTime": "", "note": ""}, {"id": "p4-2", "task": "校園疏散動線障礙物清除與大門引導協調", "dueDate": "2026-09-18", "done": false, "report": "", "reportTime": "", "note": ""}], "文書組": [{"id": "p4-3", "task": "協調教務處學務處發布相關演練公文通知", "dueDate": "2026-09-10", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "p4-4", "task": "製作各分流集結點避難路線看板及簽到表", "dueDate": "2026-09-19", "done": false, "report": "", "reportTime": "", "note": ""}]}}, {"id": "PER-05", "title": "寒暑假校園高低壓電力檢測與消防安全申報", "category": "週期常規 (半年)", "priority": 1, "deadline": "每年 5月 / 11月", "cycle": "每半年度依法申辦", "sections": ["事務組", "事務幹事", "總務主任"], "sectionTasks": {"事務組": [{"id": "p5-1", "task": "委託合格機電技師檢驗全校高低壓變壓設備", "dueDate": "2026-05-15", "done": false, "report": "", "reportTime": "", "note": "檢驗報告需申報台電與上傳局網"}, {"id": "p5-2", "task": "消防檢修申報及消防局安檢複驗複查", "dueDate": "2026-05-25", "done": false, "report": "", "reportTime": "", "note": ""}], "事務幹事": [{"id": "p5-3", "task": "整理歷次電力與消防檢驗簽呈歸檔", "dueDate": "2026-05-28", "done": false, "report": "", "reportTime": "", "note": ""}], "總務主任": [{"id": "p5-4", "task": "督導修繕不合格項目並確認法規零裁罰", "dueDate": "2026-05-30", "done": false, "report": "", "reportTime": "", "note": ""}]}}, {"id": "PER-06", "title": "學期末教職員學雜費鐘點費與各項補助核銷結案", "category": "週期常規 (每學期)", "priority": 2, "deadline": "每年 1月 / 7月", "cycle": "每學期期末結算", "sections": ["出納組", "文書組", "總務主任"], "sectionTasks": {"出納組": [{"id": "p6-1", "task": "發放學期終導師費、課後照顧與活動社團鐘點費", "dueDate": "2026-07-05", "done": false, "report": "", "reportTime": "", "note": "需確認各組上傳時數扣繳無誤"}, {"id": "p6-2", "task": "辦理各項就學補助及代辦費結餘款退款轉帳", "dueDate": "2026-07-10", "done": false, "report": "", "reportTime": "", "note": ""}], "文書組": [{"id": "p6-3", "task": "學期檔案卷宗年度大編目與移送檔案室裝訂", "dueDate": "2026-07-15", "done": false, "report": "", "reportTime": "", "note": ""}], "總務主任": [{"id": "p6-4", "task": "期末經費執行率檢討與新學期預算調配會議", "dueDate": "2026-07-20", "done": false, "report": "", "reportTime": "", "note": ""}]}}];
+    let pushConfig = {"事務組": {"line": true, "chat": true, "email": false, "lineToken": "LINE-AFF-TOKEN", "chatWebhook": "https://chat.googleapis.com/.../aff", "emailAddr": "affairs@ccps.kh.edu.tw", "thresholdDays": 5}, "出納組": {"line": true, "chat": false, "email": true, "lineToken": "LINE-CASH-TOKEN", "chatWebhook": "", "emailAddr": "cashier@ccps.kh.edu.tw", "thresholdDays": 5}, "文書組": {"line": true, "chat": true, "email": true, "lineToken": "LINE-DOC-TOKEN", "chatWebhook": "https://chat.googleapis.com/.../doc", "emailAddr": "doc@ccps.kh.edu.tw", "thresholdDays": 5}, "事務幹事": {"line": true, "chat": true, "email": false, "lineToken": "LINE-CLK-TOKEN", "chatWebhook": "https://chat.googleapis.com/.../clk", "emailAddr": "clerk@ccps.kh.edu.tw", "thresholdDays": 5}, "總務主任": {"line": true, "chat": true, "email": true, "lineToken": "LINE-DIR-TOKEN", "chatWebhook": "https://chat.googleapis.com/.../dir", "emailAddr": "director@ccps.kh.edu.tw", "thresholdDays": 5}};
+    let currentFilter = 'FOCUS';
+    let allCollapsed = false;
+
+    // RWD MOBILE SIDEBAR DRAWER CONTROLS (Flawless behavior for Mobile & Tablet!)
+    function openMobileSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-overlay').classList.add('active');
+    }
+    function closeMobileSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('active');
+    }
+
+    // Hamburger button inside sidebar header handles both desktop collapse & mobile close!
+    function handleHamburgerClick() {
+      if (window.innerWidth <= 1024) {
+        closeMobileSidebar();
+      } else {
+        const sb = document.getElementById('sidebar');
+        sb.classList.toggle('collapsed');
+      }
+    }
+
+    function selectSection(sec, el) {
+      currentFilter = sec;
+      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+      if (el) el.classList.add('active');
+      if (window.innerWidth <= 1024) {
+        closeMobileSidebar(); // Automatically close mobile drawer when any menu item is tapped!
+      }
+      renderCards();
+    }
+
+    function toggleAllCards() {
+      allCollapsed = !allCollapsed;
+      const list = (currentFilter === 'PERIODIC') ? periodicTemplates : projectsData;
+      list.forEach(p => p.collapsed = allCollapsed);
+      renderCards();
+    }
+
+    function calculateDaysLeft(deadlineStr) {
+      if (!deadlineStr || deadlineStr.includes('月')) return 15;
+      const t = new Date(deadlineStr).getTime();
+      const now = new Date('2026-07-11').getTime();
+      return Math.round((t - now)/(1000*3600*24));
+    }
+
+    function renderCards() {
+      const container = document.getElementById('projects-container');
+      container.innerHTML = '';
+
+      const kw = document.getElementById('search-input').value.trim().toLowerCase();
+      const sortMode = document.getElementById('sort-select').value;
+      const isPeriodic = (currentFilter === 'PERIODIC');
+
+      let list = isPeriodic ? JSON.parse(JSON.stringify(periodicTemplates)) : JSON.parse(JSON.stringify(projectsData));
+
+      // Filter
+      list = list.filter(p => {
+        if (kw && !p.title.toLowerCase().includes(kw) && !p.category.toLowerCase().includes(kw)) return false;
+        if (isPeriodic) return true;
+        if (currentFilter === 'FOCUS') return p.isFocus;
+        if (currentFilter === 'URGENT') return p.daysLeft <= 5;
+        return p.sections.includes(currentFilter);
+      });
+
+      // Sort
+      list.sort((a, b) => {
+        const dlA = calculateDaysLeft(a.deadline);
+        const dlB = calculateDaysLeft(b.deadline);
+        if (sortMode === 'priority') return a.priority - b.priority;
+        if (sortMode === 'deadline') return dlA - dlB;
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        return dlA - dlB;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#64748B; font-weight:700;">查無符號條件之專案與任務卡片</div>`;
+        return;
+      }
+
+      list.forEach(p => {
+        const dl = calculateDaysLeft(p.deadline);
+        let badgeCls = 'cnt-normal';
+        let badgeTxt = `剩餘 ${dl} 天`;
+        if (dl <= 3) { badgeCls = 'cnt-urgent'; badgeTxt = `🚨 倒數 ${dl} 天到期`; }
+        else if (dl <= 7) { badgeCls = 'cnt-warning'; badgeTxt = `⚠️ 剩餘 ${dl} 天`; }
+
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        let bodyHtml = '';
+        if (!p.collapsed) {
+          bodyHtml += `<div class="card-body">`;
+          
+          if (isPeriodic) {
+            bodyHtml += `
+              <div style="background:#ECFDF5; border:1px solid #A7F3D0; color:#065F46; padding:12px; border-radius:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <strong style="font-size:14px;">📅 執行期程與循環規則：${p.cycle}</strong>
+                  <div style="font-size:12px; margin-top:2px; color:#047857;">本標準化業務範本已連結各處室年度檢核點，點擊右方可立刻轉入年度專案庫！</div>
+                </div>
+                <button onclick="redeployPeriodic('${p.id}')" style="background:#059669; color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer;">🔄 一鍵重新部署</button>
+              </div>
+            `;
+          }
+
+          p.sections.forEach(sec => {
+            const tasks = p.sectionTasks[sec] || [];
+            if (tasks.length > 0) {
+              bodyHtml += `
+                <div class="section-checklist">
+                  <div class="checklist-title">
+                    <span>🏢 ${sec} — 應辦檢核項目 (${tasks.length})</span>
+                  </div>
+              `;
+              tasks.forEach(t => {
+                let subDl = calculateDaysLeft(t.dueDate);
+                let dateBadgeCls = 'green';
+                if (subDl <= 3) dateBadgeCls = 'red';
+                else if (subDl <= 7) dateBadgeCls = 'yellow';
+
+                bodyHtml += `
+                  <div class="task-item-container">
+                    <div class="task-item-top ${t.done ? 'completed' : ''}">
+                      <label class="task-checkbox-label">
+                        <input type="checkbox" class="task-checkbox" ${t.done ? 'checked' : ''} onchange="toggleTaskDone('${p.id}', '${sec}', '${t.id}', this.checked)">
+                        <span class="task-text">${t.task}</span>
+                      </label>
+                      <div class="subtask-actions">
+                        <span class="subtask-date-badge ${dateBadgeCls}">📅 期限: ${t.dueDate}</span>
+                        <button class="btn-sub-edit" onclick="openEditSubtaskModal('${p.id}', '${sec}', '${t.id}')" title="編輯與進度回報">✏️ 回報/期限</button>
+                      </div>
+                    </div>
+                `;
+
+                if (t.note) {
+                  bodyHtml += `
+                    <div class="director-note-box">
+                      <span>⚠️ <strong>主任交辦注意事項：</strong>${t.note}</span>
+                    </div>
+                  `;
+                }
+
+                if (t.report) {
+                  bodyHtml += `
+                    <div class="report-log-box">
+                      <span>💬 <strong>最新承辦回報：</strong>${t.report}</span>
+                      <span class="report-time-tag">(${t.reportTime})</span>
+                    </div>
+                  `;
+                }
+
+                bodyHtml += `</div>`;
+              });
+              bodyHtml += `</div>`;
+            }
+          });
+
+          bodyHtml += `</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="project-category">${p.category}</span>
+              <div class="project-title">${p.title}</div>
+            </div>
+            <div class="card-header-right">
+              <span class="priority-badge priority-${p.priority}">P${p.priority} - 重要性</span>
+              <button class="btn-fold" onclick="toggleCardCollapse('${p.id}')">${p.collapsed ? '🔽 展開' : '🔼 收合'}</button>
+            </div>
+          </div>
+
+          <div class="card-meta-bar">
+            <span class="deadline-text">📅 總完工期限：<strong>${p.deadline}</strong></span>
+            <span class="countdown-badge ${badgeCls}">${badgeTxt}</span>
+          </div>
+
+          ${bodyHtml}
+
+          <div class="card-footer">
+            <button class="btn-add-subtask" onclick="openAddSubtaskModal('${p.id}')">➕ 主任交辦/派發子任務</button>
+            <a href="${p.folderUrl}" target="_blank" class="btn-drive">📁 查看專屬 Drive 公文卷宗 ↗</a>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function toggleCardCollapse(projId) {
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (p) {
+        p.collapsed = !p.collapsed;
+        renderCards();
+      }
+    }
+
+    function toggleTaskDone(projId, sec, taskId, isChecked) {
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (p && p.sectionTasks[sec]) {
+        let t = p.sectionTasks[sec].find(x => x.id === taskId);
+        if (t) {
+          t.done = isChecked;
+          if (isChecked && !t.report) {
+            t.report = "經承辦長官核准於線上勾選完工備查。";
+            t.reportTime = "115/07/11 16:30";
+          }
+          renderCards();
+
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run.updateSubtaskStatus(projId, taskId, isChecked, t.report, t.note, t.dueDate);
+          }
+        }
+      }
+    }
+
+    // EDIT SUBTASK MODAL
+    function openEditSubtaskModal(projId, sec, taskId) {
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (!p || !p.sectionTasks[sec]) return;
+      let t = p.sectionTasks[sec].find(x => x.id === taskId);
+      if (!t) return;
+
+      document.getElementById('edit-proj-id').value = projId;
+      document.getElementById('edit-section-name').value = sec;
+      document.getElementById('edit-task-id').value = taskId;
+      document.getElementById('edit-task-text').value = t.task;
+      document.getElementById('edit-task-duedate').value = t.dueDate;
+      document.getElementById('edit-task-note').value = t.note || '';
+      document.getElementById('edit-task-report').value = t.report || '';
+
+      document.getElementById('edit-subtask-desc').innerText = `目前編輯：${p.title} (${sec})`;
+      document.getElementById('edit-subtask-modal').style.display = 'flex';
+    }
+    function closeEditSubtaskModal() {
+      document.getElementById('edit-subtask-modal').style.display = 'none';
+    }
+    function saveSubtaskEdit() {
+      let projId = document.getElementById('edit-proj-id').value;
+      let sec = document.getElementById('edit-section-name').value;
+      let taskId = document.getElementById('edit-task-id').value;
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (p && p.sectionTasks[sec]) {
+        let t = p.sectionTasks[sec].find(x => x.id === taskId);
+        if (t) {
+          t.task = document.getElementById('edit-task-text').value.trim();
+          t.dueDate = document.getElementById('edit-task-duedate').value;
+          t.note = document.getElementById('edit-task-note').value.trim();
+          t.report = document.getElementById('edit-task-report').value.trim();
+          if (t.report && !t.reportTime) t.reportTime = "115/07/11 17:00";
+          renderCards();
+          closeEditSubtaskModal();
+
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ 子任務限期與進度回報已成功同步至 Google Sheets！');
+              })
+              .updateSubtaskStatus(projId, taskId, t.done, t.report, t.note, t.dueDate);
+          } else {
+            alert('✅ 子任務限期與進度回報已更新（展示模式）！');
+          }
+        }
+      }
+    }
+
+    // ADD SUBTASK MODAL
+    function openAddSubtaskModal(projId) {
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (!p) return;
+      document.getElementById('add-proj-id').value = projId;
+      document.getElementById('add-task-text').value = '';
+      document.getElementById('add-task-note').value = '';
+      document.getElementById('add-subtask-desc').innerText = `為專案派發子任務：${p.title}`;
+      document.getElementById('add-subtask-modal').style.display = 'flex';
+    }
+    function closeAddSubtaskModal() {
+      document.getElementById('add-subtask-modal').style.display = 'none';
+    }
+    function saveNewDirectorSubtask() {
+      let projId = document.getElementById('add-proj-id').value;
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (!p) return;
+      let sec = document.getElementById('add-task-section').value;
+      let dueDate = document.getElementById('add-task-duedate').value;
+      let text = document.getElementById('add-task-text').value.trim();
+      let note = document.getElementById('add-task-note').value.trim();
+
+      if (!text) {
+        alert('請輸入具體的任務項目內容！');
+        return;
+      }
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function() {
+            loadDashboardDataFromServer();
+            closeAddSubtaskModal();
+            alert(`🚀 新任務已交辦至【${sec}】並寫入雲端 Google Sheets！\n期限：${dueDate}\n${note ? '注意事項：' + note : ''}\n系統將自動推播預警給組長！`);
+          })
+          .createDirectorSubtask({
+            projId: projId,
+            section: sec,
+            taskText: text,
+            dueDate: dueDate,
+            note: note
+          });
+      } else {
+        if (!p.sections.includes(sec)) {
+          p.sections.push(sec);
+        }
+        if (!p.sectionTasks[sec]) {
+          p.sectionTasks[sec] = [];
+        }
+        let newId = 't' + (p.id.replace(/\D/g, '') || '9') + '-' + (p.sectionTasks[sec].length + 1);
+        p.sectionTasks[sec].push({
+          "id": newId,
+          "task": text,
+          "dueDate": dueDate,
+          "done": false,
+          "report": "",
+          "reportTime": "",
+          "note": note
+        });
+        renderCards();
+        closeAddSubtaskModal();
+        alert(`🚀 新任務已交辦至【${sec}】(展示模式)！\n期限：${dueDate}\n${note ? '注意事項：' + note : ''}\n系統已自動推播預警給組長！`);
+      }
+    }
+
+    // PUSH CONFIG MODAL
+    function openPushConfigModal() {
+      const tbody = document.getElementById('push-config-tbody');
+      tbody.innerHTML = '';
+      Object.keys(pushConfig).forEach(sec => {
+        const c = pushConfig[sec];
+        tbody.innerHTML += `
+          <tr>
+            <td class="sec-name">${sec}</td>
+            <td><input type="checkbox" id="line-${sec}" ${c.line ? 'checked' : ''}></td>
+            <td><input type="checkbox" id="chat-${sec}" ${c.chat ? 'checked' : ''}></td>
+            <td><input type="checkbox" id="email-${sec}" ${c.email ? 'checked' : ''}></td>
+            <td><input type="number" id="thr-${sec}" value="${c.thresholdDays || 5}" style="width:60px; text-align:center;"> 天</td>
+          </tr>
+        `;
+      });
+      document.getElementById('push-config-modal').style.display = 'flex';
+    }
+    function closePushConfigModal() {
+      document.getElementById('push-config-modal').style.display = 'none';
+    }
+    function savePushConfig() {
+      Object.keys(pushConfig).forEach(sec => {
+        pushConfig[sec].line = document.getElementById(`line-${sec}`).checked;
+        pushConfig[sec].chat = document.getElementById(`chat-${sec}`).checked;
+        pushConfig[sec].email = document.getElementById(`email-${sec}`).checked;
+        pushConfig[sec].thresholdDays = parseInt(document.getElementById(`thr-${sec}`).value) || 5;
+      });
+      closePushConfigModal();
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function() {
+            alert('⚙️ 各組推播管道與倒數警示天數設定已成功儲存至雲端 Google Sheets！');
+          })
+          .savePushConfiguration(pushConfig);
+      } else {
+        alert('⚙️ 各組推播管道與倒數警示天數設定已成功儲存（展示模式）！');
+      }
+    }
+
+    function triggerPushNotify() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(`📲 【多通道雲端智能推播完畢】\n====================\n已發布推播至：LINE Notify / Google Chat / Gmail\n本次觸發期程通報件數：共 ${res.count} 項\n\n各承辦長官（事務/出納/文書/幹事/主任）已於通訊頻道收到警示與主任叮嚀事項！`);
+          })
+          .withFailureHandler(function(err) {
+            alert('❌ 推播觸發失敗: ' + err);
+          })
+          .runDailyPushEngine();
+      } else {
+        let count = 0;
+        projectsData.forEach(p => {
+          p.sections.forEach(sec => {
+            const tasks = p.sectionTasks[sec] || [];
+            tasks.forEach(t => {
+              if (!t.done && calculateDaysLeft(t.dueDate) <= 5) count++;
+            });
+          });
+        });
+        alert(`📲 【多通道推播總匯報 (展示模式)】\n====================\n已發布推播至：LINE Notify / Google Chat / Gmail\n全校總務即將到期未完工子任務：共 ${count} 項\n\n各承辦組長（事務/出納/文書/幹事）已於裝置收到到期推播及主任叮嚀事項！`);
+      }
+    }
+
+    function redeployPeriodic(tempId) {
+      const temp = periodicTemplates.find(x => x.id === tempId);
+      if (!temp) return;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(`🔄 【週期任務一鍵重新部署成功】\n已將《${res.title}》自常規範本庫轉入當前年度名冊！\n自動配發流水編號：${res.newProjId}\n總期限：${res.deadline}\n各項子任務檢查清單已同步發送予承辦長官！`);
+            loadDashboardDataFromServer();
+          })
+          .redeployPeriodicProject(tempId);
+      } else {
+        alert(`🔄 【週期任務一鍵重新部署成功 (展示模式)】\n已將《${temp.title}》自常規範本庫轉入當前年度執行名冊！\n自動配發流水編號：PRJ-10\n總期限：2026-08-25\n各項子任務檢查清單已配發予各承辦長官！`);
+      }
+    }
+
+    function updateMenuCounts() {
+      let focusCnt = 0;
+      let urgentCnt = 0;
+      let secCounts = { "事務組": 0, "出納組": 0, "文書組": 0, "事務幹事": 0, "總務主任": 0 };
+
+      projectsData.forEach(p => {
+        if (p.isFocus) focusCnt++;
+        if (p.daysLeft <= 5) urgentCnt++;
+        p.sections.forEach(sec => {
+          const tasks = p.sectionTasks[sec] || [];
+          if (secCounts[sec] !== undefined) secCounts[sec] += tasks.length;
+        });
+      });
+
+      const elFocus = document.getElementById('cnt-focus');
+      if (elFocus) elFocus.innerText = focusCnt;
+
+      const elUrgent = document.getElementById('cnt-urgent');
+      if (elUrgent) elUrgent.innerText = urgentCnt;
+
+      const idMap = { "事務組": "cnt-affairs", "出納組": "cnt-cash", "文書組": "cnt-doc", "事務幹事": "cnt-clerk", "總務主任": "cnt-dir" };
+      Object.keys(idMap).forEach(sec => {
+        const el = document.getElementById(idMap[sec]);
+        if (el) el.innerText = secCounts[sec] || 0;
+      });
+
+      const elPer = document.getElementById('cnt-periodic');
+      if (elPer) elPer.innerText = periodicTemplates.length;
+    }
+
+    function loadDashboardDataFromServer() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.projects) {
+              projectsData = res.projects;
+              periodicTemplates = res.periodicTemplates || periodicTemplates;
+              pushConfig = res.pushConfig || pushConfig;
+              renderCards();
+              updateMenuCounts();
+            }
+          })
+          .withFailureHandler(function(err) {
+            console.warn("維持使用預設資料庫：", err);
+            renderCards();
+            updateMenuCounts();
+          })
+          .getDashboardData();
+      } else {
+        renderCards();
+        updateMenuCounts();
+      }
+    }
+
+    function initCloudDatabase() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        if (confirm('確定要在目前的 Google Sheets 中建立 / 重新初始化 Projects, SubTasks, PushConfig 三大核心表格與 12 筆專案範本嗎？')) {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              alert(res);
+              loadDashboardDataFromServer();
+            })
+            .withFailureHandler(function(err) {
+              alert('❌ 執行出錯: ' + err);
+            })
+            .initSpreadsheetSchema();
+        }
+      } else {
+        alert('⚠️ 目前未在 Google Apps Script 雲端環境中運作。\n若要初始化真實 Google Sheets，請將應用程式以 Web App 部署後點擊此功能！');
+      }
+    }
+
+    // Wrap renderCards to update menu counts automatically
+    const _oldRenderCards = renderCards;
+    renderCards = function() {
+      _oldRenderCards();
+      updateMenuCounts();
+    };
+
+    window.onload = function() {
+      loadDashboardDataFromServer();
+    };
+  </script>
+</body>
+</html>
