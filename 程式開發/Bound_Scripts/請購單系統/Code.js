@@ -1,7 +1,7 @@
 /**
  * Serving the HTML Web Application
  */
-var VERSION = "v3.0.0";
+var VERSION = "v3.0.6";
 
 /**
  * Serving the HTML Web Application
@@ -56,6 +56,7 @@ function createRequisition(formData) {
     var purpose = formData.purpose;
     var vendor = formData.vendor || "";
     var department = formData.department || "總務處";
+
     var items = formData.items; // Array of { name, spec, unit, qty, price, total }
 
     if (!templateId || !folderId) {
@@ -146,6 +147,7 @@ function createRequisition(formData) {
     body.replaceText("\\{\\{用途別\\}\\}", purposeCategory);
     body.replaceText("\\{\\{總計\\}\\}", grandTotal.toLocaleString());
     body.replaceText("\\{\\{國字總計\\}\\}", chineseTotal);
+
 
     // Replace digits grid (億, 千萬, 百萬, 十萬, 萬, 千, 百, 十, 元)
     replaceAmountGrid(body, grandTotal);
@@ -489,6 +491,16 @@ function summarizePurpose(purpose) {
 }
 
 /**
+ * Replaces the {{採購卡}} placeholder with "採購卡支付" if checked.
+ * Also clears it if not checked (handled in the main process function).
+ */
+function applyProcurementCardStamp(body) {
+  // We no longer modify the table cell directly to avoid layout issues.
+  // Instead, we rely on the {{採購卡}} placeholder in the document template.
+  body.replaceText("\\{\\{採購卡\\}\\}", "採購卡支付");
+}
+
+/**
  * Formats Gregorian date (YYYY-MM-DD) to Minguo date string without separators (e.g. YYYMMDD)
  */
 function formatToROCFNSDate(dateStr) {
@@ -505,52 +517,7 @@ function formatToROCFNSDate(dateStr) {
   return rocYear + monthStr + dayStr;
 }
 
-/**
- * Dynamically stamps "採購卡支付" vertically inside the cell that contains "憑證編號".
- */
-function applyProcurementCardStamp(body) {
-  var tables = body.getTables();
-  for (var t = 0; t < tables.length; t++) {
-    var table = tables[t];
-    for (var r = 0; r < table.getNumRows(); r++) {
-      var row = table.getRow(r);
-      for (var c = 0; c < row.getNumCells(); c++) {
-        var cell = row.getCell(c);
-        var text = cell.getText().replace(/\s+/g, ""); // strip all spaces
-        if (text.indexOf("憑證編號") !== -1) {
-          cell.clear();
-          
-          var stampItems = [
-            { text: "採", size: 22, bold: true },
-            { text: "購", size: 22, bold: true },
-            { text: "卡", size: 22, bold: true },
-            { text: "憑證編號", size: 10, bold: false },
-            { text: "支", size: 22, bold: true },
-            { text: "第    號", size: 10, bold: false },
-            { text: "付", size: 22, bold: true }
-          ];
-          
-          for (var i = 0; i < stampItems.length; i++) {
-            var p;
-            if (i === 0) {
-              p = cell.getChild(0).asParagraph();
-              p.setText(stampItems[i].text);
-            } else {
-              p = cell.appendParagraph(stampItems[i].text);
-            }
-            p.setFontSize(stampItems[i].size);
-            p.setBold(stampItems[i].bold);
-            p.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-            p.setSpacingAfter(0);
-            p.setSpacingBefore(0);
-            p.setLineSpacing(1.0);
-          }
-          return; // Done
-        }
-      }
-    }
-  }
-}
+
 
 /**
  * 專門用來強制觸發 UrlFetchApp 授權的測試函數
