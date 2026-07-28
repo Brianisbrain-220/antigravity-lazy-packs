@@ -196,23 +196,62 @@ function ReporterForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    
+    // 1. Validate Classroom
     if (!formData.classroomId || !matchedClassroom) {
       const msg = roomInput.trim()
         ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請輸入或點選有效空間！`
-        : '⚠️ 請先輸入「教室編號或空間名稱」並成功對照空間後再送出表單';
+        : '⚠️ 請先在上方「教室編號或名稱」欄位輸入並成功對照後再送出表單';
       setErrorMessage(msg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return alert(msg);
+      alert(msg);
+      return;
     }
-    
+
+    // 2. Validate Reporter Name & Email
+    if (!formData.reporterName || !formData.reporterName.trim()) {
+      const msg = '⚠️ 請填寫「填報人姓名」！';
+      setErrorMessage(msg);
+      window.scrollTo({ top: 200, behavior: 'smooth' });
+      alert(msg);
+      return;
+    }
+    if (!formData.reporterEmail || !formData.reporterEmail.trim()) {
+      const msg = '⚠️ 請填寫「填報人 Email」！';
+      setErrorMessage(msg);
+      window.scrollTo({ top: 250, behavior: 'smooth' });
+      alert(msg);
+      return;
+    }
+
+    // 3. Validate Handover info if hasHandover is selected
+    if (formData.hasHandover) {
+      if (!formData.handoverName || !formData.handoverName.trim()) {
+        const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人姓名」！';
+        setErrorMessage(msg);
+        window.scrollTo({ top: 300, behavior: 'smooth' });
+        alert(msg);
+        return;
+      }
+      if (!formData.handoverEmail || !formData.handoverEmail.trim()) {
+        const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人 Email」以便接收審查連結！';
+        setErrorMessage(msg);
+        window.scrollTo({ top: 350, behavior: 'smooth' });
+        alert(msg);
+        return;
+      }
+    }
+
+    // 4. Validate Signature
     let signatureUrl = '';
     // Only check signature if required in settings
     if (!formData.hasHandover && systemSettings.requireSignature) {
       signatureUrl = savedSignature || (sigPad && !sigPad.isEmpty() ? sigPad.getTrimmedCanvas().toDataURL('image/png') : '');
       if (!signatureUrl) {
-        const msg = '⚠️ 請在「填報人簽名」欄位完成簽名以示負責';
+        const msg = '⚠️ 請在下方「填報人簽名」欄位完成簽名以示負責';
         setErrorMessage(msg);
-        return alert(msg);
+        alert(msg);
+        return;
       }
     }
 
@@ -289,7 +328,10 @@ function ReporterForm() {
       <div className="container" style={{maxWidth: 600, margin: '3rem auto', padding: '1rem'}}>
         <div className="card fade-in" style={{padding: '3rem 2rem', borderTop: '6px solid #10b981', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.08)'}}>
           <div style={{fontSize: '4.5rem', marginBottom: '1rem'}}>🎉</div>
-          <h2 style={{color: '#059669', marginBottom: '1rem', fontSize: '1.8rem', fontWeight: 700}}>填報成功！資料已送出</h2>
+          <h2 style={{color: '#059669', marginBottom: '0.5rem', fontSize: '1.8rem', fontWeight: 700}}>填報成功！資料已送出</h2>
+          <div style={{display: 'inline-block', background: '#ecfdf5', border: '1px solid #10b981', color: '#047857', padding: '0.4rem 1rem', borderRadius: '20px', fontWeight: 'bold', marginBottom: '1.5rem', fontSize: '0.9rem'}}>
+            ✔ 雲端資料庫已同步覆核：已完成報表寫入
+          </div>
           <p style={{color: '#4b5563', marginBottom: '2rem', fontSize: '1.1rem', lineHeight: 1.6}}>
             感謝老師的耐心協助！您所填報的教室設備清點與報修資料，已經成功送出並記錄於總務處設備管理系統中。
           </p>
@@ -312,7 +354,61 @@ function ReporterForm() {
         教室設備清點填報
       </h2>
       
-      <form onSubmit={handleSubmit}>
+      {/* Sticky Floating Status Toast for Mobile/LINE WebView */}
+      {errorMessage && (
+        <div className="fade-in" style={{
+          position: 'fixed',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '92%',
+          maxWidth: '520px',
+          background: '#ef4444',
+          color: 'white',
+          padding: '0.8rem 1.2rem',
+          borderRadius: '50px',
+          boxShadow: '0 10px 25px rgba(239, 68, 68, 0.4)',
+          zIndex: 99999,
+          fontWeight: 'bold',
+          fontSize: '0.95rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <span>{errorMessage}</span>
+          <button 
+            type="button" 
+            onClick={() => setErrorMessage('')}
+            style={{background: 'none', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '1.3rem', cursor: 'pointer', marginLeft: '0.5rem'}}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {isSubmitting && (
+        <div className="fade-in" style={{
+          position: 'fixed',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '92%',
+          maxWidth: '520px',
+          background: '#0284c7',
+          color: 'white',
+          padding: '0.8rem 1.2rem',
+          borderRadius: '50px',
+          boxShadow: '0 10px 25px rgba(2, 132, 199, 0.4)',
+          zIndex: 99999,
+          fontWeight: 'bold',
+          fontSize: '0.95rem',
+          textAlign: 'center'
+        }}>
+          ⏳ 系統正在將資料上傳至雲端，請稍候片刻...
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate>
         <div className="form-group fade-in">
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
             <label className="form-label" style={{marginBottom: 0}}>
@@ -341,7 +437,6 @@ function ReporterForm() {
             placeholder="請輸入教室編號或名稱 (例如: 101, room_101, 一年1班, 電腦教室)..."
             value={roomInput}
             onChange={e => setRoomInput(e.target.value)}
-            required
             style={{
               borderColor: matchedClassroom ? '#10b981' : (roomMatchError ? '#ef4444' : 'var(--border-color)'),
               borderWidth: (matchedClassroom || roomMatchError) ? '2px' : '1px',
@@ -456,12 +551,12 @@ function ReporterForm() {
         
         <div className="responsive-form-row">
           <div className="form-group" style={{flex: 1}}>
-            <label className="form-label">填報人姓名</label>
-            <input className="input-field" required value={formData.reporterName} onChange={e => setFormData({...formData, reporterName: e.target.value})} />
+            <label className="form-label">填報人姓名 <span style={{color: '#dc2626'}}>*</span></label>
+            <input className="input-field" value={formData.reporterName} onChange={e => setFormData({...formData, reporterName: e.target.value})} placeholder="請輸入姓名" />
           </div>
           <div className="form-group" style={{flex: 1}}>
-            <label className="form-label">填報人 Email</label>
-            <input type="email" className="input-field" required value={formData.reporterEmail} onChange={e => setFormData({...formData, reporterEmail: e.target.value})} placeholder="請輸入學校 Email 或常用電子郵件" />
+            <label className="form-label">填報人 Email <span style={{color: '#dc2626'}}>*</span></label>
+            <input type="email" className="input-field" value={formData.reporterEmail} onChange={e => setFormData({...formData, reporterEmail: e.target.value})} placeholder="請輸入學校 Email 或常用電子郵件" />
           </div>
         </div>
 
@@ -481,12 +576,12 @@ function ReporterForm() {
           {formData.hasHandover && (
             <div className="responsive-form-row fade-in" style={{marginTop: '1rem'}}>
               <div style={{flex: 1}}>
-                <label className="form-label">交接人姓名</label>
-                <input className="input-field" required value={formData.handoverName} onChange={e => setFormData({...formData, handoverName: e.target.value})} />
+                <label className="form-label">交接人姓名 <span style={{color: '#dc2626'}}>*</span></label>
+                <input className="input-field" value={formData.handoverName} onChange={e => setFormData({...formData, handoverName: e.target.value})} placeholder="請輸入交接老師姓名" />
               </div>
               <div style={{flex: 1}}>
-                <label className="form-label">交接人 Email (重要，用於寄發審查連結)</label>
-                <input type="email" className="input-field" required value={formData.handoverEmail} onChange={e => setFormData({...formData, handoverEmail: e.target.value})} />
+                <label className="form-label">交接人 Email (重要，用於寄發審查連結) <span style={{color: '#dc2626'}}>*</span></label>
+                <input type="email" className="input-field" value={formData.handoverEmail} onChange={e => setFormData({...formData, handoverEmail: e.target.value})} placeholder="請輸入交接老師 Email" />
               </div>
             </div>
           )}
@@ -617,13 +712,19 @@ function ReporterForm() {
             className="btn btn-primary" 
             disabled={isSubmitting}
             style={{
-              padding: '1rem 3rem', 
+              padding: '1.1rem 2.5rem', 
               fontSize: '1.2rem',
               opacity: isSubmitting ? 0.7 : 1,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              width: '100%',
+              maxWidth: '480px',
+              borderRadius: '50px',
+              boxShadow: '0 6px 20px rgba(37, 99, 235, 0.35)',
+              fontWeight: 700,
+              transition: 'all 0.2s'
             }}
           >
-            {isSubmitting ? '⏳ 資料送出中，請稍候...' : (formData.hasHandover ? '送出並發送交接確認信' : '確認無誤並完成送出')}
+            {isSubmitting ? '⏳ 資料上傳雲端中，請稍候...' : (formData.hasHandover ? '確認無誤並發送交接信 ➔' : '確認無誤並完成送出 ➔')}
           </button>
         </div>
       </form>
