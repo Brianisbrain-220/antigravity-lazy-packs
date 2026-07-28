@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '../context/AuthContext';
-import { seedEquipmentItems, seedClassrooms, seedSettings } from '../seedData';
+import { seedEquipmentItems, seedClassrooms, seedSettings, DEFAULT_CATEGORIES } from '../seedData';
 
 function ReporterForm() {
   const { user } = useAuth();
@@ -86,15 +86,16 @@ function ReporterForm() {
         delete newInv[itemId];
         return newInv;
       } else {
-        return { ...prev, [itemId]: { checked: true, count: 1 } };
+        return { ...prev, [itemId]: { checked: true, count: 1, quantity: 1 } };
       }
     });
   };
 
   const handleItemCount = (itemId, count) => {
+    const num = parseInt(count, 10) || 0;
     setInventory(prev => ({
       ...prev,
-      [itemId]: { ...prev[itemId], count: parseInt(count) || 0 }
+      [itemId]: { ...prev[itemId], count: num, quantity: num }
     }));
   };
 
@@ -139,16 +140,17 @@ function ReporterForm() {
     }
   };
 
-  const categories = {
-    desks_chairs: '課桌椅',
-    lockers: '學生置物櫃',
-    office_desks: '辦公桌',
-    office_chairs: '辦公椅',
-    multimedia: '多媒體與週邊',
-    amplifiers: '擴音設備',
-    speakers: '喇叭',
-    erasers: '板擦機'
-  };
+  const categories = useMemo(() => {
+    const baseCats = systemSettings.categories || DEFAULT_CATEGORIES;
+    const allCats = { ...baseCats };
+    equipmentItems.forEach(item => {
+      const cat = item.category || 'other';
+      if (!allCats[cat]) {
+        allCats[cat] = cat === 'other' ? '其他設備' : cat;
+      }
+    });
+    return allCats;
+  }, [systemSettings, equipmentItems]);
 
   if (loadingData) {
     return <div style={{textAlign: 'center', padding: '3rem'}}>載入填報清單中...</div>;
@@ -214,7 +216,7 @@ function ReporterForm() {
 
         {/* Dynamic Equipment Sections */}
         {Object.entries(categories).map(([catKey, catName]) => {
-          const itemsInCat = equipmentItems.filter(i => i.category === catKey);
+          const itemsInCat = equipmentItems.filter(i => (i.category || 'other') === catKey);
           if (itemsInCat.length === 0) return null;
           
           return (

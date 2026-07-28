@@ -44,8 +44,7 @@ const PRESET_EQUIPMENT_IMAGES = [
 
 function AdminDashboard() {
   const { user, isSuperAdmin } = useAuth();
-  const [simulateNormalAdmin, setSimulateNormalAdmin] = useState(false);
-  const effectiveSuperAdmin = isSuperAdmin && !simulateNormalAdmin;
+  const effectiveSuperAdmin = isSuperAdmin;
   const [isAdminVerified, setIsAdminVerified] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [inventories, setInventories] = useState([]);
@@ -140,12 +139,21 @@ function AdminDashboard() {
       const clsSnap = await getDocs(collection(db, 'eq_classrooms'));
       setClassrooms(clsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
+      let baseCats = DEFAULT_CATEGORIES;
       if (settingsSnap.exists()) {
         const data = settingsSnap.data();
         setSystemSettings(data);
         setSettingsForm({ requireSignature: data.requireSignature ?? true, googleChatWebhookUrl: data.googleChatWebhookUrl ?? '', senderEmail: data.senderEmail ?? '' });
-        if (data.categories) setCategories(data.categories);
+        if (data.categories) baseCats = data.categories;
       }
+      const allCats = { ...baseCats };
+      itemSnap.docs.forEach(d => {
+        const cat = d.data().category || 'other';
+        if (!allCats[cat]) {
+          allCats[cat] = cat === 'other' ? '其他設備' : cat;
+        }
+      });
+      setCategories(allCats);
       const adminsSnap = await getDocs(collection(db, 'admins'));
       setAdmins(adminsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
@@ -439,7 +447,7 @@ function AdminDashboard() {
       if (item.inputType === 'checkbox_only') {
         qty = isChecked ? 1 : 0;
       } else {
-        qty = Number(itemData.quantity) || (isChecked ? 1 : 0);
+        qty = Number(itemData.quantity !== undefined ? itemData.quantity : itemData.count) || (isChecked ? 1 : 0);
       }
       const status = itemData.status || 'normal';
       const notes = itemData.notes || inv?.notes || '';
@@ -631,16 +639,6 @@ function AdminDashboard() {
                   {effectiveSuperAdmin ? '👑 超級管理員' : '👤 一般管理員'}
                 </span>
               </div>
-              {isSuperAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setSimulateNormalAdmin(!simulateNormalAdmin)}
-                  style={{ background: 'transparent', border: '1px dashed #64748b', color: '#cbd5e1', fontSize: '0.73rem', padding: '0.3rem 0.5rem', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', width: '100%', marginTop: '0.2rem' }}
-                  title="切換模擬測試一般管理員視角"
-                >
-                  {simulateNormalAdmin ? '👑 還原為超級管理員' : '🔄 測試：模擬一般管理員'}
-                </button>
-              )}
             </div>
           )}
 
@@ -1257,15 +1255,6 @@ function AdminDashboard() {
               >
                 ← 返回數據總覽
               </button>
-              {isSuperAdmin && simulateNormalAdmin && (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setSimulateNormalAdmin(false)}
-                  style={{ background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
-                >
-                  👑 測試結束：切換回超級管理員視角
-                </button>
-              )}
             </div>
           </div>
         ) : (
