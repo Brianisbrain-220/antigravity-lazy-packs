@@ -43,7 +43,9 @@ const PRESET_EQUIPMENT_IMAGES = [
 ];
 
 function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const [simulateNormalAdmin, setSimulateNormalAdmin] = useState(false);
+  const effectiveSuperAdmin = isSuperAdmin && !simulateNormalAdmin;
   const [isAdminVerified, setIsAdminVerified] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [inventories, setInventories] = useState([]);
@@ -56,6 +58,7 @@ function AdminDashboard() {
   const [newCatLabel, setNewCatLabel] = useState('');
   const [admins, setAdmins] = useState([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminRole, setNewAdminRole] = useState('admin');
   const [settingsForm, setSettingsForm] = useState({ requireSignature: true, googleChatWebhookUrl: '', senderEmail: '' });
   const [systemSettings, setSystemSettings] = useState({ requireSignature: true, googleChatWebhookUrl: '', senderEmail: '' });
   const [classroomForm, setClassroomForm] = useState({ id: '', name: '', category: 'regular', teacherName: '', teacherEmail: '' });
@@ -185,11 +188,26 @@ function AdminDashboard() {
   const handleAddAdmin = async () => {
     if (!newAdminEmail.trim()) return;
     try {
-      await setDoc(doc(db, 'admins', newAdminEmail.trim()), { email: newAdminEmail.trim(), addedAt: new Date().toISOString() });
+      await setDoc(doc(db, 'admins', newAdminEmail.trim()), {
+        email: newAdminEmail.trim(),
+        role: newAdminRole || 'admin',
+        addedAt: new Date().toISOString()
+      });
       setNewAdminEmail('');
+      setNewAdminRole('admin');
       loadData();
     } catch (err) {
       alert('新增失敗: ' + err.message);
+    }
+  };
+
+  const handleUpdateAdminRole = async (email, role) => {
+    try {
+      await setDoc(doc(db, 'admins', email), { email, role }, { merge: true });
+      alert('已更新管理員權限為：' + (role === 'super_admin' ? '👑 超級管理員' : '👤 一般管理員'));
+      loadData();
+    } catch (err) {
+      alert('更新權限失敗: ' + err.message);
     }
   };
 
@@ -605,6 +623,27 @@ function AdminDashboard() {
             </button>
           </div>
 
+          {!sidebarCollapsed && (
+            <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(0,0,0,0.18)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>目前角色權限</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', background: effectiveSuperAdmin ? '#f3e8ff' : '#f1f5f9', color: effectiveSuperAdmin ? '#7e22ce' : '#475569' }}>
+                  {effectiveSuperAdmin ? '👑 超級管理員' : '👤 一般管理員'}
+                </span>
+              </div>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setSimulateNormalAdmin(!simulateNormalAdmin)}
+                  style={{ background: 'transparent', border: '1px dashed #64748b', color: '#cbd5e1', fontSize: '0.73rem', padding: '0.3rem 0.5rem', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', width: '100%', marginTop: '0.2rem' }}
+                  title="切換模擬測試一般管理員視角"
+                >
+                  {simulateNormalAdmin ? '👑 還原為超級管理員' : '🔄 測試：模擬一般管理員'}
+                </button>
+              )}
+            </div>
+          )}
+
           <nav className="admin-sidebar-nav">
             {NAV_ITEMS.map(item => {
               const isActive = activeTab === item.id;
@@ -622,7 +661,14 @@ function AdminDashboard() {
                     title={sidebarCollapsed ? item.label : ''}
                   >
                     <span className="admin-nav-icon">{item.icon}</span>
-                    <span className="admin-nav-label">{item.label}</span>
+                    <span className="admin-nav-label">
+                      {item.label}
+                      {item.id === 'settings' && !effectiveSuperAdmin && (
+                        <span style={{ marginLeft: '6px', fontSize: '0.7rem', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                          🔒 超管
+                        </span>
+                      )}
+                    </span>
                     {item.count !== null && (
                       <span className="admin-nav-badge">{item.count}</span>
                     )}
@@ -1190,50 +1236,133 @@ function AdminDashboard() {
       )}
 
       {activeTab === 'settings' && (
-        <div className="grid-admin-1-1">
-          <div className="card" style={{ height: 'fit-content' }}>
-            <h3>系統與通知設定</h3>
-            <form onSubmit={handleSaveSettings} style={{ marginTop: '1.5rem' }}>
-              <div className="form-group" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
-                  <input type="checkbox" checked={settingsForm.requireSignature} onChange={e => setSettingsForm({ ...settingsForm, requireSignature: e.target.checked })} style={{ width: '1.25rem', height: '1.25rem' }} />
-                  強制要求電子簽名（填報人/交接人均必須手寫簽署）
-                </label>
-              </div>
-              <div className="form-group">
-                <label className="form-label">系統發信信箱 (Sender Email)</label>
-                <input type="email" className="input-field" value={settingsForm.senderEmail} onChange={e => setSettingsForm({ ...settingsForm, senderEmail: e.target.value })} placeholder="noreply@school.edu.tw" />
-                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.3rem' }}>用於通知 Email 的寄件人信箱（搭配 GAS 橋接發信）。</p>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Google Chat Webhook 網址</label>
-                <input type="url" className="input-field" value={settingsForm.googleChatWebhookUrl} onChange={e => setSettingsForm({ ...settingsForm, googleChatWebhookUrl: e.target.value })} placeholder="https://chat.googleapis.com/v1/spaces/.../messages?key=..." />
-                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.3rem' }}>用於發送催報卡片至 Google Chat 空間。</p>
-              </div>
-              <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 3rem' }}>儲存設定</button>
-              </div>
-            </form>
+        !effectiveSuperAdmin ? (
+          <div className="card" style={{ maxWidth: '640px', margin: '3rem auto', textAlign: 'center', padding: '3.5rem 2.5rem', borderColor: '#f87171', background: '#fff' }}>
+            <div style={{ fontSize: '3.8rem', marginBottom: '1rem' }}>🔒</div>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>
+              系統與設定 - 僅限超級管理員 (Super Admin) 存取
+            </h2>
+            <p style={{ color: '#64748b', lineHeight: 1.8, marginBottom: '1.5rem', fontSize: '0.98rem' }}>
+              為維持全校教室設備報修與清點系統之安全控管，**系統與通知設定（電子簽名規則 / Webhook / 寄件信箱）** 及 **管理員帳號白名單** 僅授權 **超級管理員 (Super Admin)** 進行變更與檢視。<br />
+              您目前登入的權限角色為：
+            </p>
+            <div style={{ display: 'inline-block', background: '#f1f5f9', color: '#475569', fontWeight: 700, padding: '0.5rem 1.4rem', borderRadius: '9999px', marginBottom: '2rem', fontSize: '0.95rem' }}>
+              👤 一般管理員 (Admin)
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setActiveTab('summary')}
+                style={{ padding: '0.6rem 1.5rem', fontWeight: 600 }}
+              >
+                ← 返回數據總覽
+              </button>
+              {isSuperAdmin && simulateNormalAdmin && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setSimulateNormalAdmin(false)}
+                  style={{ background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
+                >
+                  👑 測試結束：切換回超級管理員視角
+                </button>
+              )}
+            </div>
           </div>
-          <div className="card" style={{ height: 'fit-content' }}>
-            <h3>管理員帳號白名單</h3>
-            <div style={{ marginTop: '1rem' }}>
-              {admins.map(a => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: '0.9rem' }}>{a.id === user?.email ? '👑 ' : ''}{a.email || a.id}</span>
-                  <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: a.id === user?.email ? '#94a3b8' : 'red', cursor: a.id === user?.email ? 'not-allowed' : 'pointer' }}
-                    onClick={() => handleRemoveAdmin(a.id)} disabled={a.id === user?.email}>移除</button>
+        ) : (
+          <div className="grid-admin-1-1">
+            <div className="card" style={{ height: 'fit-content' }}>
+              <h3>系統與通知設定</h3>
+              <form onSubmit={handleSaveSettings} style={{ marginTop: '1.5rem' }}>
+                <div className="form-group" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <input type="checkbox" checked={settingsForm.requireSignature} onChange={e => setSettingsForm({ ...settingsForm, requireSignature: e.target.checked })} style={{ width: '1.25rem', height: '1.25rem' }} />
+                    強制要求電子簽名（填報人/交接人均必須手寫簽署）
+                  </label>
                 </div>
-              ))}
-              {admins.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>尚無管理員資料</p>}
+                <div className="form-group">
+                  <label className="form-label">系統發信信箱 (Sender Email)</label>
+                  <input type="email" className="input-field" value={settingsForm.senderEmail} onChange={e => setSettingsForm({ ...settingsForm, senderEmail: e.target.value })} placeholder="noreply@school.edu.tw" />
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.3rem' }}>用於通知 Email 的寄件人信箱（搭配 GAS 橋接發信）。</p>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Google Chat Webhook 網址</label>
+                  <input type="url" className="input-field" value={settingsForm.googleChatWebhookUrl} onChange={e => setSettingsForm({ ...settingsForm, googleChatWebhookUrl: e.target.value })} placeholder="https://chat.googleapis.com/v1/spaces/.../messages?key=..." />
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.3rem' }}>用於發送催報卡片至 Google Chat 空間。</p>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                  <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 3rem' }}>儲存設定</button>
+                </div>
+              </form>
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <input className="input-field" type="email" placeholder="輸入要新增的 Email" value={newAdminEmail}
-                onChange={e => setNewAdminEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddAdmin()} style={{ flex: 1 }} />
-              <button className="btn btn-primary" onClick={handleAddAdmin}>新增</button>
+            <div className="card" style={{ height: 'fit-content' }}>
+              <h3>管理員帳號白名單與權限設定</h3>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.5rem' }}>
+                說明：超級管理員（👑）可進入此系統設定；一般管理員（👤）可管理盤點與空間設備，但無法進入系統設定。
+              </p>
+              <div style={{ marginTop: '1rem' }}>
+                {admins.map(a => {
+                  const isThisUser = a.id === user?.email || a.email === user?.email;
+                  const isSuper = a.role === 'super_admin' || !a.role;
+                  return (
+                    <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.email || a.id}</span>
+                        {isThisUser && (
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#7c3aed', background: '#f3e8ff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            你目前帳號
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <select
+                          className="input-field"
+                          value={isSuper ? 'super_admin' : 'admin'}
+                          onChange={e => handleUpdateAdminRole(a.id, e.target.value)}
+                          style={{ width: 'auto', padding: '0.25rem 0.6rem', fontSize: '0.8rem', marginBottom: 0, fontWeight: 700, color: isSuper ? '#7c3aed' : '#475569', background: isSuper ? '#f8fafc' : '#ffffff' }}
+                        >
+                          <option value="super_admin">👑 超級管理員</option>
+                          <option value="admin">👤 一般管理員</option>
+                        </select>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem', color: isThisUser ? '#94a3b8' : 'red', cursor: isThisUser ? 'not-allowed' : 'pointer' }}
+                          onClick={() => handleRemoveAdmin(a.id)}
+                          disabled={isThisUser}
+                        >
+                          移除
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {admins.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>尚無管理員資料</p>}
+              </div>
+              <div style={{ marginTop: '1.2rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input
+                  className="input-field"
+                  type="email"
+                  placeholder="輸入要新增的 Email"
+                  value={newAdminEmail}
+                  onChange={e => setNewAdminEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddAdmin()}
+                  style={{ flex: '1 1 200px', marginBottom: 0 }}
+                />
+                <select
+                  className="input-field"
+                  value={newAdminRole}
+                  onChange={e => setNewAdminRole(e.target.value)}
+                  style={{ width: 'auto', padding: '0.5rem', fontWeight: 600, marginBottom: 0 }}
+                >
+                  <option value="admin">👤 一般管理員</option>
+                  <option value="super_admin">👑 超級管理員</option>
+                </select>
+                <button className="btn btn-primary" onClick={handleAddAdmin} style={{ whiteSpace: 'nowrap' }}>
+                  + 新增
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
         </main>
       </div>
