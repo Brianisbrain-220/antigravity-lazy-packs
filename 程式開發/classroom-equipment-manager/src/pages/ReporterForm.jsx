@@ -188,9 +188,16 @@ function ReporterForm() {
         suggestedClassrooms: matches.slice(0, 8) 
       };
     } else {
+      // Create a dynamic/custom classroom object so ANY room name typed by any teacher is valid and submittable!
+      const customRm = {
+        id: `room_custom_${valNorm || 'unknown'}`,
+        name: roomInput.trim(),
+        category: 'regular',
+        isCustom: true
+      };
       return { 
-        matchedClassroom: null, 
-        roomMatchError: `❌ 後台資料庫無此編號或空間「${roomInput}」，請點選右上角查詢表選擇`, 
+        matchedClassroom: customRm, 
+        roomMatchError: '', 
         suggestedClassrooms: [] 
       };
     }
@@ -354,6 +361,48 @@ function ReporterForm() {
 
   return (
     <div className="card fade-in">
+      {/* Prominent Version Banner & Cache-Buster Reload Button */}
+      <div style={{
+        background: '#0f172a',
+        color: '#38bdf8',
+        padding: '0.75rem 1.2rem',
+        borderRadius: '50px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: '0.9rem',
+        fontWeight: 700,
+        marginBottom: '1.2rem',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+        border: '1px solid #1e293b'
+      }}>
+        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+          <span style={{background: '#0284c7', color: 'white', padding: '0.15rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem'}}>最新版本</span>
+          <span>🚀 系統版本: v2.6 (2026/07/28 22:40 - 全空間開放相容版)</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = window.location.pathname + '?v=2.6_' + Date.now();
+          }}
+          style={{
+            background: '#10b981',
+            color: 'white',
+            border: 'none',
+            padding: '0.35rem 0.9rem',
+            borderRadius: '20px',
+            fontSize: '0.82rem',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
+          }}
+        >
+          🔄 重新載入最新版本
+        </button>
+      </div>
+
       <h2 style={{marginBottom: '1.5rem', color: 'var(--primary)', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem'}}>
         教室設備清點填報
       </h2>
@@ -522,7 +571,7 @@ function ReporterForm() {
               flexWrap: 'wrap',
               gap: '0.5rem'
             }}>
-              <span>✅ 成功對照後台空間：【{matchedClassroom.name}】(編號: {matchedClassroom.id})</span>
+              <span>✅ 成功對照/設定空間：【{matchedClassroom.name}】{matchedClassroom.isCustom ? ' (自訂/新空間)' : ` (編號: ${matchedClassroom.id})`}</span>
               <span style={{fontSize: '0.75rem', background: '#10b981', color: 'white', padding: '0.15rem 0.6rem', borderRadius: '20px'}}>有效空間</span>
             </div>
           )}
@@ -788,6 +837,20 @@ function ReporterForm() {
           </button>
         </div>
       </form>
+
+      {/* Footer Version Number and Build Info */}
+      <footer style={{
+        marginTop: '2.5rem',
+        paddingTop: '1rem',
+        borderTop: '1px solid #e2e8f0',
+        textAlign: 'center',
+        color: '#64748b',
+        fontSize: '0.82rem',
+        lineHeight: '1.6'
+      }}>
+        <div><strong>中正國小教室設備清點與報修系統</strong> | 版本: <span style={{color: '#0284c7', fontWeight: 'bold'}}>v2.6 (2026-07-28 22:40)</span></div>
+        <div>全空間開放報表寫入相容版 • LINE / 行動裝置零攔截優化</div>
+      </footer>
     </div>
   );
 }

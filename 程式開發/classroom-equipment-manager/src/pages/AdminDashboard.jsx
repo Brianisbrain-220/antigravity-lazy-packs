@@ -636,7 +636,7 @@ function AdminDashboard() {
           <div className="admin-sidebar-header">
             <div className="admin-sidebar-title" title="中正國小教室設備報修與管理系統">
               <span>🏫</span>
-              <span className="admin-sidebar-title-text">管理後台系統</span>
+              <span className="admin-sidebar-title-text">管理後台 v2.6</span>
             </div>
             <button
               className="admin-sidebar-toggle-btn"
@@ -1369,8 +1369,21 @@ function AdminDashboard() {
           </div>
         )
       )}
-        </main>
-      </div>
+
+        {/* Admin Dashboard Footer Version */}
+        <footer style={{
+          marginTop: '3rem',
+          paddingTop: '1.2rem',
+          borderTop: '1px solid #e2e8f0',
+          textAlign: 'center',
+          color: '#64748b',
+          fontSize: '0.82rem'
+        }}>
+          <div><strong>中正國小教室設備清點與報修系統後台</strong> | 系統版本: <span style={{color: '#7e22ce', fontWeight: 'bold'}}>v2.6 (2026-07-28 22:40)</span></div>
+          <div>全空間相容架構 • 全螢幕防呆提示 • LINE 瀏覽器極速整合版</div>
+        </footer>
+      </main>
+    </div>
 
       {showImagePickerModal && (
         <div style={{
