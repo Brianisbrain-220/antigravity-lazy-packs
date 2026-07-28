@@ -25,6 +25,14 @@ function AdminDashboard() {
   const itemCsvInputRef = useRef(null);
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm, setItemForm] = useState({ id: '', name: '', category: 'desks_chairs', inputType: 'checkbox_only', imageUrl: '', sortOrder: 50 });
+  // Audit Tab States
+  const [auditCategory, setAuditCategory] = useState('all');
+  const [auditItem, setAuditItem] = useState('all');
+  const [auditClassroomType, setAuditClassroomType] = useState('all');
+  const [auditStatus, setAuditStatus] = useState('all');
+  const [showZeroQuantity, setShowZeroQuantity] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [selectedAuditRows, setSelectedAuditRows] = useState([]);
 
   useEffect(() => {
     const verifyAdmin = async () => {
@@ -314,6 +322,159 @@ function AdminDashboard() {
     alert('已成功模擬發送 Google Chat Webhook 與 Email 催報通知！\nWebhook 網址為：' + (systemSettings.googleChatWebhookUrl || '未設定'));
   };
 
+  // --- Audit Matrix Logic ---
+  const targetItems = equipmentItems.filter(i => {
+    if (auditCategory !== 'all' && i.category !== auditCategory) return false;
+    if (auditItem !== 'all' && i.id !== auditItem) return false;
+    return true;
+  });
+
+  const targetClassrooms = classrooms.filter(c => {
+    if (auditClassroomType !== 'all' && (c.category || 'regular') !== auditClassroomType) return false;
+    return true;
+  });
+
+  const computedAuditRows = [];
+  targetClassrooms.forEach(c => {
+    const inv = inventories.find(i => i.id === c.id || i.classroomId === c.id);
+    targetItems.forEach(item => {
+      const itemData = inv?.items?.[item.id] || {};
+      const isChecked = Boolean(itemData.checked);
+      let qty = 0;
+      if (item.inputType === 'checkbox_only') {
+        qty = isChecked ? 1 : 0;
+      } else {
+        qty = Number(itemData.quantity) || (isChecked ? 1 : 0);
+      }
+      const status = itemData.status || 'normal';
+      const notes = itemData.notes || inv?.notes || '';
+      const updatedAt = inv?.updatedAt || '';
+      const teacherName = inv?.reporterName || c.teacherName || '';
+      const teacherEmail = inv?.reporterEmail || c.teacherEmail || '';
+      const rowKey = `${c.id}__${item.id}`;
+
+      // Zero quantity filter
+      if (!showZeroQuantity && qty === 0 && !isChecked) {
+        return;
+      }
+      // Status filter
+      if (auditStatus === 'damaged' && status !== 'damaged') return;
+      if (auditStatus === 'normal' && status === 'damaged') return;
+      // Search filter
+      if (auditSearch.trim()) {
+        const kw = auditSearch.trim().toLowerCase();
+        const match = [
+          c.id,
+          c.name,
+          teacherName,
+          item.name,
+          notes
+        ].some(val => (val || '').toLowerCase().includes(kw));
+        if (!match) return;
+      }
+
+      computedAuditRows.push({
+        rowKey,
+        classroomId: c.id,
+        classroomName: c.name,
+        classroomCategory: c.category || 'regular',
+        teacherName,
+        teacherEmail,
+        itemId: item.id,
+        itemName: item.name,
+        itemCategory: item.category,
+        quantity: qty,
+        isChecked,
+        status,
+        notes,
+        updatedAt
+      });
+    });
+  });
+
+  const totalClassroomCount = new Set(computedAuditRows.map(r => r.classroomId)).size;
+  const totalQuantity = computedAuditRows.reduce((sum, r) => sum + r.quantity, 0);
+  const totalDamagedCount = computedAuditRows.filter(r => r.status === 'damaged').length;
+
+  const isAllAuditSelected = computedAuditRows.length > 0 && computedAuditRows.every(r => selectedAuditRows.includes(r.rowKey));
+
+  const handleSelectAllAuditRows = () => {
+    if (isAllAuditSelected) {
+      setSelectedAuditRows([]);
+    } else {
+      setSelectedAuditRows(computedAuditRows.map(r => r.rowKey));
+    }
+  };
+
+  const handleToggleAuditRow = (rowKey) => {
+    if (selectedAuditRows.includes(rowKey)) {
+      setSelectedAuditRows(selectedAuditRows.filter(k => k !== rowKey));
+    } else {
+      setSelectedAuditRows([...selectedAuditRows, rowKey]);
+    }
+  };
+
+  const handleExportUpdateListCsv = () => {
+    const rowsToExport = computedAuditRows.filter(r => selectedAuditRows.includes(r.rowKey));
+    if (rowsToExport.length === 0) {
+      alert('請先在左側勾選至少一筆欲處理或更新的設備紀錄！');
+      return;
+    }
+    const headers = ['教室代碼', '教室名稱', '負責教師', '教師 Email', '設備類別', '設備名稱', '現有數量', '狀態', '報修與備註說明', '處理建議'];
+    const csvRows = rowsToExport.map(r => [
+      `"${r.classroomId}"`,
+      `"${r.classroomName}"`,
+      `"${r.teacherName}"`,
+      `"${r.teacherEmail}"`,
+      `"${categories[r.itemCategory] || r.itemCategory}"`,
+      `"${r.itemName}"`,
+      `"${r.quantity}"`,
+      `"${r.status === 'damaged' ? '報修/損壞' : '正常'}"`,
+      `"${(r.notes || '').replace(/"/g, '""')}"`,
+      `"列入設備更新與處理名單"`
+    ].join(','));
+    const csvContent = "\uFEFF" + [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `勾選設備更新與處理名單_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportFullAuditCsv = () => {
+    if (computedAuditRows.length === 0) {
+      alert('目前篩選結果無資料可匯出');
+      return;
+    }
+    const headers = ['教室代碼', '教室名稱', '負責教師', '教師 Email', '設備類別', '設備名稱', '現有數量', '狀態', '報修與備註說明', '更新時間'];
+    const csvRows = computedAuditRows.map(r => [
+      `"${r.classroomId}"`,
+      `"${r.classroomName}"`,
+      `"${r.teacherName}"`,
+      `"${r.teacherEmail}"`,
+      `"${categories[r.itemCategory] || r.itemCategory}"`,
+      `"${r.itemName}"`,
+      `"${r.quantity}"`,
+      `"${r.status === 'damaged' ? '報修/損壞' : '正常'}"`,
+      `"${(r.notes || '').replace(/"/g, '""')}"`,
+      `"${r.updatedAt}"`
+    ].join(','));
+    const csvContent = "\uFEFF" + [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `全校設備盤點查詢統計表_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (checkingAdmin) return <div style={{ textAlign: 'center', padding: '3rem' }}>驗證權限中...</div>;
   if (!isAdminVerified) {
     return (
@@ -338,6 +499,7 @@ function AdminDashboard() {
         <h2>管理後台看板</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className={`btn ${activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('summary')}>數據總覽</button>
+          <button className={`btn ${activeTab === 'audit' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('audit')}>🔍 設備盤點</button>
           <button className={`btn ${activeTab === 'classrooms' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('classrooms')}>管理空間/班級 ({classrooms.length})</button>
           <button className={`btn ${activeTab === 'items' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('items')}>管理設備項目 ({equipmentItems.length})</button>
           <button className={`btn ${activeTab === 'settings' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('settings')}>系統與通知設定</button>
@@ -464,6 +626,233 @@ function AdminDashboard() {
                     );
                   })}
                   {classrooms.length === 0 && <tr><td colSpan="4" style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>尚無班級資料</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'audit' && (
+        <div className="fade-in">
+          {/* Filter Card */}
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>🔍 跨空間設備橫向盤點與篩選</span>
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <label className="form-label">設備類別</label>
+                <select
+                  className="input-field"
+                  value={auditCategory}
+                  onChange={e => {
+                    setAuditCategory(e.target.value);
+                    setAuditItem('all');
+                  }}
+                >
+                  <option value="all">所有類別</option>
+                  {Object.entries(categories).map(([k, label]) => (
+                    <option key={k} value={k}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">設備項目名稱</label>
+                <select
+                  className="input-field"
+                  value={auditItem}
+                  onChange={e => setAuditItem(e.target.value)}
+                >
+                  <option value="all">該類別全部項目 ({targetItems.length})</option>
+                  {equipmentItems
+                    .filter(i => auditCategory === 'all' || i.category === auditCategory)
+                    .map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">空間分類</label>
+                <select
+                  className="input-field"
+                  value={auditClassroomType}
+                  onChange={e => setAuditClassroomType(e.target.value)}
+                >
+                  <option value="all">全部空間</option>
+                  <option value="regular">普通導師班</option>
+                  <option value="special">科任與行政處室</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">設備狀態過濾</label>
+                <select
+                  className="input-field"
+                  value={auditStatus}
+                  onChange={e => setAuditStatus(e.target.value)}
+                >
+                  <option value="all">全部狀態</option>
+                  <option value="damaged">🔴 僅有報修/損壞</option>
+                  <option value="normal">🟢 僅正常</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <div style={{ flex: '1 1 280px' }}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="搜尋空間代碼、名稱、老師或備註..."
+                  value={auditSearch}
+                  onChange={e => setAuditSearch(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.6rem 1.2rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                <input
+                  type="checkbox"
+                  checked={showZeroQuantity}
+                  onChange={e => setShowZeroQuantity(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                顯示 0 數量教室 (未持有者)
+              </label>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.2rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ marginBottom: 0, textAlign: 'center', borderColor: '#3b82f6' }}>
+              <h3 style={{ fontSize: '2.2rem', color: '#3b82f6' }}>{totalClassroomCount}</h3>
+              <p style={{ color: '#64748b', fontWeight: 600 }}>持有空間數 (間)</p>
+            </div>
+            <div className="card" style={{ marginBottom: 0, textAlign: 'center', borderColor: '#10b981' }}>
+              <h3 style={{ fontSize: '2.2rem', color: '#10b981' }}>{totalQuantity}</h3>
+              <p style={{ color: '#64748b', fontWeight: 600 }}>全校累計總數量</p>
+            </div>
+            <div className="card" style={{ marginBottom: 0, textAlign: 'center', borderColor: '#ef4444' }}>
+              <h3 style={{ fontSize: '2.2rem', color: '#ef4444' }}>{totalDamagedCount}</h3>
+              <p style={{ color: '#64748b', fontWeight: 600 }}>報修與損壞件數</p>
+            </div>
+            <div className="card" style={{ marginBottom: 0, textAlign: 'center', borderColor: '#7c3aed', background: selectedAuditRows.length > 0 ? '#f5f3ff' : 'white' }}>
+              <h3 style={{ fontSize: '2.2rem', color: '#7c3aed' }}>{selectedAuditRows.length}</h3>
+              <p style={{ color: '#64748b', fontWeight: 600 }}>已勾選名單筆數</p>
+            </div>
+          </div>
+
+          {/* Audit Table & Export Actions */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ margin: 0 }}>📋 設備分布明細表 (共 {computedAuditRows.length} 筆)</h3>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
+                  onClick={handleExportUpdateListCsv}
+                >
+                  📤 匯出勾選的設備更新名單 (CSV) ({selectedAuditRows.length})
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleExportFullAuditCsv}
+                >
+                  📄 匯出當前篩選完整統計表 (CSV)
+                </button>
+              </div>
+            </div>
+
+            <div className="table-responsive" style={{ maxHeight: '680px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, borderBottom: '2px solid #cbd5e1' }}>
+                  <tr>
+                    <th style={{ padding: '0.75rem 0.5rem', width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllAuditSelected}
+                        onChange={handleSelectAllAuditRows}
+                        title="全選 / 取消全選"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                    </th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>空間代碼</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>空間名稱</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>負責教師</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>設備類別</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>設備名稱</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>清點數量</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>狀態</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>報修備註說明</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>最後清點時間</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {computedAuditRows.map(r => {
+                    const isDamaged = r.status === 'damaged';
+                    const isSelected = selectedAuditRows.includes(r.rowKey);
+                    return (
+                      <tr
+                        key={r.rowKey}
+                        style={{
+                          borderBottom: '1px solid #e2e8f0',
+                          background: isDamaged ? '#fef2f2' : (isSelected ? '#f0fdf4' : 'transparent'),
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleAuditRow(r.rowKey)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold', color: '#475569' }}>{r.classroomId}</td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600 }}>{r.classroomName}</td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>
+                          <div><strong>{r.teacherName || '未填寫'}</strong></div>
+                          <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{r.teacherEmail}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', color: '#64748b' }}>
+                          {categories[r.itemCategory] || r.itemCategory}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold', color: '#1e293b' }}>
+                          {r.itemName}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 'bold', color: r.quantity === 0 ? '#94a3b8' : '#2563eb' }}>
+                          {r.quantity}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                          {isDamaged ? (
+                            <span style={{ display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#fee2e2', color: '#dc2626', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                              🔴 報修/損壞
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#dcfce7', color: '#16a34a', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                              🟢 正常
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', color: isDamaged ? '#b91c1c' : '#475569', maxWidth: '250px' }}>
+                          {r.notes || '-'}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                          {r.updatedAt || '尚未填報'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {computedAuditRows.length === 0 && (
+                    <tr>
+                      <td colSpan="10" style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+                        <div style={{ fontWeight: 600 }}>目前沒有符合條件的設備盤點紀錄</div>
+                        <div style={{ fontSize: '0.85rem', marginTop: '0.4rem' }}>
+                          提示：若無結果，可嘗試勾選右上方「顯示 0 數量教室 (未持有者)」或變更篩選類別。
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
