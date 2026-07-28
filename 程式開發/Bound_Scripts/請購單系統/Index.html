@@ -12,22 +12,22 @@
   
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-      --glass-bg: rgba(30, 41, 59, 0.7);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      --input-bg: rgba(15, 23, 42, 0.6);
-      --input-border: rgba(255, 255, 255, 0.1);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --primary-glow: rgba(99, 102, 241, 0.4);
-      --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.3);
+      --bg-gradient: linear-gradient(135deg, #ffe4e1 0%, #fff0f5 50%, #fff8dc 100%);
+      --glass-bg: rgba(255, 255, 255, 0.7);
+      --glass-border: rgba(212, 175, 55, 0.3);
+      --glass-shadow: 0 8px 32px 0 rgba(212, 175, 55, 0.15);
+      --input-bg: rgba(255, 255, 255, 0.9);
+      --input-border: rgba(255, 182, 193, 0.6);
+      --text-main: #4a2c2a;
+      --text-muted: #8c6b69;
+      --primary: #d4af37;
+      --primary-hover: #b8962e;
+      --primary-glow: rgba(212, 175, 55, 0.5);
+      --success: #ffb7c5;
+      --success-glow: rgba(255, 183, 197, 0.3);
       --danger: #ef4444;
       --danger-hover: #dc2626;
-      --accent: #06b6d4;
+      --accent: #ff69b4;
     }
 
     * {
@@ -47,6 +47,21 @@
       align-items: center;
       padding: 2rem 1rem;
       overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.25;
+      pointer-events: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="250" height="250"><text x="20" y="50" font-size="24" opacity="0.8">🌸</text><text x="160" y="80" font-size="20" opacity="0.7">💰</text><text x="100" y="180" font-size="28" opacity="0.9">🌸</text><text x="40" y="220" font-size="18" opacity="0.6">💰</text><text x="200" y="200" font-size="22" opacity="0.8">🌸</text></svg>');
+      background-repeat: repeat;
+      background-size: 300px 300px;
     }
 
     /* Container */
@@ -180,7 +195,7 @@
     input:focus, textarea:focus, select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--primary-glow);
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(255, 255, 255, 1);
     }
 
     input::placeholder, textarea::placeholder {
@@ -203,7 +218,7 @@
       margin-bottom: 1.5rem;
       border-radius: 12px;
       border: 1px solid var(--glass-border);
-      background: rgba(15, 23, 42, 0.4);
+      background: rgba(255, 255, 255, 0.5);
     }
 
     table {
@@ -214,8 +229,8 @@
     }
 
     th {
-      background: rgba(30, 41, 59, 0.8);
-      color: var(--text-muted);
+      background: rgba(255, 228, 225, 0.8);
+      color: var(--text-main);
       font-weight: 600;
       padding: 1rem;
       border-bottom: 1px solid var(--glass-border);
@@ -234,12 +249,12 @@
       width: 100%;
       padding: 0.5rem 0.4rem;
       font-size: 0.85rem;
-      background: rgba(15, 23, 42, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(212, 175, 55, 0.3);
     }
 
     .table-input:focus {
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(255, 255, 255, 1);
     }
 
     .row-total {
@@ -364,20 +379,15 @@
 
     /* Loading Overlay */
     .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 240, 245, 0.85);
+      z-index: 9999;
       display: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      border-radius: 24px;
-      z-index: 10;
       justify-content: center;
       align-items: center;
       flex-direction: column;
-      gap: 1.5rem;
+      backdrop-filter: blur(8px);
     }
 
     .spinner {
@@ -512,12 +522,12 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(30, 41, 59, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid var(--glass-border);
       border-left: 4px solid var(--primary);
       padding: 1rem 1.5rem;
       border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       z-index: 100;
       transform: translateY(100px);
       opacity: 0;
@@ -543,7 +553,7 @@
     <!-- Main Content -->
     <div class="content-wrapper" id="formWrapper">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
-        <h1 style="margin-bottom: 0; text-align: left; background: linear-gradient(to right, #ffffff, #a5b4fc, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">請購單快速生成系統 <span style="font-size: 0.8rem; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 8px; font-weight: 600;">v3.0.6</span></h1>
+        <h1 style="margin-bottom: 0; text-align: left; background: linear-gradient(to right, #d4af37, #b8962e, #ffb7c5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">請購單快速生成系統 <span style="font-size: 0.8rem; background: rgba(255, 183, 197, 0.2); color: #d4af37; border: 1px solid rgba(212, 175, 55, 0.3); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 8px; font-weight: 600;">v3.1.0</span></h1>
         <a href="#" id="adminLink" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">⚙️ 系統設定</a>
       </div>
       <p class="subtitle" style="text-align: left; margin-bottom: 2rem;">輸入表單欄位，即可在雲端自動產生並下載制式請購單 PDF 進行列印</p>
@@ -568,7 +578,7 @@
             <!-- AI OCR File upload -->
             <div class="form-group" style="margin-bottom: 0;">
               <label>📄 AI 估價單圖片/PDF 自動辨識填表</label>
-              <div id="dropZone" style="border: 2px dashed rgba(255, 255, 255, 0.15); border-radius: 10px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(15, 23, 42, 0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 94px;" onclick="document.getElementById('ocrFile').click()">
+              <div id="dropZone" style="border: 2px dashed rgba(212, 175, 55, 0.5); border-radius: 10px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(255, 255, 255, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 94px;" onclick="document.getElementById('ocrFile').click()">
                 <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style="color: var(--accent); margin-bottom: 0.25rem;">
                   <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                   <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
@@ -867,7 +877,7 @@
         dropZone.addEventListener(eventName, (e) => {
           e.preventDefault();
           dropZone.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-          dropZone.style.background = 'rgba(15, 23, 42, 0.4)';
+          dropZone.style.background = 'rgba(255, 255, 255, 0.6)';
         }, false);
       });
 

@@ -1,7 +1,7 @@
 /**
  * Serving the HTML Web Application
  */
-var VERSION = "v3.0.6";
+var VERSION = "v3.1.0";
 
 /**
  * Serving the HTML Web Application
