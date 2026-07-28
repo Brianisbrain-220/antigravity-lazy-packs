@@ -4,6 +4,44 @@ import { collection, getDocs, doc, setDoc, getDoc, deleteDoc } from 'firebase/fi
 import { useAuth } from '../context/AuthContext';
 import { seedEquipmentItems, seedClassrooms, DEFAULT_CATEGORIES } from '../seedData';
 
+const PRESET_EQUIPMENT_IMAGES = [
+  { name: '1.塑膠抽屜_新式', url: '/images/equipment/page_1_1_Image21.jpg' },
+  { name: '2.鐵製抽屜_新式', url: '/images/equipment/page_1_2_Image22.jpg' },
+  { name: '3.木頭桌椅', url: '/images/equipment/page_1_3_Image23.jpg' },
+  { name: '4.局補助_可調式', url: '/images/equipment/page_1_4_Image24.jpg' },
+  { name: '5.舊款_可調式', url: '/images/equipment/page_1_5_Image25.jpg' },
+  { name: '6.桌椅樣式6', url: '/images/equipment/page_1_6_Image26.jpg' },
+  { name: '7.圓凳樣式7', url: '/images/equipment/page_1_7_Image27.jpg' },
+  { name: '8.圓凳樣式8', url: '/images/equipment/page_1_8_Image28.jpg' },
+  { name: '置物櫃_紅藍', url: '/images/equipment/page_1_9_Image29.jpg' },
+  { name: '置物櫃_塑膠', url: '/images/equipment/page_1_10_Image30.jpg' },
+  { name: '置物櫃_深綠', url: '/images/equipment/page_1_11_Image31.jpg' },
+  { name: '置物櫃_淺綠', url: '/images/equipment/page_1_12_Image32.jpg' },
+  { name: '置物櫃_不鏽鋼', url: '/images/equipment/page_1_13_Image33.jpg' },
+  { name: '辦公桌 1', url: '/images/equipment/page_1_14_Image34.jpg' },
+  { name: '辦公桌 2', url: '/images/equipment/page_1_15_Image35.jpg' },
+  { name: '辦公桌 3', url: '/images/equipment/page_1_16_Image36.jpg' },
+  { name: '辦公桌 4', url: '/images/equipment/page_1_17_Image37.jpg' },
+  { name: '辦公桌 5', url: '/images/equipment/page_1_18_Image38.jpg' },
+  { name: '辦公椅 1', url: '/images/equipment/page_1_19_Image39.jpg' },
+  { name: '辦公椅 2', url: '/images/equipment/page_1_20_Image40.jpg' },
+  { name: '木椅', url: '/images/equipment/page_1_21_Image41.jpg' },
+  { name: '藤椅', url: '/images/equipment/page_1_22_Image42.jpg' },
+  { name: '窗簾_有', url: '/images/equipment/page_2_1_Image45.jpg' },
+  { name: '講桌_1', url: '/images/equipment/page_2_2_Image46.jpg' },
+  { name: '講桌_2', url: '/images/equipment/page_2_3_Image47.jpg' },
+  { name: '擴音機 1', url: '/images/equipment/page_2_4_Image48.jpg' },
+  { name: '擴音機 2', url: '/images/equipment/page_2_5_Image49.jpg' },
+  { name: '擴音機 3', url: '/images/equipment/page_2_6_Image50.jpg' },
+  { name: '擴音機 4', url: '/images/equipment/page_2_7_Image51.jpg' },
+  { name: '喇叭 1', url: '/images/equipment/page_2_8_Image52.jpg' },
+  { name: '喇叭 2', url: '/images/equipment/page_2_9_Image53.jpg' },
+  { name: '喇叭 3', url: '/images/equipment/page_2_10_Image54.jpg' },
+  { name: '喇叭 4', url: '/images/equipment/page_2_11_Image55.jpg' },
+  { name: '板擦機 1', url: '/images/equipment/page_2_12_Image56.jpg' },
+  { name: '板擦機 2', url: '/images/equipment/page_2_13_Image57.jpg' }
+];
+
 function AdminDashboard() {
   const { user } = useAuth();
   const [isAdminVerified, setIsAdminVerified] = useState(false);
@@ -33,6 +71,43 @@ function AdminDashboard() {
   const [showZeroQuantity, setShowZeroQuantity] = useState(false);
   const [auditSearch, setAuditSearch] = useState('');
   const [selectedAuditRows, setSelectedAuditRows] = useState([]);
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const customImgInputRef = useRef(null);
+
+  const handleUploadCustomImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 180;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setItemForm(prev => ({ ...prev, imageUrl: compressedDataUrl }));
+        setShowImagePickerModal(false);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const verifyAdmin = async () => {
@@ -890,21 +965,52 @@ function AdminDashboard() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">示意圖片路徑</label>
-                      <button
-                        type="button"
-                        onClick={() => setItemForm({ ...itemForm, imageUrl: '/images/equipment/' })}
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}
-                      >
-                        ⚡ 填入標準前綴 (/images/equipment/)
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label className="form-label" style={{ marginBottom: 0 }}>示意圖片與圖庫</label>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowImagePickerModal(true)}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.2rem 0.6rem', fontSize: '0.78rem', borderColor: '#3b82f6', color: '#3b82f6', fontWeight: 600 }}
+                        >
+                          🖼️ 瀏覽內建圖庫 (35款)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => customImgInputRef.current?.click()}
+                          className="btn btn-primary"
+                          style={{ padding: '0.2rem 0.6rem', fontSize: '0.78rem', background: '#10b981', borderColor: '#10b981', fontWeight: 600 }}
+                        >
+                          📤 上傳電腦相片
+                        </button>
+                      </div>
                     </div>
-                    <input className="input-field" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} placeholder="例如：/images/equipment/desk.jpg" />
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
-                      💡 將相片放入電腦 <code>public/images/equipment</code>，點上方⚡加上相片檔名即可。
+                    <input
+                      ref={customImgInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleUploadCustomImage}
+                    />
+                    <input
+                      className="input-field"
+                      value={itemForm.imageUrl}
+                      onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })}
+                      placeholder="點上方按鈕選取圖庫或電腦相片..."
+                    />
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                      💡 點「🖼️ 瀏覽內建圖庫」直接挑選現有照片；或點「📤 上傳電腦相片」直接從本機選擇照片，儲存後立刻於全校線上發布生效！
                     </div>
-                    {itemForm.imageUrl && <img src={itemForm.imageUrl} alt="" style={{ width: '60px', height: '60px', objectFit: 'contain', marginTop: '0.5rem', background: '#f1f5f9', borderRadius: '6px' }} />}
+                    {itemForm.imageUrl && (
+                      <div style={{ marginTop: '0.6rem', padding: '0.5rem', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                        <img src={itemForm.imageUrl} alt="" style={{ width: '60px', height: '60px', objectFit: 'contain', background: 'white', borderRadius: '4px', border: '1px solid #e2e8f0' }} />
+                        <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>當前預覽示意圖</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', wordBreak: 'break-all' }}>{itemForm.imageUrl.length > 50 ? itemForm.imageUrl.substring(0, 50) + '... (自動壓縮相片)' : itemForm.imageUrl}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">排序權重</label>
@@ -1023,6 +1129,92 @@ function AdminDashboard() {
               <input className="input-field" type="email" placeholder="輸入要新增的 Email" value={newAdminEmail}
                 onChange={e => setNewAdminEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddAdmin()} style={{ flex: 1 }} />
               <button className="btn btn-primary" onClick={handleAddAdmin}>新增</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showImagePickerModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '1.5rem'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '12px', width: '100%', maxWidth: '800px',
+            maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b' }}>🖼️ 設備示意圖庫預覽與選擇器</h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                  點擊下方任一圖片即可快速選擇。也可點選右方按鈕直接從本機電腦上傳新照片。
+                </p>
+              </div>
+              <button
+                onClick={() => setShowImagePickerModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
+                📂 共收錄 {PRESET_EQUIPMENT_IMAGES.length} 款系統預設課桌椅與設備相片
+              </span>
+              <button
+                type="button"
+                onClick={() => customImgInputRef.current?.click()}
+                className="btn btn-primary"
+                style={{ background: '#10b981', borderColor: '#10b981', fontSize: '0.85rem' }}
+              >
+                📤 從電腦選擇/上傳新照片 (免發布即時生效)
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1rem' }}>
+              {PRESET_EQUIPMENT_IMAGES.map((img, idx) => {
+                const isSelected = itemForm.imageUrl === img.url;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setItemForm(prev => ({ ...prev, imageUrl: img.url }));
+                      setShowImagePickerModal(false);
+                    }}
+                    style={{
+                      border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                      background: isSelected ? '#eff6ff' : 'white',
+                      borderRadius: '8px', padding: '0.6rem', cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      transition: 'all 0.15s ease', textAlign: 'center',
+                      boxShadow: isSelected ? '0 4px 6px -1px rgba(59, 130, 246, 0.2)' : 'none'
+                    }}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      style={{ width: '70px', height: '70px', objectFit: 'contain', background: '#f1f5f9', borderRadius: '4px', marginBottom: '0.5rem' }}
+                    />
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1e293b', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {img.name}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setShowImagePickerModal(false)}
+                className="btn btn-secondary"
+              >
+                關閉
+              </button>
             </div>
           </div>
         </div>
