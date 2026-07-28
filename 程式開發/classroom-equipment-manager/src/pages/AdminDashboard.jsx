@@ -72,6 +72,8 @@ function AdminDashboard() {
   const [auditSearch, setAuditSearch] = useState('');
   const [selectedAuditRows, setSelectedAuditRows] = useState([]);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const customImgInputRef = useRef(null);
 
   const handleUploadCustomImage = (e) => {
@@ -568,18 +570,101 @@ function AdminDashboard() {
   const pendingCount = inventories.filter(i => i.status === 'pending_handover').length;
   const rejectedCount = inventories.filter(i => i.status === 'rejected').length;
 
+  const NAV_ITEMS = [
+    { id: 'summary', label: '數據總覽', icon: '📊', count: null },
+    { id: 'audit', label: '設備盤點', icon: '🔍', count: null },
+    { id: 'classrooms', label: '空間與班級', icon: '🏫', count: classrooms.length },
+    { id: 'items', label: '設備與圖庫', icon: '📦', count: equipmentItems.length },
+    { id: 'settings', label: '系統與設定', icon: '⚙️', count: null }
+  ];
+
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <h2>管理後台看板</h2>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className={`btn ${activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('summary')}>數據總覽</button>
-          <button className={`btn ${activeTab === 'audit' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('audit')}>🔍 設備盤點</button>
-          <button className={`btn ${activeTab === 'classrooms' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('classrooms')}>管理空間/班級 ({classrooms.length})</button>
-          <button className={`btn ${activeTab === 'items' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('items')}>管理設備項目 ({equipmentItems.length})</button>
-          <button className={`btn ${activeTab === 'settings' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('settings')}>系統與通知設定</button>
+    <div className="admin-app-layout fade-in">
+      {/* 行動裝置抽屜遮罩 (Mobile Drawer Overlay) */}
+      {sidebarOpen && (
+        <div
+          className="admin-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* 左側收合式側邊導覽欄 (Responsive Sidebar) */}
+      <aside className={`admin-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'mobile-open' : ''}`}>
+        <div>
+          <div className="admin-sidebar-header">
+            <div className="admin-sidebar-title" title="中正國小教室設備報修與管理系統">
+              <span>🏫</span>
+              <span className="admin-sidebar-title-text">管理後台系統</span>
+            </div>
+            <button
+              className="admin-sidebar-toggle-btn"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? '展開選單 (Expand Sidebar)' : '收縮為圖示 (Collapse Sidebar)'}
+            >
+              ☰
+            </button>
+          </div>
+
+          <nav className="admin-sidebar-nav">
+            {NAV_ITEMS.map(item => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  className={`admin-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSidebarOpen(false); // 在手機端點選後自動關閉抽屜
+                  }}
+                  title={sidebarCollapsed ? item.label : ''}
+                >
+                  <span className="admin-nav-icon">{item.icon}</span>
+                  <span className="admin-nav-label">{item.label}</span>
+                  {item.count !== null && (
+                    <span className="admin-nav-badge">{item.count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
-      </div>
+
+        <div className="admin-sidebar-footer">
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8', padding: '0 0.5rem', marginBottom: '0.25rem' }} className="admin-sidebar-title-text">
+            登入管理員帳號：
+            <div style={{ fontWeight: 600, color: '#e2e8f0', wordBreak: 'break-all' }}>{user?.email}</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* 右側主要內容工作區 (Main Wrapper & Content) */}
+      <div className="admin-main-wrapper">
+        {/* 行動裝置與平板專用上方導覽與漢堡按鈕 (Mobile Topbar) */}
+        <div className="admin-mobile-topbar">
+          <button
+            className="admin-mobile-hamburger"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="開啟選單"
+          >
+            ☰
+          </button>
+          <div className="admin-mobile-title">
+            {NAV_ITEMS.find(item => item.id === activeTab)?.icon}{' '}
+            {NAV_ITEMS.find(item => item.id === activeTab)?.label}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+            中正國小
+          </div>
+        </div>
+
+        {/* 頁面主要內容展示區 (Main Content Area) */}
+        <main className="admin-main-content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.6rem', color: '#1e293b' }}>
+              {NAV_ITEMS.find(item => item.id === activeTab)?.icon}{' '}
+              {NAV_ITEMS.find(item => item.id === activeTab)?.label}
+            </h2>
+          </div>
 
       {activeTab === 'summary' && (
         <>
@@ -1133,6 +1218,8 @@ function AdminDashboard() {
           </div>
         </div>
       )}
+        </main>
+      </div>
 
       {showImagePickerModal && (
         <div style={{
