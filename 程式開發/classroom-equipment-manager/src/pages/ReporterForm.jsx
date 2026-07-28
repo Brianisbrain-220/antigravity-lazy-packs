@@ -35,6 +35,8 @@ function ReporterForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [roomInput, setRoomInput] = useState('');
+  const [showRoomListModal, setShowRoomListModal] = useState(false);
   
   // Autocomplete user info
   useEffect(() => {
@@ -135,7 +137,7 @@ function ReporterForm() {
     });
   };
 
-  const handleItemCount = (itemId, count) => {
+    const handleItemCount = (itemId, count) => {
     const num = parseInt(count, 10) || 0;
     setInventory(prev => ({
       ...prev,
@@ -143,11 +145,61 @@ function ReporterForm() {
     }));
   };
 
+  const { matchedClassroom, roomMatchError, suggestedClassrooms } = useMemo(() => {
+    if (!roomInput || !roomInput.trim()) {
+      return { matchedClassroom: null, roomMatchError: '', suggestedClassrooms: [] };
+    }
+    const val = roomInput.trim().toLowerCase();
+    
+    // 1. Exact match (id, name, or room_ID)
+    let exact = classrooms.find(c => 
+      (c.id || '').toLowerCase() === val || 
+      (c.name || '').toLowerCase() === val ||
+      (c.id || '').toLowerCase() === `room_${val}`
+    );
+    
+    if (exact) {
+      return { matchedClassroom: exact, roomMatchError: '', suggestedClassrooms: [] };
+    }
+    
+    // 2. Partial search matches
+    const matches = classrooms.filter(c => 
+      (c.id || '').toLowerCase().includes(val) || 
+      (c.name || '').toLowerCase().includes(val)
+    );
+    
+    if (matches.length === 1) {
+      return { matchedClassroom: matches[0], roomMatchError: '', suggestedClassrooms: [] };
+    } else if (matches.length > 1) {
+      return { 
+        matchedClassroom: null, 
+        roomMatchError: `找到 ${matches.length} 間相關空間，請直接點選下方建議或輸入更完整編號`, 
+        suggestedClassrooms: matches.slice(0, 8) 
+      };
+    } else {
+      return { 
+        matchedClassroom: null, 
+        roomMatchError: `❌ 後台資料庫無此編號或空間「${roomInput}」，請確認是否已經在後台建立`, 
+        suggestedClassrooms: [] 
+      };
+    }
+  }, [roomInput, classrooms]);
+
+  useEffect(() => {
+    if (matchedClassroom) {
+      setFormData(prev => ({ ...prev, classroomId: matchedClassroom.id }));
+    } else {
+      setFormData(prev => ({ ...prev, classroomId: '' }));
+    }
+  }, [matchedClassroom]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!formData.classroomId) {
-      const msg = '⚠️ 請先選擇「清點空間 / 班級」後再送出表單';
+    if (!formData.classroomId || !matchedClassroom) {
+      const msg = roomInput.trim()
+        ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請輸入或點選有效空間！`
+        : '⚠️ 請先輸入「教室編號或空間名稱」並成功對照空間後再送出表單';
       setErrorMessage(msg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return alert(msg);
@@ -261,17 +313,145 @@ function ReporterForm() {
       </h2>
       
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label className="form-label">選擇班級/空間</label>
-          <select 
+        <div className="form-group fade-in">
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+            <label className="form-label" style={{marginBottom: 0}}>
+              輸入教室編號 / 空間名稱 <span style={{color: '#dc2626'}}>*</span>
+            </label>
+            <button 
+              type="button" 
+              onClick={() => setShowRoomListModal(!showRoomListModal)}
+              style={{
+                background: 'none', 
+                border: 'none', 
+                color: 'var(--primary)', 
+                textDecoration: 'underline', 
+                fontSize: '0.85rem', 
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              {showRoomListModal ? '▲ 收起空間對照表' : '🔍 忘記編號？點此展開全校空間查詢表'}
+            </button>
+          </div>
+
+          <input 
+            type="text"
             className="input-field" 
-            value={formData.classroomId}
-            onChange={e => setFormData({...formData, classroomId: e.target.value})}
+            placeholder="請輸入教室編號或名稱 (例如: 101, room_101, 一年1班, 電腦教室)..."
+            value={roomInput}
+            onChange={e => setRoomInput(e.target.value)}
             required
-          >
-            <option value="">-- 請選擇 --</option>
-            {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            style={{
+              borderColor: matchedClassroom ? '#10b981' : (roomMatchError ? '#ef4444' : 'var(--border-color)'),
+              borderWidth: (matchedClassroom || roomMatchError) ? '2px' : '1px',
+              padding: '0.8rem',
+              fontSize: '1.05rem',
+              background: matchedClassroom ? '#f0fdf4' : 'white'
+            }}
+          />
+
+          {/* matching status feedback */}
+          {matchedClassroom && (
+            <div className="fade-in" style={{
+              marginTop: '0.5rem', 
+              padding: '0.65rem 1rem', 
+              background: '#ecfdf5', 
+              border: '1px solid #10b981', 
+              borderRadius: '8px', 
+              color: '#047857', 
+              fontWeight: 'bold', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
+            }}>
+              <span>✅ 成功對照後台空間：【{matchedClassroom.name}】(編號: {matchedClassroom.id})</span>
+              <span style={{fontSize: '0.75rem', background: '#10b981', color: 'white', padding: '0.15rem 0.6rem', borderRadius: '20px'}}>有效空間</span>
+            </div>
+          )}
+
+          {roomMatchError && !matchedClassroom && (
+            <div className="fade-in" style={{
+              marginTop: '0.5rem', 
+              padding: '0.65rem 1rem', 
+              background: '#fef2f2', 
+              border: '1px solid #ef4444', 
+              borderRadius: '8px', 
+              color: '#b91c1c', 
+              fontWeight: 'bold'
+            }}>
+              {roomMatchError}
+            </div>
+          )}
+
+          {/* Suggested classroom pill buttons when multiple matches found */}
+          {suggestedClassrooms.length > 0 && !matchedClassroom && (
+            <div className="fade-in" style={{marginTop: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center'}}>
+              <span style={{fontSize: '0.85rem', color: '#4b5563', fontWeight: 600}}>快速點選符合的空間：</span>
+              {suggestedClassrooms.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setRoomInput(c.name)}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    background: '#e0f2fe',
+                    border: '1px solid #0284c7',
+                    color: '#0369a1',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {c.name} (#{c.id})
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Collapsible reference list of all classrooms */}
+          {showRoomListModal && (
+            <div className="fade-in" style={{
+              marginTop: '0.8rem', 
+              padding: '1rem', 
+              background: '#f8fafc', 
+              border: '1px solid #cbd5e1', 
+              borderRadius: '8px', 
+              maxHeight: '220px', 
+              overflowY: 'auto'
+            }}>
+              <div style={{fontSize: '0.85rem', fontWeight: 'bold', color: '#334155', marginBottom: '0.6rem'}}>
+                📌 全校教室與空間後台對照表 (直接點擊即可套用)：
+              </div>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem'}}>
+                {classrooms.map(c => (
+                  <div
+                    key={c.id}
+                    onClick={() => { setRoomInput(c.name); setShowRoomListModal(false); }}
+                    style={{
+                      padding: '0.5rem 0.7rem',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <span style={{fontWeight: 600, color: '#0f172a'}}>{c.name}</span>
+                    <span style={{color: '#64748b', fontSize: '0.75rem'}}>#{c.id}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="responsive-form-row">
