@@ -599,9 +599,9 @@ function AdminDashboard() {
               <input ref={csvInputRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCsvImport} />
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <h3>空間列表與交接進度</h3>
-            <div className="table-responsive" style={{ maxHeight: '600px', overflowY: 'auto' }}>
+            <div className="table-responsive" style={{ maxHeight: '850px', flex: 1, overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead><tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                   <th style={{ padding: '0.5rem' }}>空間名稱</th><th style={{ padding: '0.5rem' }}>負責教師</th>
@@ -762,7 +762,7 @@ function AdminDashboard() {
               </div>
             </div>
 
-            <div className="table-responsive" style={{ maxHeight: '680px', overflowY: 'auto' }}>
+            <div className="table-responsive" style={{ maxHeight: '850px', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, borderBottom: '2px solid #cbd5e1' }}>
                   <tr>
@@ -936,9 +936,9 @@ function AdminDashboard() {
                 <input ref={itemCsvInputRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCsvItemImport} />
               </div>
             </div>
-            <div className="card">
+            <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <h3>設備項目列表</h3>
-              <div className="table-responsive" style={{ maxHeight: '700px', overflowY: 'auto' }}>
+              <div className="table-responsive" style={{ maxHeight: '1350px', flex: 1, overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead><tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '0.5rem' }}>排序</th><th style={{ padding: '0.5rem' }}>圖片</th>
