@@ -22,6 +22,7 @@ function AdminDashboard() {
   const [systemSettings, setSystemSettings] = useState({ requireSignature: true, googleChatWebhookUrl: '', senderEmail: '' });
   const [classroomForm, setClassroomForm] = useState({ id: '', name: '', category: 'regular', teacherName: '', teacherEmail: '' });
   const csvInputRef = useRef(null);
+  const itemCsvInputRef = useRef(null);
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm, setItemForm] = useState({ id: '', name: '', category: 'desks_chairs', inputType: 'checkbox_only', imageUrl: '', sortOrder: 50 });
 
@@ -199,6 +200,75 @@ function AdminDashboard() {
     e.target.value = '';
   };
 
+  const handleDownloadClassroomTemplate = () => {
+    const csvContent = "\uFEFF" +
+      "代碼,空間名稱,regular/special,負責教師姓名,負責教師Email\n" +
+      "101,一年1班,regular,王小明,wang@cjps.kh.edu.tw\n" +
+      "102,一年2班,regular,陳大文,chen@cjps.kh.edu.tw\n" +
+      "lib,圖書室,special,林美華,lin@cjps.kh.edu.tw\n";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', '教室空間批次匯入範本.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadItemTemplate = () => {
+    const csvContent = "\uFEFF" +
+      "代碼,設備名稱,類別代碼,填報方式(checkbox_with_quantity/checkbox_only),排序,圖片路徑\n" +
+      "desk_1,1. 塑膠抽屜_新式,desks_chairs,checkbox_with_quantity,1,/images/equipment/page_1_1_Image21.jpg\n" +
+      "desk_2,2. 鐵製抽屜_新式,desks_chairs,checkbox_with_quantity,2,/images/equipment/page_1_2_Image22.jpg\n" +
+      "locker_1,紅藍樣式,lockers,checkbox_with_quantity,11,/images/equipment/page_1_9_Image29.jpg\n";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', '設備項目批次匯入範本.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCsvItemImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('代碼'));
+      let successCount = 0;
+      let errCount = 0;
+      for (const line of lines) {
+        const cols = line.split(',').map(c => c.trim());
+        if (cols.length < 5) { errCount++; continue; }
+        const [id, name, category, inputType, sortOrder, imageUrl] = cols;
+        if (!id || !name) { errCount++; continue; }
+        try {
+          await setDoc(doc(db, 'eq_items', id), {
+            id,
+            name,
+            category: category || 'desks_chairs',
+            inputType: inputType || 'checkbox_with_quantity',
+            sortOrder: parseInt(sortOrder) || 50,
+            imageUrl: imageUrl || ''
+          });
+          successCount++;
+        } catch (err) {
+          errCount++;
+        }
+      }
+      alert('設備項目匯入完成！成功 ' + successCount + ' 筆' + (errCount > 0 ? '，失敗 ' + errCount + ' 筆（格式錯誤）' : ''));
+      loadData();
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
+
   const handleEditClick = (item) => {
     setEditingItem(item);
     setItemForm({ id: item.id, name: item.name, category: item.category, inputType: item.inputType, imageUrl: item.imageUrl || '', sortOrder: item.sortOrder });
@@ -352,11 +422,18 @@ function AdminDashboard() {
               </form>
             </div>
             <div className="card">
-              <h3>📥 批次匯入 CSV</h3>
+              <h3>📥 批次匯入與範本下載</h3>
               <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.5rem', lineHeight: '1.6' }}>
-                格式每行：<code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px' }}>代碼,名稱,regular,教師,email</code>
+                支援下載 CSV 範本，使用 Excel 編輯後另存為 CSV 匯入。欄位：<code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px' }}>代碼,名稱,類別,教師,email</code>
               </p>
-              <button className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem' }} onClick={() => csvInputRef.current?.click()}>選擇 CSV 檔案匯入</button>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1, borderColor: '#3b82f6', color: '#3b82f6' }} onClick={handleDownloadClassroomTemplate}>
+                  📄 下載匯入範本
+                </button>
+                <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={() => csvInputRef.current?.click()}>
+                  📥 選擇檔案匯入
+                </button>
+              </div>
               <input ref={csvInputRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCsvImport} />
             </div>
           </div>
@@ -453,6 +530,21 @@ function AdminDashboard() {
                   <input className="input-field" placeholder="顯示名稱（如 體育器材）" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} />
                   <button className="btn btn-primary" onClick={handleAddCategory}>+ 新增類別</button>
                 </div>
+              </div>
+              <div className="card">
+                <h3>📥 批次匯入設備與範本下載</h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.5rem', lineHeight: '1.6' }}>
+                  支援下載 CSV 範本，使用 Excel 編輯後匯入建檔。欄位：<code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px' }}>代碼,名稱,類別,填報方式,排序,圖片</code>
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn-secondary" style={{ flex: 1, borderColor: '#3b82f6', color: '#3b82f6' }} onClick={handleDownloadItemTemplate}>
+                    📄 下載設備範本
+                  </button>
+                  <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={() => itemCsvInputRef.current?.click()}>
+                    📥 選擇檔案匯入
+                  </button>
+                </div>
+                <input ref={itemCsvInputRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCsvItemImport} />
               </div>
             </div>
             <div className="card">

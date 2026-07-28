@@ -75,10 +75,8 @@ function ReporterForm() {
         setLoadingData(false);
       }
     };
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+    loadData();
+  }, []);
   
   const handleItemToggle = (itemId) => {
     setInventory(prev => {
