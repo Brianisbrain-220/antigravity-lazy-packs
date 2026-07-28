@@ -180,8 +180,8 @@ function ReporterForm() {
             <input className="input-field" required value={formData.reporterName} onChange={e => setFormData({...formData, reporterName: e.target.value})} />
           </div>
           <div className="form-group" style={{flex: 1}}>
-            <label className="form-label">填報人 Email (唯讀)</label>
-            <input type="email" className="input-field" readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} value={formData.reporterEmail} />
+            <label className="form-label">填報人 Email</label>
+            <input type="email" className="input-field" required value={formData.reporterEmail} onChange={e => setFormData({...formData, reporterEmail: e.target.value})} placeholder="請輸入學校 Email 或常用電子郵件" />
           </div>
         </div>
 
