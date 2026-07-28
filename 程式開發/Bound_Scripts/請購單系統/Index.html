@@ -12,12 +12,12 @@
   
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #ffe4e1 0%, #fff0f5 50%, #fff8dc 100%);
-      --glass-bg: rgba(255, 255, 255, 0.7);
-      --glass-border: rgba(212, 175, 55, 0.3);
-      --glass-shadow: 0 8px 32px 0 rgba(212, 175, 55, 0.15);
-      --input-bg: rgba(255, 255, 255, 0.9);
-      --input-border: rgba(255, 182, 193, 0.6);
+      --bg-gradient: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), linear-gradient(135deg, #ffe4e1 0%, #fff0f5 50%, #fff8dc 100%);
+      --glass-bg: rgba(255, 255, 255, 0.95); /* 更不透明的容器背景，提高對比 */
+      --glass-border: rgba(212, 175, 55, 0.6); /* 加深金色邊框 */
+      --glass-shadow: 0 12px 40px 0 rgba(100, 50, 50, 0.15); /* 加強陰影立體感 */
+      --input-bg: #ffffff; /* 純白色的填寫區 */
+      --input-border: rgba(212, 175, 55, 0.5); /* 填寫區改用金色邊框以突顯 */
       --text-main: #4a2c2a;
       --text-muted: #8c6b69;
       --primary: #d4af37;
@@ -249,8 +249,8 @@
       width: 100%;
       padding: 0.5rem 0.4rem;
       font-size: 0.85rem;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(212, 175, 55, 0.3);
+      background: #ffffff;
+      border: 1px solid rgba(212, 175, 55, 0.5);
     }
 
     .table-input:focus {
