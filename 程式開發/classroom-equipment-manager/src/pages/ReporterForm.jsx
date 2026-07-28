@@ -211,63 +211,74 @@ function ReporterForm() {
     }
   }, [matchedClassroom]);
 
+  const getSafeSignatureUrl = () => {
+    if (savedSignature) return savedSignature;
+    if (!sigPad || sigPad.isEmpty()) return '';
+    try {
+      // 優先使用標準 toDataURL()，避開 Android/LINE WebView 對 getTrimmedCanvas() 像素掃描產生的 SecurityError 與記憶體崩潰
+      return sigPad.toDataURL('image/png');
+    } catch (e) {
+      console.warn('Signature canvas export failed:', e);
+      return '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     
-    // 1. Validate Classroom
-    if (!formData.classroomId || !matchedClassroom) {
-      const msg = roomInput.trim()
-        ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請從右上方「查詢表」選擇有效空間！`
-        : '⚠️ 請先在上方「教室編號或名稱」欄位輸入或點選空間後再送出表單';
-      setErrorMessage(msg);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    // 2. Validate Reporter Name & Email
-    if (!formData.reporterName || !formData.reporterName.trim()) {
-      const msg = '⚠️ 請填寫「填報人姓名」欄位！';
-      setErrorMessage(msg);
-      window.scrollTo({ top: 200, behavior: 'smooth' });
-      return;
-    }
-    if (!formData.reporterEmail || !formData.reporterEmail.trim()) {
-      const msg = '⚠️ 請填寫「填報人 Email」欄位！';
-      setErrorMessage(msg);
-      window.scrollTo({ top: 250, behavior: 'smooth' });
-      return;
-    }
-
-    // 3. Validate Handover info if hasHandover is selected
-    if (formData.hasHandover) {
-      if (!formData.handoverName || !formData.handoverName.trim()) {
-        const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人姓名」！';
-        setErrorMessage(msg);
-        window.scrollTo({ top: 300, behavior: 'smooth' });
-        return;
-      }
-      if (!formData.handoverEmail || !formData.handoverEmail.trim()) {
-        const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人 Email」以便接收審查連結！';
-        setErrorMessage(msg);
-        window.scrollTo({ top: 350, behavior: 'smooth' });
-        return;
-      }
-    }
-
-    // 4. Validate Signature
-    let signatureUrl = '';
-    // Only check signature if required in settings
-    if (!formData.hasHandover && systemSettings.requireSignature) {
-      signatureUrl = savedSignature || (sigPad && !sigPad.isEmpty() ? sigPad.getTrimmedCanvas().toDataURL('image/png') : '');
-      if (!signatureUrl) {
-        const msg = '⚠️ 請在下方「填報人簽名」欄位完成簽名以示負責';
-        setErrorMessage(msg);
-        return;
-      }
-    }
-
     try {
+      // 1. Validate Classroom
+      if (!formData.classroomId || !matchedClassroom) {
+        const msg = roomInput.trim()
+          ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請從右上方「查詢表」選擇有效空間！`
+          : '⚠️ 請先在上方「教室編號或名稱」欄位輸入或點選空間後再送出表單';
+        setErrorMessage(msg);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // 2. Validate Reporter Name & Email
+      if (!formData.reporterName || !formData.reporterName.trim()) {
+        const msg = '⚠️ 請填寫「填報人姓名」欄位！';
+        setErrorMessage(msg);
+        window.scrollTo({ top: 200, behavior: 'smooth' });
+        return;
+      }
+      if (!formData.reporterEmail || !formData.reporterEmail.trim()) {
+        const msg = '⚠️ 請填寫「填報人 Email」欄位！';
+        setErrorMessage(msg);
+        window.scrollTo({ top: 250, behavior: 'smooth' });
+        return;
+      }
+
+      // 3. Validate Handover info if hasHandover is selected
+      if (formData.hasHandover) {
+        if (!formData.handoverName || !formData.handoverName.trim()) {
+          const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人姓名」！';
+          setErrorMessage(msg);
+          window.scrollTo({ top: 300, behavior: 'smooth' });
+          return;
+        }
+        if (!formData.handoverEmail || !formData.handoverEmail.trim()) {
+          const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人 Email」以便接收審查連結！';
+          setErrorMessage(msg);
+          window.scrollTo({ top: 350, behavior: 'smooth' });
+          return;
+        }
+      }
+
+      // 4. Validate Signature (Safe export without getTrimmedCanvas crash!)
+      let signatureUrl = '';
+      if (!formData.hasHandover && systemSettings.requireSignature) {
+        signatureUrl = getSafeSignatureUrl();
+        if (!signatureUrl) {
+          const msg = '⚠️ 請在下方「填報人簽名」欄位完成簽名以示負責';
+          setErrorMessage(msg);
+          return;
+        }
+      }
+
       setIsSubmitting(true);
       const docData = {
         ...formData,
@@ -290,14 +301,20 @@ function ReporterForm() {
         };
       }
       
-      await addDoc(collection(db, 'eq_inventories'), docData);
+      // Promise.race 避免行動網路或 LINE 瀏覽器連線中斷時無限期靜默卡住
+      const submitPromise = addDoc(collection(db, 'eq_inventories'), docData);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('上傳雲端回應超時，請確認手機網路穩定或點擊右上角在外部瀏覽器開啟')), 15000)
+      );
+      await Promise.race([submitPromise, timeoutPromise]);
+
       setIsSubmitting(false);
       setIsSubmittedSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setIsSubmitting(false);
       console.error('Submission error:', err);
-      setErrorMessage('❌ 資料傳送時發生錯誤: ' + (err.message || '無法連線至雲端資料庫，請檢查網路狀況'));
+      setErrorMessage('❌ 資料傳送或簽名讀取時發生錯誤: ' + (err.message || '無法連線至雲端資料庫，請檢查網路狀況'));
     }
   };
 
@@ -380,12 +397,12 @@ function ReporterForm() {
       }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
           <span style={{background: '#0284c7', color: 'white', padding: '0.15rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem'}}>最新版本</span>
-          <span>🚀 系統版本: v2.6 (2026/07/28 22:40 - 全空間開放相容版)</span>
+          <span>🚀 系統版本: v2.7 (2026/07/28 23:05 - Android/LINE簽名防崩潰安全版)</span>
         </div>
         <button
           type="button"
           onClick={() => {
-            window.location.href = window.location.pathname + '?v=2.6_' + Date.now();
+            window.location.href = window.location.pathname + '?v=2.7_' + Date.now();
           }}
           style={{
             background: '#10b981',
@@ -768,8 +785,12 @@ function ReporterForm() {
                 penColor="blue"
                 clearOnResize={false}
                 onEnd={() => {
-                  if (sigPad && !sigPad.isEmpty()) {
-                    setSavedSignature(sigPad.getTrimmedCanvas().toDataURL('image/png'));
+                  try {
+                    if (sigPad && !sigPad.isEmpty()) {
+                      setSavedSignature(sigPad.toDataURL('image/png'));
+                    }
+                  } catch (err) {
+                    console.warn("Signature canvas export warning:", err);
                   }
                 }}
                 canvasProps={{
@@ -848,8 +869,8 @@ function ReporterForm() {
         fontSize: '0.82rem',
         lineHeight: '1.6'
       }}>
-        <div><strong>中正國小教室設備清點與報修系統</strong> | 版本: <span style={{color: '#0284c7', fontWeight: 'bold'}}>v2.6 (2026-07-28 22:40)</span></div>
-        <div>全空間開放報表寫入相容版 • LINE / 行動裝置零攔截優化</div>
+        <div><strong>中正國小教室設備清點與報修系統</strong> | 版本: <span style={{color: '#0284c7', fontWeight: 'bold'}}>v2.7 (2026-07-28 23:05)</span></div>
+        <div>Android / LINE 簽名防崩潰安全版 • 全空間開放報表相容版</div>
       </footer>
     </div>
   );
