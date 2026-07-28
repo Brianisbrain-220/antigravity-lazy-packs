@@ -297,9 +297,9 @@ body {
 /* 3. Responsive Admin Grids */
 .grid-admin-1-2 {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: minmax(320px, 1fr) 2.5fr;
   gap: 2rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .grid-admin-1-1 {
@@ -308,7 +308,7 @@ body {
   gap: 2rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .grid-admin-1-2,
   .grid-admin-1-1 {
     grid-template-columns: 1fr;
@@ -620,6 +620,87 @@ body {
   .admin-main-content {
     padding: 1rem 0.85rem;
   }
+}
+
+/* 7. Full Width Admin Container & Sidebar Sub-navigation Panel */
+.admin-full-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-sidebar-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.65rem;
+  margin: 0.2rem 0 0.4rem 0.4rem;
+  background: rgba(15, 23, 42, 0.65);
+  border-left: 2px solid #3b82f6;
+  border-radius: 0 8px 8px 0;
+  animation: fadeIn 0.2s ease;
+}
+
+.admin-sidebar-subnav-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-sidebar-subnav label {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  margin-bottom: 0.15rem;
+  display: block;
+  font-weight: 600;
+}
+
+.admin-sidebar-subnav select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1e293b;
+  color: #f8fafc;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-sidebar-subnav select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.admin-sidebar-subnav select:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-sidebar-reset-btn {
+  width: 100%;
+  padding: 0.38rem;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  margin-top: 0.25rem;
+}
+
+.admin-sidebar-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
 }
 
 

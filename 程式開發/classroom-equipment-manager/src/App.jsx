@@ -1,48 +1,49 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ReporterForm from './pages/ReporterForm';
 import HandoverConfirm from './pages/HandoverConfirm';
 import AdminDashboard from './pages/AdminDashboard';
 import { LogOut } from 'lucide-react';
 
-function AppContent() {
+function MainLayout() {
   const { user, isAdmin, loading, login, logout } = useAuth();
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen">
-        <header className="app-header">
-          <div className="app-title">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-            </svg>
-            教室設備清點系統
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} className="header-actions">
-            {user ? (
-              <>
-                <span className="user-email-label" style={{ fontSize: '0.9rem', color: '#64748b' }}>{user.email}</span>
-                <nav style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link to="/" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>填報端</Link>
-                  {isAdmin && (
-                    <Link to="/admin" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台</Link>
-                  )}
-                </nav>
-                <button className="btn btn-secondary" style={{ padding: '0.4rem', color: '#ef4444' }} onClick={logout} title="登出">
-                  <LogOut size={18} />
-                </button>
-              </>
-            ) : (
+    <div className="min-h-screen">
+      <header className="app-header">
+        <div className="app-title">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+          </svg>
+          教室設備清點系統
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} className="header-actions">
+          {user ? (
+            <>
+              <span className="user-email-label" style={{ fontSize: '0.9rem', color: '#64748b' }}>{user.email}</span>
               <nav style={{ display: 'flex', gap: '0.5rem' }}>
                 <Link to="/" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>填報端</Link>
-                <Link to="/admin" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台登入</Link>
+                {isAdmin && (
+                  <Link to="/admin" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台</Link>
+                )}
               </nav>
-            )}
-          </div>
-        </header>
+              <button className="btn btn-secondary" style={{ padding: '0.4rem', color: '#ef4444' }} onClick={logout} title="登出">
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : (
+            <nav style={{ display: 'flex', gap: '0.5rem' }}>
+              <Link to="/" className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>填報端</Link>
+              <Link to="/admin" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>管理後台登入</Link>
+            </nav>
+          )}
+        </div>
+      </header>
 
-        <main className="main-container">
-          <Routes>
+      <main className={isAdminPage ? "admin-full-container" : "main-container"}>
+        <Routes>
             <Route path="/" element={<ReporterForm />} />
             <Route path="/confirm/:id" element={<HandoverConfirm />} />
             <Route path="/admin" element={
@@ -79,6 +80,13 @@ function AppContent() {
           </Routes>
         </main>
       </div>
+  );
+}
+
+function AppContent() {
+  return (
+    <BrowserRouter>
+      <MainLayout />
     </BrowserRouter>
   );
 }

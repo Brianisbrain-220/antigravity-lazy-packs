@@ -609,21 +609,99 @@ function AdminDashboard() {
             {NAV_ITEMS.map(item => {
               const isActive = activeTab === item.id;
               return (
-                <button
-                  key={item.id}
-                  className={`admin-nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setSidebarOpen(false); // 在手機端點選後自動關閉抽屜
-                  }}
-                  title={sidebarCollapsed ? item.label : ''}
-                >
-                  <span className="admin-nav-icon">{item.icon}</span>
-                  <span className="admin-nav-label">{item.label}</span>
-                  {item.count !== null && (
-                    <span className="admin-nav-badge">{item.count}</span>
+                <div key={item.id} style={{ width: '100%' }}>
+                  <button
+                    className={`admin-nav-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setSidebarOpen(false); // 在手機端點選後自動關閉抽屜
+                      if (item.id === 'audit' && sidebarCollapsed) {
+                        setSidebarCollapsed(false);
+                      }
+                    }}
+                    title={sidebarCollapsed ? item.label : ''}
+                  >
+                    <span className="admin-nav-icon">{item.icon}</span>
+                    <span className="admin-nav-label">{item.label}</span>
+                    {item.count !== null && (
+                      <span className="admin-nav-badge">{item.count}</span>
+                    )}
+                  </button>
+
+                  {/* 當選擇設備盤點 (audit) 且非收縮模式時，顯示左側篩選子選單 */}
+                  {item.id === 'audit' && isActive && !sidebarCollapsed && (
+                    <div className="admin-sidebar-subnav">
+                      <div className="admin-sidebar-subnav-title">
+                        <span>🔍 篩選條件設定</span>
+                      </div>
+                      <div>
+                        <label>設備類別</label>
+                        <select
+                          value={auditCategory}
+                          onChange={e => {
+                            setAuditCategory(e.target.value);
+                            setAuditItem('all');
+                          }}
+                        >
+                          <option value="all">所有類別</option>
+                          {Object.entries(categories).map(([k, label]) => (
+                            <option key={k} value={k}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label>設備項目名稱</label>
+                        <select
+                          value={auditItem}
+                          onChange={e => setAuditItem(e.target.value)}
+                        >
+                          <option value="all">該類別全部項目 ({targetItems.length})</option>
+                          {equipmentItems
+                            .filter(i => auditCategory === 'all' || i.category === auditCategory)
+                            .map(i => (
+                              <option key={i.id} value={i.id}>{i.name}</option>
+                            ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label>空間分類</label>
+                        <select
+                          value={auditClassroomType}
+                          onChange={e => setAuditClassroomType(e.target.value)}
+                        >
+                          <option value="all">全部空間</option>
+                          <option value="regular">普通導師班</option>
+                          <option value="special">科任與行政處室</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label>設備狀態過濾</label>
+                        <select
+                          value={auditStatus}
+                          onChange={e => setAuditStatus(e.target.value)}
+                        >
+                          <option value="all">全部狀態</option>
+                          <option value="damaged">🔴 僅有報修/損壞</option>
+                          <option value="normal">🟢 僅正常</option>
+                        </select>
+                      </div>
+                      {(auditCategory !== 'all' || auditItem !== 'all' || auditClassroomType !== 'all' || auditStatus !== 'all') && (
+                        <button
+                          type="button"
+                          className="admin-sidebar-reset-btn"
+                          onClick={() => {
+                            setAuditCategory('all');
+                            setAuditItem('all');
+                            setAuditClassroomType('all');
+                            setAuditStatus('all');
+                          }}
+                        >
+                          🔄 重設所有篩選
+                        </button>
+                      )}
+                    </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </nav>
@@ -795,81 +873,20 @@ function AdminDashboard() {
 
       {activeTab === 'audit' && (
         <div className="fade-in">
-          {/* Filter Card */}
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>🔍 跨空間設備橫向盤點與篩選</span>
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label className="form-label">設備類別</label>
-                <select
-                  className="input-field"
-                  value={auditCategory}
-                  onChange={e => {
-                    setAuditCategory(e.target.value);
-                    setAuditItem('all');
-                  }}
-                >
-                  <option value="all">所有類別</option>
-                  {Object.entries(categories).map(([k, label]) => (
-                    <option key={k} value={k}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">設備項目名稱</label>
-                <select
-                  className="input-field"
-                  value={auditItem}
-                  onChange={e => setAuditItem(e.target.value)}
-                >
-                  <option value="all">該類別全部項目 ({targetItems.length})</option>
-                  {equipmentItems
-                    .filter(i => auditCategory === 'all' || i.category === auditCategory)
-                    .map(i => (
-                      <option key={i.id} value={i.id}>{i.name}</option>
-                    ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">空間分類</label>
-                <select
-                  className="input-field"
-                  value={auditClassroomType}
-                  onChange={e => setAuditClassroomType(e.target.value)}
-                >
-                  <option value="all">全部空間</option>
-                  <option value="regular">普通導師班</option>
-                  <option value="special">科任與行政處室</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">設備狀態過濾</label>
-                <select
-                  className="input-field"
-                  value={auditStatus}
-                  onChange={e => setAuditStatus(e.target.value)}
-                >
-                  <option value="all">全部狀態</option>
-                  <option value="damaged">🔴 僅有報修/損壞</option>
-                  <option value="normal">🟢 僅正常</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <div style={{ flex: '1 1 280px' }}>
+          {/* Top Search & Options Bar */}
+          <div className="card" style={{ marginBottom: '1.2rem', padding: '1.2rem 1.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ flex: '1 1 320px' }}>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="搜尋空間代碼、名稱、老師或備註..."
+                  placeholder="🔍 搜尋教室代碼、名稱、負責教師或備註..."
                   value={auditSearch}
                   onChange={e => setAuditSearch(e.target.value)}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', marginBottom: 0 }}
                 />
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.6rem 1.2rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.6rem 1.2rem', borderRadius: '8px', border: '1px solid #bfdbfe', margin: 0 }}>
                 <input
                   type="checkbox"
                   checked={showZeroQuantity}
