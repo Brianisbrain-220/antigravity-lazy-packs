@@ -890,8 +890,20 @@ function AdminDashboard() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">示意圖片路徑</label>
-                    <input className="input-field" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} placeholder="/images/equipment/..." />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">示意圖片路徑</label>
+                      <button
+                        type="button"
+                        onClick={() => setItemForm({ ...itemForm, imageUrl: '/images/equipment/' })}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}
+                      >
+                        ⚡ 填入標準前綴 (/images/equipment/)
+                      </button>
+                    </div>
+                    <input className="input-field" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} placeholder="例如：/images/equipment/desk.jpg" />
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
+                      💡 將相片放入電腦 <code>public/images/equipment</code>，點上方⚡加上相片檔名即可。
+                    </div>
                     {itemForm.imageUrl && <img src={itemForm.imageUrl} alt="" style={{ width: '60px', height: '60px', objectFit: 'contain', marginTop: '0.5rem', background: '#f1f5f9', borderRadius: '6px' }} />}
                   </div>
                   <div className="form-group">
