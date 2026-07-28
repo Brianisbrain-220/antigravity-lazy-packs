@@ -42,6 +42,12 @@ const PRESET_EQUIPMENT_IMAGES = [
   { name: '板擦機 2', url: '/images/equipment/page_2_13_Image57.jpg' }
 ];
 
+const getSortWeight = (item) => {
+  if (item?.sortOrder === undefined || item?.sortOrder === null || item?.sortOrder === '') return 50;
+  const num = Number(item.sortOrder);
+  return !isNaN(num) ? num : 50;
+};
+
 function AdminDashboard() {
   const { user, isSuperAdmin } = useAuth();
   const effectiveSuperAdmin = isSuperAdmin;
@@ -135,7 +141,13 @@ function AdminDashboard() {
       const invSnap = await getDocs(collection(db, 'eq_inventories'));
       setInventories(invSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const itemSnap = await getDocs(collection(db, 'eq_items'));
-      setEquipmentItems(itemSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.sortOrder - b.sortOrder));
+      const sortedItems = itemSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+        const wA = getSortWeight(a);
+        const wB = getSortWeight(b);
+        if (wA !== wB) return wA - wB;
+        return (a.id || '').localeCompare(b.id || '');
+      });
+      setEquipmentItems(sortedItems);
       const clsSnap = await getDocs(collection(db, 'eq_classrooms'));
       setClassrooms(clsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
@@ -360,12 +372,14 @@ function AdminDashboard() {
         const [id, name, category, inputType, sortOrder, imageUrl] = cols;
         if (!id || !name) { errCount++; continue; }
         try {
+          const parsedOrder = parseInt(sortOrder, 10);
+          const validOrder = !isNaN(parsedOrder) ? parsedOrder : 50;
           await setDoc(doc(db, 'eq_items', id), {
             id,
             name,
             category: category || 'desks_chairs',
             inputType: inputType || 'checkbox_with_quantity',
-            sortOrder: parseInt(sortOrder) || 50,
+            sortOrder: validOrder,
             imageUrl: imageUrl || ''
           });
           successCount++;
@@ -391,7 +405,9 @@ function AdminDashboard() {
     if (!itemForm.name) return alert('請輸入名稱');
     try {
       const itemId = editingItem ? itemForm.id : 'item_' + Date.now();
-      await setDoc(doc(db, 'eq_items', itemId), { id: itemId, name: itemForm.name, category: itemForm.category, inputType: itemForm.inputType, imageUrl: itemForm.imageUrl || '', sortOrder: parseInt(itemForm.sortOrder) || 50 });
+      const parsedOrder = parseInt(itemForm.sortOrder, 10);
+      const validOrder = !isNaN(parsedOrder) ? parsedOrder : 50;
+      await setDoc(doc(db, 'eq_items', itemId), { id: itemId, name: itemForm.name, category: itemForm.category, inputType: itemForm.inputType, imageUrl: itemForm.imageUrl || '', sortOrder: validOrder });
       alert(editingItem ? '修改成功！' : '新增成功！');
       setEditingItem(null);
       setItemForm({ id: '', name: '', category: 'desks_chairs', inputType: 'checkbox_only', imageUrl: '', sortOrder: 50 });

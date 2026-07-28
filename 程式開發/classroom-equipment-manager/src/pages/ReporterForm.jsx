@@ -5,6 +5,12 @@ import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '../context/AuthContext';
 import { seedEquipmentItems, seedClassrooms, seedSettings, DEFAULT_CATEGORIES } from '../seedData';
 
+const getSortWeight = (item) => {
+  if (item?.sortOrder === undefined || item?.sortOrder === null || item?.sortOrder === '') return 50;
+  const num = Number(item.sortOrder);
+  return !isNaN(num) ? num : 50;
+};
+
 function ReporterForm() {
   const { user } = useAuth();
   
@@ -62,7 +68,13 @@ function ReporterForm() {
           const itemSnap2 = await getDocs(collection(db, 'eq_items'));
           items = itemSnap2.docs.map(d => ({id: d.id, ...d.data()}));
         }
-        setEquipmentItems(items.sort((a,b) => (a.sortOrder || 50) - (b.sortOrder || 50)));
+        const sortedItems = items.sort((a, b) => {
+          const wA = getSortWeight(a);
+          const wB = getSortWeight(b);
+          if (wA !== wB) return wA - wB;
+          return (a.id || '').localeCompare(b.id || '');
+        });
+        setEquipmentItems(sortedItems);
 
         // 3. Fetch settings
         const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
@@ -140,7 +152,7 @@ function ReporterForm() {
     }
   };
 
-  const categories = useMemo(() => {
+  const sortedCategoryEntries = useMemo(() => {
     const baseCats = systemSettings.categories || DEFAULT_CATEGORIES;
     const allCats = { ...baseCats };
     equipmentItems.forEach(item => {
@@ -149,7 +161,24 @@ function ReporterForm() {
         allCats[cat] = cat === 'other' ? '其他設備' : cat;
       }
     });
-    return allCats;
+
+    const catMinOrder = {};
+    Object.keys(allCats).forEach(catKey => {
+      const itemsInCat = equipmentItems.filter(i => (i.category || 'other') === catKey);
+      if (itemsInCat.length > 0) {
+        const minOrder = Math.min(...itemsInCat.map(i => getSortWeight(i)));
+        catMinOrder[catKey] = minOrder;
+      } else {
+        catMinOrder[catKey] = 9999;
+      }
+    });
+
+    return Object.entries(allCats).sort(([keyA], [keyB]) => {
+      const orderA = catMinOrder[keyA] ?? 9999;
+      const orderB = catMinOrder[keyB] ?? 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      return keyA.localeCompare(keyB);
+    });
   }, [systemSettings, equipmentItems]);
 
   if (loadingData) {
@@ -215,7 +244,7 @@ function ReporterForm() {
         </div>
 
         {/* Dynamic Equipment Sections */}
-        {Object.entries(categories).map(([catKey, catName]) => {
+        {sortedCategoryEntries.map(([catKey, catName]) => {
           const itemsInCat = equipmentItems.filter(i => (i.category || 'other') === catKey);
           if (itemsInCat.length === 0) return null;
           
