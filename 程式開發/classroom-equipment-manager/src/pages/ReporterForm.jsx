@@ -23,7 +23,7 @@ function ReporterForm() {
     classroomId: '',
     reporterName: '',
     reporterEmail: '',
-    hasHandover: true,
+    hasHandover: false,
     handoverName: '',
     handoverEmail: '',
     remarks: ''
@@ -149,14 +149,26 @@ function ReporterForm() {
     if (!roomInput || !roomInput.trim()) {
       return { matchedClassroom: null, roomMatchError: '', suggestedClassrooms: [] };
     }
-    const val = roomInput.trim().toLowerCase();
+    const normalize = (str) => {
+      return (str || '').toLowerCase()
+        .replace(/一/g, '1')
+        .replace(/二/g, '2')
+        .replace(/三/g, '3')
+        .replace(/四/g, '4')
+        .replace(/五/g, '5')
+        .replace(/六/g, '6')
+        .replace(/\s+/g, '')
+        .replace(/-/g, '');
+    };
+
+    const valNorm = normalize(roomInput);
     
     // 1. Exact match (id, name, or room_ID)
-    let exact = classrooms.find(c => 
-      (c.id || '').toLowerCase() === val || 
-      (c.name || '').toLowerCase() === val ||
-      (c.id || '').toLowerCase() === `room_${val}`
-    );
+    let exact = classrooms.find(c => {
+      const idNorm = normalize(c.id);
+      const nameNorm = normalize(c.name);
+      return idNorm === valNorm || nameNorm === valNorm || idNorm === `room_${valNorm}` || nameNorm.includes(valNorm);
+    });
     
     if (exact) {
       return { matchedClassroom: exact, roomMatchError: '', suggestedClassrooms: [] };
@@ -164,22 +176,21 @@ function ReporterForm() {
     
     // 2. Partial search matches
     const matches = classrooms.filter(c => 
-      (c.id || '').toLowerCase().includes(val) || 
-      (c.name || '').toLowerCase().includes(val)
+      normalize(c.id).includes(valNorm) || 
+      normalize(c.name).includes(valNorm)
     );
     
-    if (matches.length === 1) {
-      return { matchedClassroom: matches[0], roomMatchError: '', suggestedClassrooms: [] };
-    } else if (matches.length > 1) {
+    if (matches.length >= 1) {
+      // Auto select the first match so teacher is never blocked from submitting!
       return { 
-        matchedClassroom: null, 
-        roomMatchError: `找到 ${matches.length} 間相關空間，請直接點選下方建議或輸入更完整編號`, 
+        matchedClassroom: matches[0], 
+        roomMatchError: matches.length > 1 ? `找到 ${matches.length} 間相關空間，已為您預設選取【${matches[0].name}】，可點擊下方標籤更換` : '', 
         suggestedClassrooms: matches.slice(0, 8) 
       };
     } else {
       return { 
         matchedClassroom: null, 
-        roomMatchError: `❌ 後台資料庫無此編號或空間「${roomInput}」，請確認是否已經在後台建立`, 
+        roomMatchError: `❌ 後台資料庫無此編號或空間「${roomInput}」，請點選右上角查詢表選擇`, 
         suggestedClassrooms: [] 
       };
     }
@@ -200,27 +211,24 @@ function ReporterForm() {
     // 1. Validate Classroom
     if (!formData.classroomId || !matchedClassroom) {
       const msg = roomInput.trim()
-        ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請輸入或點選有效空間！`
-        : '⚠️ 請先在上方「教室編號或名稱」欄位輸入並成功對照後再送出表單';
+        ? `⚠️ 後台資料庫查無「${roomInput}」這個教室編號或名稱，請從右上方「查詢表」選擇有效空間！`
+        : '⚠️ 請先在上方「教室編號或名稱」欄位輸入或點選空間後再送出表單';
       setErrorMessage(msg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      alert(msg);
       return;
     }
 
     // 2. Validate Reporter Name & Email
     if (!formData.reporterName || !formData.reporterName.trim()) {
-      const msg = '⚠️ 請填寫「填報人姓名」！';
+      const msg = '⚠️ 請填寫「填報人姓名」欄位！';
       setErrorMessage(msg);
       window.scrollTo({ top: 200, behavior: 'smooth' });
-      alert(msg);
       return;
     }
     if (!formData.reporterEmail || !formData.reporterEmail.trim()) {
-      const msg = '⚠️ 請填寫「填報人 Email」！';
+      const msg = '⚠️ 請填寫「填報人 Email」欄位！';
       setErrorMessage(msg);
       window.scrollTo({ top: 250, behavior: 'smooth' });
-      alert(msg);
       return;
     }
 
@@ -230,14 +238,12 @@ function ReporterForm() {
         const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人姓名」！';
         setErrorMessage(msg);
         window.scrollTo({ top: 300, behavior: 'smooth' });
-        alert(msg);
         return;
       }
       if (!formData.handoverEmail || !formData.handoverEmail.trim()) {
         const msg = '⚠️ 您選擇了「需交接」，請務必填寫「交接人 Email」以便接收審查連結！';
         setErrorMessage(msg);
         window.scrollTo({ top: 350, behavior: 'smooth' });
-        alert(msg);
         return;
       }
     }
@@ -250,7 +256,6 @@ function ReporterForm() {
       if (!signatureUrl) {
         const msg = '⚠️ 請在下方「填報人簽名」欄位完成簽名以示負責';
         setErrorMessage(msg);
-        alert(msg);
         return;
       }
     }
@@ -284,9 +289,8 @@ function ReporterForm() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setIsSubmitting(false);
-      const errMsg = '資料傳送時發生錯誤: ' + err.message;
-      setErrorMessage(errMsg);
-      alert(errMsg);
+      console.error('Submission error:', err);
+      setErrorMessage('❌ 資料傳送時發生錯誤: ' + (err.message || '無法連線至雲端資料庫，請檢查網路狀況'));
     }
   };
 
@@ -354,6 +358,62 @@ function ReporterForm() {
         教室設備清點填報
       </h2>
       
+      {/* Custom HTML/React Modal Dialog - Never swallowed by LINE WebView! */}
+      {errorMessage && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '1.5rem',
+          backdropFilter: 'blur(5px)'
+        }}>
+          <div className="card fade-in" style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '2.5rem 1.8rem',
+            maxWidth: '430px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+            borderTop: '6px solid #ef4444'
+          }}>
+            <div style={{fontSize: '3.8rem', marginBottom: '0.8rem'}}>⚠️</div>
+            <h3 style={{color: '#b91c1c', fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.8rem'}}>
+              表單還無法送出喔！
+            </h3>
+            <p style={{color: '#374151', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem', background: '#fef2f2', padding: '1.2rem', borderRadius: '14px', border: '1px solid #fecaca', fontWeight: 500}}>
+              {errorMessage}
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                fontSize: '1.2rem',
+                background: '#dc2626',
+                borderColor: '#dc2626',
+                borderRadius: '50px',
+                fontWeight: 700,
+                boxShadow: '0 4px 15px rgba(220, 38, 38, 0.35)'
+              }}
+              onClick={() => {
+                setErrorMessage('');
+              }}
+            >
+              👉 知道了，立刻前往填寫
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Floating Status Toast for Mobile/LINE WebView */}
       {errorMessage && (
         <div className="fade-in" style={{
