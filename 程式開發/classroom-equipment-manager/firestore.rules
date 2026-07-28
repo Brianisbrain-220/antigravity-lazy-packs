@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 設備項目與分類設定：所有人都可以讀取 (讓老師/手機瀏覽器順利載入品項與分類)，僅管理員可異動
+    match /eq_items/{item} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 班級與空間列表：所有人都可以讀取 (讓老師/LINE瀏覽器順利選擇空間)，僅管理員可異動
+    match /eq_classrooms/{classroom} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 系統全域設定：所有人都可以讀取 (讓前端讀取簽名等開關設定)，僅管理員可異動
+    match /eq_settings/{setting} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 盤點與報修紀錄表單：所有人皆可讀取與送出新紀錄，僅管理員可修改/刪除
+    match /eq_inventories/{inventory} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    // 管理員帳號名單：所有人皆可驗證自身角色權限，僅管理員/超管可異動
+    match /admins/{admin} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 預設關閉其他未授權集合
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

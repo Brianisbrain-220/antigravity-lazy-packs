@@ -244,10 +244,11 @@ body {
   overflow: hidden;
 }
 
-.signature-container canvas {
+.signature-container canvas, .sigCanvas {
   width: 100%;
   height: 200px;
   cursor: crosshair;
+  touch-action: none !important;
 }
 
 /* ==========================================================================

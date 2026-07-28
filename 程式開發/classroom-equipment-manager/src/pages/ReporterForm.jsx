@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '../context/AuthContext';
-import { seedEquipmentItems, seedClassrooms, seedSettings, DEFAULT_CATEGORIES } from '../seedData';
+import { seedEquipmentItems, seedClassrooms, seedSettings, DEFAULT_CATEGORIES, DEFAULT_CLASSROOMS, DEFAULT_EQUIPMENT_ITEMS } from '../seedData';
 
 const getSortWeight = (item) => {
   if (item?.sortOrder === undefined || item?.sortOrder === null || item?.sortOrder === '') return 50;
@@ -45,28 +45,45 @@ function ReporterForm() {
 
   useEffect(() => {
     const loadData = async () => {
-      try {
-        setLoadingData(true);
-        
-        await seedSettings();
+      setLoadingData(true);
 
-        // 1. Fetch classrooms
+      // 1. Fetch classrooms independently
+      try {
         const clsSnap = await getDocs(collection(db, 'eq_classrooms'));
         let cls = clsSnap.docs.map(d => ({id: d.id, ...d.data()}));
         if (cls.length === 0) {
-          await seedClassrooms();
-          const clsSnap2 = await getDocs(collection(db, 'eq_classrooms'));
-          cls = clsSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+          try {
+            await seedClassrooms();
+            const clsSnap2 = await getDocs(collection(db, 'eq_classrooms'));
+            cls = clsSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+          } catch (seedErr) {
+            console.warn("Classrooms seeding skipped:", seedErr.message);
+          }
+        }
+        if (cls.length === 0) {
+          cls = DEFAULT_CLASSROOMS;
         }
         setClassrooms(cls);
-        
-        // 2. Fetch items
+      } catch (err) {
+        console.warn("Using default classrooms due to fetch error:", err.message);
+        setClassrooms(DEFAULT_CLASSROOMS);
+      }
+
+      // 2. Fetch items independently
+      try {
         const itemSnap = await getDocs(collection(db, 'eq_items'));
         let items = itemSnap.docs.map(d => ({id: d.id, ...d.data()}));
         if (items.length === 0) {
-          await seedEquipmentItems();
-          const itemSnap2 = await getDocs(collection(db, 'eq_items'));
-          items = itemSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+          try {
+            await seedEquipmentItems();
+            const itemSnap2 = await getDocs(collection(db, 'eq_items'));
+            items = itemSnap2.docs.map(d => ({id: d.id, ...d.data()}));
+          } catch (seedErr) {
+            console.warn("Equipment items seeding skipped:", seedErr.message);
+          }
+        }
+        if (items.length === 0) {
+          items = DEFAULT_EQUIPMENT_ITEMS;
         }
         const sortedItems = items.sort((a, b) => {
           const wA = getSortWeight(a);
@@ -75,17 +92,28 @@ function ReporterForm() {
           return (a.id || '').localeCompare(b.id || '');
         });
         setEquipmentItems(sortedItems);
+      } catch (err) {
+        console.warn("Using default equipment items due to fetch error:", err.message);
+        const sortedItems = [...DEFAULT_EQUIPMENT_ITEMS].sort((a, b) => {
+          const wA = getSortWeight(a);
+          const wB = getSortWeight(b);
+          if (wA !== wB) return wA - wB;
+          return (a.id || '').localeCompare(b.id || '');
+        });
+        setEquipmentItems(sortedItems);
+      }
 
-        // 3. Fetch settings
+      // 3. Fetch settings independently
+      try {
         const settingsSnap = await getDoc(doc(db, 'eq_settings', 'global'));
         if (settingsSnap.exists()) {
           setSystemSettings(settingsSnap.data());
         }
       } catch (err) {
-        console.error("Error loading form data:", err);
-      } finally {
-        setLoadingData(false);
+        console.warn("Using default system settings due to fetch error:", err.message);
       }
+
+      setLoadingData(false);
     };
     loadData();
   }, []);
@@ -313,10 +341,17 @@ function ReporterForm() {
               <SignatureCanvas 
                 ref={(ref) => { setSigPad(ref) }}
                 penColor="blue"
-                canvasProps={{className: 'sigCanvas'}}
+                clearOnResize={false}
+                canvasProps={{
+                  className: 'sigCanvas',
+                  style: { width: '100%', height: '200px', touchAction: 'none' }
+                }}
               />
             </div>
-            <button type="button" className="btn btn-secondary" style={{marginTop: '0.5rem', fontSize: '0.8rem'}} onClick={() => sigPad.clear()}>重新簽名</button>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+              <button type="button" className="btn btn-secondary" style={{fontSize: '0.8rem'}} onClick={() => sigPad.clear()}>重新簽名</button>
+              <span style={{fontSize: '0.8rem', color: '#059669', fontWeight: 'bold'}}>🔒 簽名已防護：往下滑動畫面不會被清除</span>
+            </div>
           </div>
         )}
 

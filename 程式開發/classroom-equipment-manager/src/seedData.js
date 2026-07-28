@@ -12,8 +12,7 @@ export const DEFAULT_CATEGORIES = {
   erasers: '板擦機'
 };
 
-export const seedEquipmentItems = async (force = false) => {
-  const items = [
+export const DEFAULT_EQUIPMENT_ITEMS = [
     { id: 'desk_1', category: 'desks_chairs', name: '1. 塑膠抽屜_新式', imageUrl: '/images/equipment/page_1_1_Image21.jpg', inputType: 'checkbox_with_quantity', sortOrder: 1 },
     { id: 'desk_2', category: 'desks_chairs', name: '2. 鐵製抽屜_新式', imageUrl: '/images/equipment/page_1_2_Image22.jpg', inputType: 'checkbox_with_quantity', sortOrder: 2 },
     { id: 'desk_3', category: 'desks_chairs', name: '3. 木頭桌椅', imageUrl: '/images/equipment/page_1_3_Image23.jpg', inputType: 'checkbox_with_quantity', sortOrder: 3 },
@@ -50,8 +49,10 @@ export const seedEquipmentItems = async (force = false) => {
     { id: 'speaker_4', category: 'speakers', name: '喇叭 4', imageUrl: '/images/equipment/page_2_11_Image55.jpg', inputType: 'checkbox_only', sortOrder: 64 },
     { id: 'eraser_1', category: 'erasers', name: '板擦機 1', imageUrl: '/images/equipment/page_2_12_Image56.jpg', inputType: 'checkbox_only', sortOrder: 71 },
     { id: 'eraser_2', category: 'erasers', name: '板擦機 2', imageUrl: '/images/equipment/page_2_13_Image57.jpg', inputType: 'checkbox_only', sortOrder: 72 },
-  ];
+];
 
+export const seedEquipmentItems = async (force = false) => {
+  const items = DEFAULT_EQUIPMENT_ITEMS;
   for (const item of items) {
     const docRef = doc(db, 'eq_items', item.id);
     if (force) {
@@ -65,13 +66,14 @@ export const seedEquipmentItems = async (force = false) => {
   }
 };
 
-export const seedClassrooms = async (force = false) => {
-  const classrooms = [
+export const DEFAULT_CLASSROOMS = [
     { id: 'room_101', name: '一年1班', category: 'regular', teacherName: '張曉明', teacherEmail: 'teacher1@example.com', status: 'pending' },
     { id: 'room_102', name: '一年2班', category: 'regular', teacherName: '李大華', teacherEmail: 'teacher2@example.com', status: 'pending' },
     { id: 'room_computer_1', name: '第一電腦教室', category: 'special', teacherName: '王小芬', teacherEmail: 'teacher3@example.com', status: 'pending' },
-  ];
+];
 
+export const seedClassrooms = async (force = false) => {
+  const classrooms = DEFAULT_CLASSROOMS;
   for (const rm of classrooms) {
     const docRef = doc(db, 'eq_classrooms', rm.id);
     if (force) {
