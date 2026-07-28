@@ -31,6 +31,10 @@ function ReporterForm() {
   
   const [inventory, setInventory] = useState({});
   const [sigPad, setSigPad] = useState(null);
+  const [savedSignature, setSavedSignature] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Autocomplete user info
   useEffect(() => {
@@ -141,16 +145,27 @@ function ReporterForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.classroomId) return alert('請選擇班級');
+    setErrorMessage('');
+    if (!formData.classroomId) {
+      const msg = '⚠️ 請先選擇「清點空間 / 班級」後再送出表單';
+      setErrorMessage(msg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return alert(msg);
+    }
     
     let signatureUrl = '';
     // Only check signature if required in settings
     if (!formData.hasHandover && systemSettings.requireSignature) {
-      if (!sigPad || sigPad.isEmpty()) return alert('請在簽名區簽名以示負責');
-      signatureUrl = sigPad.getTrimmedCanvas().toDataURL('image/png');
+      signatureUrl = savedSignature || (sigPad && !sigPad.isEmpty() ? sigPad.getTrimmedCanvas().toDataURL('image/png') : '');
+      if (!signatureUrl) {
+        const msg = '⚠️ 請在「填報人簽名」欄位完成簽名以示負責';
+        setErrorMessage(msg);
+        return alert(msg);
+      }
     }
 
     try {
+      setIsSubmitting(true);
       const docData = {
         ...formData,
         status: formData.hasHandover ? 'pending_handover' : 'completed',
@@ -173,10 +188,14 @@ function ReporterForm() {
       }
       
       await addDoc(collection(db, 'eq_inventories'), docData);
-      alert('填報成功！');
-      window.location.reload();
+      setIsSubmitting(false);
+      setIsSubmittedSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      alert('發生錯誤: ' + err.message);
+      setIsSubmitting(false);
+      const errMsg = '資料傳送時發生錯誤: ' + err.message;
+      setErrorMessage(errMsg);
+      alert(errMsg);
     }
   };
 
@@ -211,6 +230,28 @@ function ReporterForm() {
 
   if (loadingData) {
     return <div style={{textAlign: 'center', padding: '3rem'}}>載入填報清單中...</div>;
+  }
+
+  if (isSubmittedSuccess) {
+    return (
+      <div className="container" style={{maxWidth: 600, margin: '3rem auto', padding: '1rem'}}>
+        <div className="card fade-in" style={{padding: '3rem 2rem', borderTop: '6px solid #10b981', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.08)'}}>
+          <div style={{fontSize: '4.5rem', marginBottom: '1rem'}}>🎉</div>
+          <h2 style={{color: '#059669', marginBottom: '1rem', fontSize: '1.8rem', fontWeight: 700}}>填報成功！資料已送出</h2>
+          <p style={{color: '#4b5563', marginBottom: '2rem', fontSize: '1.1rem', lineHeight: 1.6}}>
+            感謝老師的耐心協助！您所填報的教室設備清點與報修資料，已經成功送出並記錄於總務處設備管理系統中。
+          </p>
+          <button 
+            type="button"
+            className="btn btn-primary" 
+            style={{padding: '0.8rem 2rem', fontSize: '1.1rem', borderRadius: '50px'}}
+            onClick={() => window.location.reload()}
+          >
+            ➕ 繼續填報其他教室 / 返回表單
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -342,6 +383,11 @@ function ReporterForm() {
                 ref={(ref) => { setSigPad(ref) }}
                 penColor="blue"
                 clearOnResize={false}
+                onEnd={() => {
+                  if (sigPad && !sigPad.isEmpty()) {
+                    setSavedSignature(sigPad.getTrimmedCanvas().toDataURL('image/png'));
+                  }
+                }}
                 canvasProps={{
                   className: 'sigCanvas',
                   style: { width: '100%', height: '200px', touchAction: 'none' }
@@ -349,15 +395,55 @@ function ReporterForm() {
               />
             </div>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-              <button type="button" className="btn btn-secondary" style={{fontSize: '0.8rem'}} onClick={() => sigPad.clear()}>重新簽名</button>
-              <span style={{fontSize: '0.8rem', color: '#059669', fontWeight: 'bold'}}>🔒 簽名已防護：往下滑動畫面不會被清除</span>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{fontSize: '0.8rem'}} 
+                onClick={() => {
+                  if (sigPad) sigPad.clear();
+                  setSavedSignature('');
+                }}
+              >
+                重新簽名
+              </button>
+              {savedSignature ? (
+                <span style={{fontSize: '0.85rem', color: '#059669', fontWeight: 'bold'}}>✅ 已自動記錄簽名！(滑動檢查頁面也不會遺失)</span>
+              ) : (
+                <span style={{fontSize: '0.8rem', color: '#059669', fontWeight: 'bold'}}>🔒 簽名已防護：往下滑動畫面不會被清除</span>
+              )}
             </div>
           </div>
         )}
 
+        {errorMessage && (
+          <div className="fade-in" style={{
+            background: '#fee2e2',
+            border: '1px solid #f87171',
+            color: '#b91c1c',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginTop: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold',
+            fontSize: '1rem'
+          }}>
+            {errorMessage}
+          </div>
+        )}
+
         <div style={{marginTop: '2rem', textAlign: 'center'}}>
-          <button type="submit" className="btn btn-primary" style={{padding: '1rem 3rem', fontSize: '1.2rem'}}>
-            {formData.hasHandover ? '送出並發送交接確認信' : '確認無誤並完成送出'}
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            disabled={isSubmitting}
+            style={{
+              padding: '1rem 3rem', 
+              fontSize: '1.2rem',
+              opacity: isSubmitting ? 0.7 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isSubmitting ? '⏳ 資料送出中，請稍候...' : (formData.hasHandover ? '送出並發送交接確認信' : '確認無誤並完成送出')}
           </button>
         </div>
       </form>
