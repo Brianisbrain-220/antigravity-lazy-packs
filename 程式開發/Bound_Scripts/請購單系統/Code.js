@@ -1,7 +1,7 @@
 /**
  * Serving the HTML Web Application
  */
-var VERSION = "v3.1.0";
+var VERSION = "v3.2.0";
 
 /**
  * Serving the HTML Web Application
@@ -73,7 +73,10 @@ function createRequisition(formData) {
       grandTotal += total;
     }
 
-    var chineseTotal = numberToChinese(grandTotal);
+    var actualPayment = parseFloat(formData.actualPayment);
+    var hasActualPayment = !isNaN(actualPayment) && actualPayment > 0;
+    var voucherAmount = hasActualPayment ? actualPayment : grandTotal;
+    var chineseTotal = numberToChinese(voucherAmount);
 
     // [DEBUG LOGGING]
     try {
@@ -150,7 +153,7 @@ function createRequisition(formData) {
 
 
     // Replace digits grid (億, 千萬, 百萬, 十萬, 萬, 千, 百, 十, 元)
-    replaceAmountGrid(body, grandTotal);
+    replaceAmountGrid(body, voucherAmount, hasActualPayment);
 
     // 5. Populate Items Table
     populateRequisitionTable(body, items);
@@ -161,6 +164,8 @@ function createRequisition(formData) {
     // Apply procurement card stamp if checked
     if (isProcurementCard) {
       applyProcurementCardStamp(body);
+    } else {
+      body.replaceText("\\{\\{採購卡\\}\\}", "");
     }
 
     // Save and close doc
@@ -384,10 +389,11 @@ function logToSheet(department, date, businessPlan, workPlan, purposeCategory, f
  * Splits the grand total into individual digits and replaces the placeholders
  * in the amount grid (億, 千萬, 百萬, 十萬, 萬, 千, 百, 十, 元)
  * and places a "$" right before the highest digit.
+ * If isActualPayment is true, also places "實\n支" right before the "$".
  */
-function replaceAmountGrid(body, grandTotal) {
+function replaceAmountGrid(body, amount, isActualPayment) {
   var digits = ["元", "十", "百", "千", "萬", "十萬", "百萬", "千萬", "億"];
-  var amountStr = Math.round(grandTotal).toString();
+  var amountStr = Math.round(amount).toString();
   var len = amountStr.length;
   
   for (var i = 0; i < digits.length; i++) {
@@ -400,6 +406,9 @@ function replaceAmountGrid(body, grandTotal) {
     } else if (i === len) {
       // This is the position immediately to the left of the highest digit -> put "$"
       replacement = "$";
+    } else if (isActualPayment && i === len + 1) {
+      // If actual payment, put "實\n支" before "$"
+      replacement = "實\n支";
     } else {
       // Remaining higher positions -> empty
       replacement = "";
