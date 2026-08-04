@@ -59,34 +59,11 @@ if (isDemoMode) {
   }
 }
 
-// Whitelist checks (admin-dashboard-master rule: require role and isOwner)
+import { getHubAuthPermission } from './hubAuth';
+
+// Whitelist checks (Central Authority Hub Pilot: hub_grants / park_admins)
 export async function checkAdminPermission(email) {
-  if (isDemoMode) {
-    return {
-      isAdmin: true,
-      role: 'ADMIN',
-      isOwner: true,
-      email: email || 'admin@ccps.kh.edu.tw',
-      name: '事務組管理員'
-    };
-  }
-  try {
-    const adminRef = doc(db, 'admins', email);
-    const snap = await getDoc(adminRef);
-    if (snap.exists()) {
-      const data = snap.data();
-      return {
-        isAdmin: true,
-        role: data.role || 'ADMIN',
-        isOwner: !!data.isOwner,
-        email,
-        name: data.name || email
-      };
-    }
-  } catch (err) {
-    console.error('checkAdminPermission error:', err);
-  }
-  return { isAdmin: false, role: 'USER', isOwner: false, email };
+  return await getHubAuthPermission(email);
 }
 
 export { auth, db, googleProvider };

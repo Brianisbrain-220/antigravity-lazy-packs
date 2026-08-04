@@ -1,0 +1,57 @@
+// ============================================================================
+// ⚠️ 唯讀鏡像 (READ-ONLY MIRROR)
+// 權威版本在：my-app/packages/line-hub/firebase/firestore.merged.rules
+// ============================================================================
+// 本檔案僅供本地開發、架構參考與程式碼審查使用，禁止使用此檔案執行 firebase deploy --only firestore:rules。
+// 專案的 firebase.json 已刻意移除 firestore 區塊，防止誤觸覆蓋線上的共用資料庫安全規則。
+// ============================================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================================
+    // [第五套] 中正國小停車管理與 ETC 登記系統 (parking-etc-manager) 專屬集合
+    // ========================================================================
+    
+    // 1. 中央權限表 (Pilot 接入：僅供讀取個人權限；寫入限 Superadmin)
+    match /hub_grants/{email} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false; // 由中央管理工具或超級管理員寫入
+    }
+
+    // 2. 停車管理專屬管理員表 (相容過渡期使用)
+    match /park_admins/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 3. 汽機車停車證申請單
+    match /park_permits/{id} {
+      allow read, write: if true; // 支援前台免登入送單與後台查詢
+    }
+
+    // 4. 違規紀錄
+    match /park_violations/{id} {
+      allow read, write: if true;
+    }
+
+    // 5. 停車管理辦法規範條文
+    match /park_rules/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 6. 違規事項分類表
+    match /park_violation_types/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 7. 未登錄車牌違規與累犯追蹤
+    match /park_unregistered_vehicles/{id} {
+      allow read, write: if true;
+    }
+
+  }
+}

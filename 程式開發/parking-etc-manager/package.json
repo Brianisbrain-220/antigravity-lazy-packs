@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:rules": "echo \"[保護防呆] 本專案的 firestore.rules 為唯讀鏡像，請至 line-hub 權威版本庫執行 rules 部署！\" && exit 1"
   },
   "dependencies": {
     "firebase": "^12.16.0",
