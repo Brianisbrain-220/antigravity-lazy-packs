@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from gkeepapi.node import NodeTimestamps
 from config import setup_logger, CHANGES_DIR
 
 logger = setup_logger("KeepApplier")
@@ -42,7 +43,9 @@ class KeepApplier:
         self.sync_engine.sync()
         
         # 2. Iterate and apply, recording changes
-        run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        run_started_dt = datetime.now(timezone.utc)
+        run_id = run_started_dt.strftime("%Y%m%d_%H%M%S")
+        run_started_at = run_started_dt.isoformat()
         applied_changes = []
         successful_note_ids = set()
         
@@ -56,8 +59,9 @@ class KeepApplier:
                 continue
                 
             # Check for remote changes
-            # We already have the snapshot updated timestamp in the rule logic, 
-            # but since we just synced, let's just apply safely.
+            if NodeTimestamps.dt_to_str(note.timestamps.updated) != mods.get("snapshot_updated"):
+                logger.warning(f"Note {note_id} SKIPPED_CHANGED_REMOTELY")
+                continue
             
             # Record before state
             before_color = note.color.value
@@ -68,9 +72,10 @@ class KeepApplier:
                 note.color = mods["color"]
                 
             # Apply labels
+            existing_label_ids = {l.id for l in note.labels.all()}
             for label_name in mods["labels"]:
                 label = self._get_or_create_label(label_name)
-                if label:
+                if label and label.id not in existing_label_ids:
                     note.labels.add(label)
                     
             after_color = note.color.value
@@ -113,6 +118,10 @@ class KeepApplier:
             
             b_clean = {k: v for k, v in b_node.items() if k not in keys_to_ignore}
             a_clean = {k: v for k, v in a_node.items() if k not in keys_to_ignore}
+            b_clean["_trashed"] = str(b_node.get("timestamps", {}).get("trashed") or "1970")
+            a_clean["_trashed"] = str(a_node.get("timestamps", {}).get("trashed") or "1970")
+            b_clean["_deleted"] = str(b_node.get("timestamps", {}).get("deleted") or "1970")
+            a_clean["_deleted"] = str(a_node.get("timestamps", {}).get("deleted") or "1970")
             
             if b_clean != a_clean:
                 # Find exactly what changed for logging
@@ -128,7 +137,8 @@ class KeepApplier:
         # 5. Write rollback log
         change_log = {
             "run_id": run_id,
-            "run_started_at": datetime.now(timezone.utc).isoformat(),
+            "run_started_at": run_started_at,
+            "run_finished_at": datetime.now(timezone.utc).isoformat(),
             "changes": applied_changes
         }
         change_file = CHANGES_DIR / f"{run_id}.json"
@@ -138,5 +148,4 @@ class KeepApplier:
         logger.info(f"Changes applied and logged to {change_file}")
         
         # Return dict of note_id -> updated timestamp (for state tracking)
-        # We need to re-fetch timestamps post-sync
-        return {change["note_id"]: self.keep.get(change["note_id"]).timestamps.updated for change in applied_changes}
+        return {change["note_id"]: NodeTimestamps.dt_to_str(self.keep.get(change["note_id"]).timestamps.updated) for change in applied_changes}

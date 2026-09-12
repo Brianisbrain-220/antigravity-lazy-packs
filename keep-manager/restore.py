@@ -18,14 +18,24 @@ def restore_run(run_id, dry_run=False, force=False):
     with open(change_file, 'r', encoding='utf-8') as f:
         log = json.load(f)
         
-    run_started_at = datetime.fromisoformat(log["run_started_at"])
+    run_started_at = datetime.fromisoformat(log.get("run_finished_at", log["run_started_at"]))
     changes = log["changes"]
     
     logger.info(f"Starting restore for run {run_id}. Notes to restore: {len(changes)}")
     
     if dry_run:
         for c in changes:
-            logger.info(f"[DRY-RUN] Would restore {c['note_id']} to color={c['before']['color']}, labels={c['before']['label_ids']}")
+            before_color = c['before']['color']
+            after_color = c['after']['color']
+            color_msg = f"Color: {after_color} -> {before_color}" if before_color != after_color else "Color: no change"
+            
+            b_ids = set(c['before']['label_ids'])
+            a_ids = set(c['after']['label_ids'])
+            to_remove = a_ids - b_ids
+            to_add = b_ids - a_ids
+            labels_msg = f"Labels: remove {to_remove}, add {to_add}"
+            
+            logger.info(f"[DRY-RUN] Would restore {c['note_id']}: {color_msg} | {labels_msg}")
         return
         
     engine = KeepSyncEngine()
@@ -57,22 +67,38 @@ def restore_run(run_id, dry_run=False, force=False):
                 
         # Restore color
         before_color = gkeepapi.node.ColorValue(c["before"]["color"])
-        note.color = before_color
+        changed = False
+        if note.color != before_color:
+            note.color = before_color
+            changed = True
         
-        # Restore labels
-        # First clear all labels
-        for lbl in list(note.labels.all()):
-            note.labels.remove(lbl)
-            
-        # Add back old labels by ID
-        for lbl_id in c["before"]["label_ids"]:
-            lbl_node = keep.get(lbl_id)
-            if lbl_node:
-                note.labels.add(lbl_node)
-            else:
-                logger.warning(f"Label ID {lbl_id} not found in keep, could not restore this label.")
+        # Restore labels precisely
+        before_ids = set(c["before"]["label_ids"])
+        after_ids = set(c["after"]["label_ids"])
+        current = {l.id: l for l in note.labels.all()}
+        
+        missing = 0
+        for lid in after_ids - before_ids: # Added during run -> remove
+            if lid in current:
+                note.labels.remove(current[lid])
+                changed = True
                 
-        successful_note_ids.add(note_id)
+        for lid in before_ids - after_ids: # Removed during run -> add back
+            if lid not in current:
+                lbl = keep.getLabel(lid)
+                if lbl is None:
+                    logger.error(f"{note_id}: label {lid} 已不存在，無法還原")
+                    missing += 1
+                    continue
+                note.labels.add(lbl)
+                changed = True
+                
+        if missing > 0 and not force:
+            logger.error("Missing labels detected. Aborting restore. Use --force to allow missing labels.")
+            raise AssertionError("ABORT: Missing labels for restore.")
+            
+        if changed:
+            successful_note_ids.add(note_id)
         
     if not successful_note_ids:
         logger.info("No notes restored.")

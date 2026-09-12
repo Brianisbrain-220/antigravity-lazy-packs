@@ -1,11 +1,17 @@
 import os
 from pathlib import Path
 import logging
+import json
+
+def write_json_atomic(path, data):
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
 from dotenv import load_dotenv
 
-# R4: Use absolute paths resolved from __file__
 BASE_DIR = Path(__file__).resolve().parent
-
 load_dotenv(BASE_DIR / ".env")
 
 KEEP_EMAIL = os.getenv("KEEP_EMAIL")
@@ -22,57 +28,64 @@ for d in (BACKUPS_DIR, CHANGES_DIR, LOGS_DIR, STATE_DIR):
 def setup_logger(name, log_file="app.log"):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-    
-    # Check if handlers exist to prevent duplication
     if not logger.handlers:
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        
-        # File handler (UTF-8)
         fh = logging.FileHandler(LOGS_DIR / log_file, encoding='utf-8')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
-        
-        # Stream handler
         sh = logging.StreamHandler()
         sh.setFormatter(formatter)
         logger.addHandler(sh)
-        
     return logger
 
 import gkeepapi
 from gkeepapi.node import ColorValue
 
 # Taxonomy (colors and labels based on rules)
-# Using label strings WITHOUT '#' per R6.
 TAXONOMY_RULES = [
     {
-        "keywords": ["待辦", "緊急", "提醒", "deadline", "截止", "記得", "繳費", "期限"],
+        "keywords": ["緊急", "deadline", "截止", "繳費", "立刻", "待辦", "今日", "必辦", "警告"],
         "color": ColorValue.Red,
-        "labels": ["待辦-緊急", "待辦-日常"]
+        "labels": ["待辦-今日"]
     },
     {
-        "keywords": ["備課", "教案", "學生", "家長", "班級", "成績", "段考", "石蕊試紙", "自然科", "實驗", "常態任務"],
-        "color": ColorValue.Green,
-        "labels": ["教學-備課", "班級-事務"]
-    },
-    {
-        "keywords": ["公文", "標案", "核銷", "請購", "研習", "開會", "會議紀錄", "處室", "簽辦"],
+        "keywords": ["備課", "教材", "教案", "共備", "進度", "教學"],
         "color": ColorValue.Orange,
-        "labels": ["行政-公文", "行政-會議"]
+        "labels": ["教學-教案"]
     },
     {
-        "keywords": ["AntiGravity", "Linebot", "Python", "程式", "開發", "API", "專案", "系統", "bug", "AI"],
+        "keywords": ["公文", "標案", "核銷", "請購", "會議", "處室", "簽辦", "行政"],
+        "color": ColorValue.Orange,
+        "labels": ["行政-公文標案"]
+    },
+    {
+        "keywords": ["學生", "家長", "成績", "段考", "班級"],
+        "color": ColorValue.Orange,
+        "labels": ["班級-學生事務"]
+    },
+    {
+        "keywords": ["AntiGravity", "antigravity"],
         "color": ColorValue.Teal,
-        "labels": ["專案-開發", "專案-AI"]
+        "labels": ["專案-AntiGravity"]
     },
     {
-        "keywords": ["筆記", "語錄", "心得", "想法", "SOP", "知識", "紀錄片", "好文", "工具"],
-        "color": ColorValue.Blue,
-        "labels": ["筆記-知識庫", "筆記-靈感"]
+        "keywords": [r"\b(api|python|bug|ai)\b", "程式", "開發", "專案", "系統"],
+        "color": ColorValue.Teal,
+        "labels": ["專案-程式開發"]
     },
     {
-        "keywords": ["買", "購物", "採買", "訂", "清單", "晚餐", "網購", "帳單"],
+        "keywords": ["筆記", "心得", "SOP", "流程", "手冊", "知識庫", "反思", "閱讀"],
+        "color": ColorValue.Purple,
+        "labels": ["筆記-知識庫"]
+    },
+    {
+        "keywords": ["買", "購物", "採買", "清單", "網購", "帳單", "點子", "靈感", "待確認"],
         "color": ColorValue.Yellow,
-        "labels": ["生活-採買", "生活-日常"]
+        "labels": ["生活-購物採買"]
+    },
+    {
+        "keywords": ["運動", "課表", "作息", "健康", "例行"],
+        "color": ColorValue.Green,
+        "labels": ["生活-日常"]
     }
 ]

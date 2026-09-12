@@ -3,11 +3,23 @@ from gkeepapi.node import ColorValue
 
 logger = setup_logger("KeepClassifier")
 
+
+_EPOCH_PREFIX = "1970"
+def _ts(node, key):
+    return str(node.get("timestamps", {}).get(key) or "1970")
+def is_trashed(node):
+    return not _ts(node, "trashed").startswith(_EPOCH_PREFIX)
+def is_deleted(node):
+    return not _ts(node, "deleted").startswith(_EPOCH_PREFIX)
+def live_label_ids(node):
+    return [x["labelId"] for x in node.get("labelIds", [])
+            if isinstance(x, dict) and str(x.get("deleted", "1970")).startswith(_EPOCH_PREFIX)]
+
 class KeepClassifier:
     """Pure rule-based classifier that only reads dumped JSON dict, returning a plan."""
     
     @staticmethod
-    def generate_plan(dumped_state, incremental=False, processed_dict=None):
+    def generate_plan(dumped_state, incremental=False, processed_dict=None, include_labeled=False):
         """
         Takes raw dictionary from keep.dump().
         Returns a dict: {note_id: {"color": ColorValue, "labels": ["label1", ...]}}
@@ -24,41 +36,46 @@ class KeepClassifier:
             if node_type not in ("NOTE", "LIST"):
                 continue
                 
-            # D1/D7: Exclude trashed and archived
-            if node.get("isTrashed", False) or node.get("isArchived", False):
+            if is_trashed(node) or is_deleted(node) or node.get("isArchived", False):
                 continue
                 
             note_id = node["id"]
             title = node.get("title", "")
             text = node.get("text", "")
             
-            # Combine title and text
             content = title + "\n" + text
             
-            # gkeepapi dump is flat. Find all LIST_ITEMs that belong to this note
             for child in nodes:
                 if child.get("type") == "LIST_ITEM" and child.get("parentId") == note_id:
                     content += "\n" + child.get("text", "")
             
-            # For incremental (Phase B), we filter uncolored, unlabeled
-            # R5: processed.json now maps note_id -> updated_timestamp
+            node_color = node.get("color", "DEFAULT")
+            lbl_ids = live_label_ids(node)
+            node_updated = _ts(node, "updated")
+            
             if incremental:
-                node_color = node.get("color", "DEFAULT")
-                node_labels = node.get("labels", [])
-                node_updated = node.get("timestamps", {}).get("updated")
-                
-                # Check if processed and unmodified
-                if note_id in processed_dict and processed_dict[note_id] == node_updated:
+                if note_id in processed_dict and processed_dict.get(note_id) == node_updated:
                     continue
-                    
-                # Must be white and unlabeled to process in incremental mode
-                if node_color != "DEFAULT" or len(node_labels) > 0:
+                if node_color != "DEFAULT" or len(lbl_ids) > 0:
+                    continue
+            else:
+                if not include_labeled and (node_color != "DEFAULT" or len(lbl_ids) > 0):
                     continue
             
             # Rule matching
             matched = False
             for rule in TAXONOMY_RULES:
-                if any(kw.lower() in content.lower() for kw in rule["keywords"]):
+                matched_rule = False
+                for kw in rule["keywords"]:
+                    if r"\b" in kw:
+                        if re.search(kw, content, re.I):
+                            matched_rule = True
+                            break
+                    else:
+                        if kw.lower() in content.lower():
+                            matched_rule = True
+                            break
+                if matched_rule:
                     plan[note_id] = {
                         "color": rule["color"],
                         "labels": rule["labels"]
@@ -70,7 +87,8 @@ class KeepClassifier:
                 # D1/D7: No rules matched, leave as White (DEFAULT), add '待整理'
                 plan[note_id] = {
                     "color": ColorValue.White,
-                    "labels": ["待整理"]
+                    "labels": ["待整理"],
+                    "snapshot_updated": node_updated
                 }
                 
         return plan
