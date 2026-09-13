@@ -4,7 +4,7 @@ import { VERSION_INFO } from '../config/version';
 import { ShieldAlert, UserCheck, LogOut, LogIn, RefreshCw, Car, Wrench } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
-  const { user, loginWithGoogle, logout, toggleDemoRole, isDemoMode } = useAuth();
+  const { user, loginWithGoogle, logout, toggleDemoRole, isDemoMode, demoAdminEnabled } = useAuth();
 
   return (
     <header className="navbar-container">
@@ -38,7 +38,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
           )}
 
-          {isDemoMode && user && (
+          {isDemoMode && demoAdminEnabled && user && (
             <button
               onClick={toggleDemoRole}
               className="demo-toggle-btn"

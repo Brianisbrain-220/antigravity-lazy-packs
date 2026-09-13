@@ -1,11 +1,262 @@
+// ⚠️⚠️⚠️  這是「鏡像副本」,請不要在這裡編輯  ⚠️⚠️⚠️
+//
+//  權威版本(唯一該修改的那一份):
+//    C:\Claude20260723\my-app\packages\line-hub\firebase\firestore.merged.rules
+//
+//  為什麼:cjps-admin-hub 這一個 Firestore 資料庫同時服務四套系統,而 Firestore
+//  規則是「整個資料庫一份」的。任一套系統單獨部署自己的 rules,都會把其他三套
+//  整份覆蓋掉。2026-07-29 已因此發生過線上事故(消耗品前台 Kiosk 模式全面
+//  permission-denied,老師無法申請,且無人回報)。
+//
+//  本資料夾的 firebase.json 已刻意移除 firestore 區塊,因此 `firebase deploy`
+//  不會、也不可能部署這份規則。此檔保留完整正確內容僅供對照,並確保萬一有人
+//  重新加回 firestore 區塊時,部署的仍是正確版本而非殘缺版本。
+//
+//  要部署規則:到 line-hub 專案執行  npm run deploy:rules
+//  部署後務必回頭實測四套系統都仍能正常讀寫。
+//
+//  本副本同步時間:2026-08-02(與當時線上生效版本逐一比對一致)
+// ============================================================================
+
 rules_version = '2';
+
+// ============================================================================
+//  cjps-admin-hub 共用 Firestore 規則(四套系統合併)
+// ----------------------------------------------------------------------------
+//  ⚠️ 這一個 Firestore 資料庫同時服務四套系統,而 Firestore 規則是「整個資料庫
+//     一份」的。任何一套系統單獨部署自己的 firestore.rules,都會把其他三套的
+//     規則整份覆蓋掉。本檔案是四套合併後的唯一真實版本。
+//
+//     1. consumables-manager-v3        → consumables_*
+//        C:\2026Antigravity2\程式開發\consumables-manager-v3
+//     2. classroom-equipment-manager   → eq_*、admins、inventories
+//        C:\2026Antigravity2\程式開發\classroom-equipment-manager
+//     3. ac-card-manager               → applications、users、cards、records、
+//                                        categories、admins
+//        C:\2026Antigravity2\程式開發\ac-card-manager
+//     4. line-hub(本專案)             → hub_*
+//
+//     修改規則時,請一律改這一份,再用 npm run deploy:rules 部署。
+//     改完務必回頭實測另外三套系統仍能正常讀寫。
+//
+//  ⚠️ 為什麼移除了原本的 match /{document=**} 萬用比對:
+//     Firestore 規則是 OR 邏輯——只要有任何一條規則放行就會放行。原本那條
+//     「已登入即可讀寫一切」的萬用規則會直接蓋過下面 hub_* 的分權設計,讓任何
+//     擁有 Google 帳號的人都能把自己寫進 hub_admins 提權成 superadmin。
+//     因此改為逐一列出既有集合,行為與原本等價,但不再波及新集合。
+//     ⚠️ 副作用:未列在下面的集合將一律拒絕存取。新增集合時記得回來補。
+// ============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 任何已登入的 Google 帳號即可讀寫所有集合
-    // 管理員白名單驗證由前端 AuthContext 處理
-    // 未來可改為 custom claims 強化安全性
-    match /{document=**} {
+    // ========================================================================
+    //  區塊 1:line-hub(hub_*)
+    // ========================================================================
+
+    // ⚠️ Firestore 對「單次請求的文件存取次數」有上限(單文件請求 10 次)。
+    //    因此這裡刻意把管理員資料當參數傳遞(canManage(hubAdmin(), ...)),
+    //    而不是在每個判斷式裡各自再呼叫一次 get()。實際碰到的不重複文件只有兩個:
+    //    hub_admins/{我} 與 hub_units/{目標單位}。
+
+    function hubAdminPath() {
+      return /databases/$(database)/documents/hub_admins/$(request.auth.token.email.lower());
+    }
+
+    function isHubAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && exists(hubAdminPath());
+    }
+
+    function hubAdmin() {
+      return get(hubAdminPath()).data;
+    }
+
+    function isHubSuper() {
+      return isHubAdmin() && hubAdmin().role == 'superadmin';
+    }
+
+    // 目標單位所屬的處室。單位不存在時回傳 null,後續比對必然為 false(拒絕)。
+    function unitDept(unitId) {
+      return exists(/databases/$(database)/documents/hub_units/$(unitId))
+        ? get(/databases/$(database)/documents/hub_units/$(unitId)).data.dept
+        : null;
+    }
+
+    // admin 這個人是否有權管理 unitId 這個單位的內容。
+    // 邏輯必須與前端 firebase/public/js/auth.js 的 canManageUnit() 保持一致。
+    function canManage(admin, unitId) {
+      return admin.role == 'superadmin'
+        || (admin.role == 'unitAdmin' && unitId == admin.unit)
+        || (admin.role == 'deptAdmin' && unitDept(unitId) == admin.dept);
+    }
+
+    // 管理員名單:自己只讀得到自己那筆,superadmin 讀得到全部、也只有 superadmin 能異動
+    match /hub_admins/{adminEmail} {
+      allow read: if request.auth != null
+        && (request.auth.token.email.lower() == adminEmail || isHubSuper());
+      allow write: if isHubSuper();
+    }
+
+    // 單位清單:所有後台管理員可讀(下拉選單與權限判斷需要),僅 superadmin 可異動
+    match /hub_units/{unitId} {
+      allow read: if isHubAdmin();
+      allow write: if isHubSuper();
+    }
+
+    // 動態關鍵字:各單位分權管理。
+    // create / update / delete 三處都必須檢查範圍;update 另外要求「改前」與
+    // 「改後」的 ownerUnit 都在自己範圍內,否則就能靠改 ownerUnit 把別單位的
+    // 關鍵字搶過來、或把自己的關鍵字丟到別單位去。
+    match /hub_keywords/{keywordId} {
+      allow read: if isHubAdmin();
+      allow create: if isHubAdmin()
+        && canManage(hubAdmin(), request.resource.data.ownerUnit);
+      // 改前與改後的 ownerUnit 都必須在自己範圍內。少了任何一邊,就能靠修改
+      // ownerUnit 把別單位的關鍵字搶過來,或把自己的關鍵字丟到別單位去。
+      allow update: if isHubAdmin()
+        && canManage(hubAdmin(), resource.data.ownerUnit)
+        && canManage(hubAdmin(), request.resource.data.ownerUnit);
+      allow delete: if isHubAdmin()
+        && canManage(hubAdmin(), resource.data.ownerUnit);
+    }
+
+    // 圖文主選單:全校共用一份,僅 superadmin 可異動
+    match /hub_flexMenu/{itemId} {
+      allow read: if isHubAdmin();
+      allow write: if isHubSuper();
+    }
+
+    // 系統訊息設定:僅存放非機密設定(Msg_* 等),金鑰一律留在 GAS Script Properties
+    match /hub_settings/{settingKey} {
+      allow read: if isHubAdmin();
+      allow write: if isHubSuper();
+    }
+
+    // 人員名單:後台管理員皆可讀;一般管理員只能切換推播開關,增刪改由 superadmin
+    match /hub_users/{userEmail} {
+      allow read: if isHubAdmin();
+      allow create, delete: if isHubSuper();
+      allow update: if isHubSuper()
+        || (isHubAdmin()
+            && request.resource.data.diff(resource.data)
+                 .affectedKeys().hasOnly(['allowPush', 'updatedAt']));
+    }
+
+    // 稽核紀錄:只進不出——可新增、僅 superadmin 可讀、任何人都不能改或刪
+    match /hub_auditLogs/{logId} {
+      allow read: if isHubSuper();
+      allow create: if isHubAdmin();
+      allow update, delete: if false;
+    }
+
+    // ========================================================================
+    //  區塊 2:consumables-manager-v3(consumables_*)
+    //  原樣沿用該專案 firestore.rules,未做任何行為變更
+    // ========================================================================
+
+    function isConsumablesManager() {
+      return request.auth != null && (
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)).data.role in ['manager', 'sysadmin']) ||
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())).data.role in ['manager', 'sysadmin'])
+      );
+    }
+
+    function isConsumablesSysadmin() {
+      return request.auth != null && (
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.uid)).data.role == 'sysadmin') ||
+        (exists(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())) && get(/databases/$(database)/documents/consumables_admins/$(request.auth.token.email.lower())).data.role == 'sysadmin')
+      );
+    }
+
+    match /consumables_inventory/{item} {
+      allow read: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']);
+      allow write: if isConsumablesManager();
+    }
+
+    match /consumables_applications/{app} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if isConsumablesManager() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'cancelled');
+      allow delete: if isConsumablesManager();
+    }
+
+    match /consumables_admins/{admin} {
+      allow read: if request.auth != null;
+      allow write: if isConsumablesSysadmin();
+    }
+
+    match /consumables_settings/{setting} {
+      allow read: if true;
+      allow write: if isConsumablesSysadmin();
+    }
+
+    // ========================================================================
+    //  區塊 3:classroom-equipment-manager(eq_*)
+    //  原樣沿用該專案 firestore.rules,未做任何行為變更
+    // ========================================================================
+
+    match /eq_items/{item} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /eq_classrooms/{classroom} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /eq_settings/{setting} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /eq_inventories/{inventory} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    // ========================================================================
+    //  區塊 4:既有的無前綴集合(技術債,維持原本「已登入即可讀寫」的行為)
+    // ----------------------------------------------------------------------
+    //  這些集合原本是被 match /{document=**} 萬用規則涵蓋的。為了移除萬用規則
+    //  又不改變它們的行為,在此逐一列名。
+    //
+    //  ⚠️ admins 這個集合同時被 classroom-equipment-manager 與 ac-card-manager
+    //     使用(兩套系統的管理員名單混在同一個集合裡)。line-hub 因此改用
+    //     hub_admins,不碰這裡。
+    //  ⚠️ classroom-equipment-manager 的 AdminDashboard.jsx 有幾處寫的是
+    //     inventories 而不是 eq_inventories,疑似筆誤;在確認之前照原樣保留。
+    // ========================================================================
+
+    match /admins/{adminId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /inventories/{inventoryId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /applications/{applicationId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /cards/{cardId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /records/{recordId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /categories/{categoryId} {
       allow read, write: if request.auth != null;
     }
   }

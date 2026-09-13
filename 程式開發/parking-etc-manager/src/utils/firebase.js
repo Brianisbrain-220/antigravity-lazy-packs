@@ -24,6 +24,14 @@ const firebaseConfig = {
 
 export const isDemoMode = firebaseConfig.apiKey === 'demo-key' || !firebaseConfig.apiKey;
 
+// ⚠️ 安全性:示範模式「不得」自動授予管理員權限。
+// 「設定檔沒填」(isDemoMode) 與「我要展示後台」是兩件不同的事,綁在同一個布林值上,
+// 會讓一次漏帶環境變數的部署,直接變成任何人免登入即為管理員的公開網站(2026-08-04 實際發生)。
+// 要在本機展示後台,請在自己的 .env 明確加上 VITE_DEMO_ALLOW_ADMIN=true;
+// 正式部署一律不得設定此變數。
+export const demoAdminEnabled =
+  isDemoMode && import.meta.env.VITE_DEMO_ALLOW_ADMIN === 'true';
+
 let app, auth, db, googleProvider;
 
 if (!isDemoMode) {

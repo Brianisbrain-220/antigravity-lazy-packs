@@ -1,11 +1,13 @@
 /**
  * Global Version Tagging Source of Truth
- * @version 1.0.0-b1
- * @date 2026-07-29
+ * @version 1.0.1-b2
+ * @date 2026-08-04
+ * @description 資安修補:示範模式不再自動授予管理員權限(改由 VITE_DEMO_ALLOW_ADMIN 明確啟用);
+ *              清空指向不存在帳號的緊急管理員名單。
  */
 export const VERSION_INFO = {
-  version: '1.0.0-b1',
-  buildDate: '2026-07-29',
+  version: '1.0.1-b2',
+  buildDate: '2026-08-04',
   codename: 'CCPS Smart Parking & ETC',
   schemaVersion: 1
 };

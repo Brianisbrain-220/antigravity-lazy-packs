@@ -1,9 +1,10 @@
 // ============================================================================
-// ⚠️ 唯讀鏡像 (READ-ONLY MIRROR)
+// ⚠️ 本專案規則片段，待併入權威檔 (PROJECT RULES SNIPPET - DO NOT DEPLOY)
 // 權威版本在：my-app/packages/line-hub/firebase/firestore.merged.rules
 // ============================================================================
-// 本檔案僅供本地開發、架構參考與程式碼審查使用，禁止使用此檔案執行 firebase deploy --only firestore:rules。
-// 專案的 firebase.json 已刻意移除 firestore 區塊，防止誤觸覆蓋線上的共用資料庫安全規則。
+// ⚠️ 本檔案僅為「中正國小停車管理與 ETC 登記系統 (parking-etc-manager)」自己所需的
+// Firestore 集合設定片段，並非整個共用資料庫的完整規則！
+// 禁止直接使用此檔案執行 firebase deploy --only firestore:rules，否則將蓋掉其他四套系統規則！
 // ============================================================================
 
 rules_version = '2';
@@ -11,46 +12,59 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ========================================================================
-    // [第五套] 中正國小停車管理與 ETC 登記系統 (parking-etc-manager) 專屬集合
+    // [第五套] 中正國小停車管理與 ETC 登記系統 (parking-etc-manager) 專屬集合片段
     // ========================================================================
     
-    // 1. 中央權限表 (Pilot 接入：僅供讀取個人權限；寫入限 Superadmin)
-    match /hub_grants/{email} {
-      allow read: if request.auth != null && request.auth.token.email == email;
-      allow write: if false; // 由中央管理工具或超級管理員寫入
+    // 停車管理權限驗證輔助函式
+    function isParkAdmin() {
+      return request.auth != null && request.auth.token.email != null && (
+        (exists(/databases/$(database)/documents/park_admins/$(request.auth.token.email.lower())) &&
+         get(/databases/$(database)/documents/park_admins/$(request.auth.token.email.lower())).data.role in ['ADMIN', 'SUPERADMIN', 'admin', 'superadmin']) ||
+        (exists(/databases/$(database)/documents/hub_grants/$(request.auth.token.email.lower())) &&
+         get(/databases/$(database)/documents/hub_grants/$(request.auth.token.email.lower())).data.systems.park.role in ['ADMIN', 'SUPERADMIN', 'admin', 'superadmin'])
+      );
     }
 
-    // 2. 停車管理專屬管理員表 (相容過渡期使用)
+    // 1. 中央權限表 (Pilot 接入：僅供讀取個人權限；寫入於權威檔限 superadmin)
+    match /hub_grants/{email} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow write: if false;
+    }
+
+    // 2. 停車管理專屬管理員表 (相容過渡期使用：僅供讀取驗證；寫入限 superadmin/console)
     match /park_admins/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
-    // 3. 汽機車停車證申請單
+    // 3. 汽機車停車證申請單 (前台免登入送單僅開放 create，查詢/修改/刪除嚴格限制管理員)
     match /park_permits/{id} {
-      allow read, write: if true; // 支援前台免登入送單與後台查詢
+      allow create: if true;
+      allow read, update, delete: if isParkAdmin();
     }
 
-    // 4. 違規紀錄
+    // 4. 違規紀錄 (前台通報僅開放 create，查詢/修改/刪除嚴格限制管理員)
     match /park_violations/{id} {
-      allow read, write: if true;
+      allow create: if true;
+      allow read, update, delete: if isParkAdmin();
     }
 
-    // 5. 停車管理辦法規範條文
+    // 5. 停車管理辦法規範條文 (前台全體可讀，編輯更新限管理員)
     match /park_rules/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isParkAdmin();
     }
 
-    // 6. 違規事項分類表
+    // 6. 違規事項分類表 (前台全體可讀，編輯更新限管理員)
     match /park_violation_types/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isParkAdmin();
     }
 
-    // 7. 未登錄車牌違規與累犯追蹤
+    // 7. 未登錄車牌違規與累犯追蹤 (前台通報僅開放 create，查詢/修改/刪除嚴格限制管理員)
     match /park_unregistered_vehicles/{id} {
-      allow read, write: if true;
+      allow create: if true;
+      allow read, update, delete: if isParkAdmin();
     }
 
   }

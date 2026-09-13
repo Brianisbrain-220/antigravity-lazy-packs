@@ -28,8 +28,5 @@
         ]
       }
     ]
-  },
-  "firestore": {
-    "rules": "firestore.rules"
   }
 }

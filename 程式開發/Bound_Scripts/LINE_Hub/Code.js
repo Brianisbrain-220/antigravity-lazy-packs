@@ -439,7 +439,10 @@ function SYS_HandleDynamicMenu(replyToken, msg) {
       type = String(type || '').trim();
       content = String(content || '');
       status = String(status || '').trim();
-      if (status !== '啟用' || keyword !== msg) continue;
+      
+      if (status !== '啟用') continue;
+      const keywordList = keyword.split(/[,，、|]+/).map(k => k.trim()).filter(Boolean);
+      if (!keywordList.includes(msg.trim())) continue;
       if (type === '文字') return SYS_ReplyLine(replyToken, [{ type: 'text', text: content.substring(0, 5000) }]);
       if (type === '圖片') {
         const match = String(content).match(/[-\w]{25,}/);

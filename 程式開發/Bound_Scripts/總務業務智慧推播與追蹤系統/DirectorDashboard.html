@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>中正國小總務處 - 智慧主副欄專案決策戰情室 [系統版本: v3.3.1]</title>
+  <title>中正國小總務處 - 智慧主副欄專案決策戰情室 [系統版本: v3.4.0]</title>
   <style>
     :root {
       --sidebar-bg: #0F172A;
@@ -102,6 +102,7 @@
     .app-wrapper {
       display: flex;
       flex: 1;
+      align-items: flex-start;
       min-height: calc(100vh - 64px);
       position: relative;
     }
@@ -133,6 +134,10 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border-right: 1px solid #1E293B;
       z-index: 1000;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
     }
     .sidebar.collapsed {
       width: var(--sidebar-collapsed);
@@ -571,6 +576,60 @@
     }
     .report-time-tag { font-weight: 800; font-size: 11px; color: #64748B; margin-left: 8px; }
 
+    /* COMPLETED TASKS ACCORDION (已完成檢核項目折疊查詢) */
+    .completed-accordion-box {
+      margin-top: 12px;
+      border-top: 1px dashed #E2E8F0;
+      padding-top: 8px;
+    }
+    .btn-toggle-completed {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      color: #475569;
+      border-radius: 8px;
+      padding: 8px 14px;
+      width: 100%;
+      text-align: left;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-toggle-completed:hover {
+      background: #EFF6FF;
+      color: #2563EB;
+      border-color: #BFDBFE;
+    }
+    .completed-tasks-list {
+      margin-top: 10px;
+      padding-left: 8px;
+      border-left: 3px solid #CBD5E1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* ADD NEW PROJECT BUTTON */
+    .btn-add-project {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 4px rgba(37,99,235,0.2);
+      transition: background 0.2s;
+    }
+    .btn-add-project:hover { background: #1D4ED8; }
+
     .card-footer {
       padding: 14px 20px;
       background: #F8FAFC;
@@ -800,7 +859,7 @@
       <div class="topbar-title">
         <span>🏛️</span>
         <span>中正國小總務處決策戰情室</span>
-        <span class="topbar-version">v3.3.1</span>
+        <span class="topbar-version">v3.4.0</span>
       </div>
     </div>
 
@@ -818,7 +877,7 @@
         <div class="logo-text">
           <span>🛡️</span>
           <span class="logo-title">中正總務戰情室</span>
-          <span class="version-tag">v3.3.1</span>
+          <span class="version-tag">v3.4.0</span>
         </div>
         <button class="btn-hamburger" onclick="handleHamburgerClick()" title="收合/展開選單">☰</button>
       </div>
@@ -915,6 +974,7 @@
         </div>
         
         <div class="toolbar-right">
+          <button class="btn-add-project" onclick="openAddProjectModal()">➕ 增設新工程 / 重點業務專案</button>
           <button class="btn-action btn-toggle-all" onclick="toggleAllCards()">🔼 展開/收合全部</button>
         </div>
       </div>
@@ -1020,6 +1080,71 @@
       <div class="modal-buttons">
         <button class="btn-cancel" onclick="closePushConfigModal()">關閉</button>
         <button class="btn-submit" onclick="savePushConfig()">💾 儲存並啟用設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: ADD NEW DIRECTOR PROJECT -->
+  <div class="modal-overlay" id="add-project-modal">
+    <div class="modal">
+      <div class="modal-title">➕ 增設新工程 / 重點業務專案</div>
+      <div class="modal-desc">線上建立總務處年度工程或採購專案，建立後可即刻指派各處室組別應辦檢核任務</div>
+      
+      <div class="form-group">
+        <label>專案標題 / 工程名稱：</label>
+        <input type="text" id="add-proj-title" placeholder="例：校園東棟教室樓頂漏水修繕與防水工程">
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:160px;">
+          <label>業務類別：</label>
+          <select id="add-proj-category" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1;">
+            <option value="大額工程">大額工程</option>
+            <option value="採購訂約">採購訂約</option>
+            <option value="財務經費">財務經費</option>
+            <option value="安全消防">安全消防</option>
+            <option value="環境綠化">環境綠化</option>
+            <option value="交辦專案">交辦專案</option>
+            <option value="行政事務">行政事務</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1; min-width:140px;">
+          <label>重要性優先序：</label>
+          <select id="add-proj-priority" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1;">
+            <option value="1">P1 - 🚨 急件/重中之重</option>
+            <option value="2" selected>P2 - ⚠️ 年度常規/例行</option>
+            <option value="3">P3 - 📅 預備/長程規劃</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:160px;">
+          <label>總完工限期日 (YYYY-MM-DD)：</label>
+          <input type="date" id="add-proj-deadline">
+        </div>
+        <div class="form-group" style="flex:1; min-width:140px; display:flex; align-items:center; padding-top:24px;">
+          <label style="cursor:pointer; font-weight:700; color:#1E293B;">
+            <input type="checkbox" id="add-proj-focus" checked> 列入主任決策戰情室焦點追蹤
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>參與責任處室組別 (可複選)：</label>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; padding:8px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px;" id="add-proj-sections">
+          <label style="cursor:pointer;"><input type="checkbox" value="事務組" checked> 事務組</label>
+          <label style="cursor:pointer;"><input type="checkbox" value="出納組"> 出納組</label>
+          <label style="cursor:pointer;"><input type="checkbox" value="文書組"> 文書組</label>
+          <label style="cursor:pointer;"><input type="checkbox" value="事務幹事" checked> 事務幹事</label>
+          <label style="cursor:pointer;"><input type="checkbox" value="總務主任" checked> 總務主任</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>專屬雲端卷宗 Drive 連結 (選填)：</label>
+        <input type="text" id="add-proj-folder" placeholder="例：https://drive.google.com/drive/folders/...">
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeAddProjectModal()">取消</button>
+        <button class="btn-submit" onclick="saveNewDirectorProject()">🚀 建立新專案 / 重點工程</button>
       </div>
     </div>
   </div>
@@ -1138,19 +1263,18 @@
           p.sections.forEach(sec => {
             const tasks = p.sectionTasks[sec] || [];
             if (tasks.length > 0) {
-              bodyHtml += `
-                <div class="section-checklist">
-                  <div class="checklist-title">
-                    <span>🏢 ${sec} — 應辦檢核項目 (${tasks.length})</span>
-                  </div>
-              `;
-              tasks.forEach(t => {
+              if (!p.showCompleted) p.showCompleted = {};
+              const pendingTasks = tasks.filter(t => !t.done);
+              const completedTasks = tasks.filter(t => t.done);
+              const isExpanded = !!p.showCompleted[sec];
+
+              const renderTaskItemHtml = (t) => {
                 let subDl = calculateDaysLeft(t.dueDate);
                 let dateBadgeCls = 'green';
                 if (subDl <= 3) dateBadgeCls = 'red';
                 else if (subDl <= 7) dateBadgeCls = 'yellow';
 
-                bodyHtml += `
+                let html = `
                   <div class="task-item-container">
                     <div class="task-item-top ${t.done ? 'completed' : ''}">
                       <label class="task-checkbox-label">
@@ -1163,26 +1287,54 @@
                       </div>
                     </div>
                 `;
-
                 if (t.note) {
-                  bodyHtml += `
+                  html += `
                     <div class="director-note-box">
                       <span>⚠️ <strong>主任交辦注意事項：</strong>${t.note}</span>
                     </div>
                   `;
                 }
-
                 if (t.report) {
-                  bodyHtml += `
+                  html += `
                     <div class="report-log-box">
                       <span>💬 <strong>最新承辦回報：</strong>${t.report}</span>
                       <span class="report-time-tag">(${t.reportTime})</span>
                     </div>
                   `;
                 }
+                html += `</div>`;
+                return html;
+              };
 
-                bodyHtml += `</div>`;
+              bodyHtml += `
+                <div class="section-checklist">
+                  <div class="checklist-title">
+                    <span>🏢 ${sec} — 應辦檢核項目 (${pendingTasks.length} / 共 ${tasks.length} 項)</span>
+                  </div>
+              `;
+
+              // 優先列出未完成待辦事項
+              pendingTasks.forEach(t => {
+                bodyHtml += renderTaskItemHtml(t);
               });
+
+              // 已完成項目自動放入折疊面板
+              if (completedTasks.length > 0) {
+                bodyHtml += `
+                  <div class="completed-accordion-box">
+                    <button class="btn-toggle-completed" onclick="toggleCompletedSection('${p.id}', '${sec}')">
+                      <span>✅ 已完成項目 (${completedTasks.length} 項) — 點擊${isExpanded ? '收合' : '展開'}查詢</span>
+                      <span>${isExpanded ? '🔽' : '▶️'}</span>
+                    </button>
+                    ${isExpanded ? `
+                      <div class="completed-tasks-list">
+                        ${completedTasks.map(t => renderTaskItemHtml(t)).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }
+
               bodyHtml += `</div>`;
             }
           });
@@ -1223,6 +1375,15 @@
       let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
       if (p) {
         p.collapsed = !p.collapsed;
+        renderCards();
+      }
+    }
+
+    function toggleCompletedSection(projId, sec) {
+      let p = projectsData.find(x => x.id === projId) || periodicTemplates.find(x => x.id === projId);
+      if (p) {
+        if (!p.showCompleted) p.showCompleted = {};
+        p.showCompleted[sec] = !p.showCompleted[sec];
         renderCards();
       }
     }
@@ -1325,10 +1486,17 @@
 
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         google.script.run
-          .withSuccessHandler(function() {
-            loadDashboardDataFromServer();
-            closeAddSubtaskModal();
-            alert(`🚀 新任務已交辦至【${sec}】並寫入雲端 Google Sheets！\n期限：${dueDate}\n${note ? '注意事項：' + note : ''}\n系統將自動推播預警給組長！`);
+          .withSuccessHandler(function(res) {
+            if (res && res.success !== false) {
+              loadDashboardDataFromServer();
+              closeAddSubtaskModal();
+              alert(`🚀 新任務已交辦至【${sec}】並寫入雲端 Google Sheets！\n期限：${dueDate}\n${note ? '注意事項：' + note : ''}\n系統將自動推播預警給組長！`);
+            } else {
+              alert('❌ 交辦任務失敗：' + (res && res.error ? res.error : '未知錯誤'));
+            }
+          })
+          .withFailureHandler(function(err) {
+            alert('❌ 呼叫雲端後端服務發生錯誤：' + err);
           })
           .createDirectorSubtask({
             projId: projId,
@@ -1357,6 +1525,92 @@
         renderCards();
         closeAddSubtaskModal();
         alert(`🚀 新任務已交辦至【${sec}】(展示模式)！\n期限：${dueDate}\n${note ? '注意事項：' + note : ''}\n系統已自動推播預警給組長！`);
+      }
+    }
+
+    // ADD NEW DIRECTOR PROJECT MODAL
+    function openAddProjectModal() {
+      document.getElementById('add-proj-title').value = '';
+      document.getElementById('add-proj-category').value = '大額工程';
+      document.getElementById('add-proj-priority').value = '2';
+      let d = new Date();
+      d.setDate(d.getDate() + 14);
+      let yyyy = d.getFullYear();
+      let mm = String(d.getMonth() + 1).padStart(2, '0');
+      let dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('add-proj-deadline').value = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('add-proj-focus').checked = true;
+      document.getElementById('add-proj-folder').value = '';
+      document.getElementById('add-project-modal').style.display = 'flex';
+    }
+    function closeAddProjectModal() {
+      document.getElementById('add-project-modal').style.display = 'none';
+    }
+    function saveNewDirectorProject() {
+      let title = document.getElementById('add-proj-title').value.trim();
+      if (!title) {
+        alert('請輸入專案標題或工程名稱！');
+        return;
+      }
+      let category = document.getElementById('add-proj-category').value;
+      let priority = parseInt(document.getElementById('add-proj-priority').value, 10) || 2;
+      let deadline = document.getElementById('add-proj-deadline').value || '2026-07-31';
+      let isFocus = document.getElementById('add-proj-focus').checked;
+      let folderUrl = document.getElementById('add-proj-folder').value.trim() || '';
+
+      let sectionCbs = document.querySelectorAll('#add-proj-sections input[type="checkbox"]:checked');
+      let sections = Array.from(sectionCbs).map(cb => cb.value);
+      if (sections.length === 0) {
+        sections = ['事務組', '總務主任'];
+      }
+
+      const payload = {
+        title: title,
+        category: category,
+        priority: priority,
+        deadline: deadline,
+        isFocus: isFocus,
+        sections: sections,
+        folderUrl: folderUrl
+      };
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success !== false) {
+              loadDashboardDataFromServer();
+              closeAddProjectModal();
+              alert(`✅ 新工程專案【${title}】已成功增設至雲端 Google Sheets！\n專案編號：${res.projId || '新專案'}\n您現在可以直接點選該卡片下方「➕ 主任交辦/派發子任務」派發各組任務！`);
+            } else {
+              alert('❌ 建立專案失敗：' + (res && res.error ? res.error : '未知錯誤'));
+            }
+          })
+          .withFailureHandler(function(err) {
+            alert('❌ 呼叫雲端後端服務發生錯誤：' + err);
+          })
+          .createDirectorProject(payload);
+      } else {
+        let nextNum = projectsData.length + 1;
+        let newProj = {
+          "id": `PRJ-0${nextNum}`,
+          "title": title,
+          "category": category,
+          "priority": priority,
+          "deadline": deadline,
+          "daysLeft": calculateDaysLeft(deadline),
+          "isFocus": isFocus,
+          "collapsed": false,
+          "sections": sections,
+          "sectionTasks": {},
+          "folderUrl": folderUrl || "file:///H:/我的雲端硬碟/++++總務主任/採購業務"
+        };
+        sections.forEach(s => {
+          newProj.sectionTasks[s] = [];
+        });
+        projectsData.unshift(newProj);
+        renderCards();
+        closeAddProjectModal();
+        alert(`✅ 新工程專案【${title}】已增設完成（展示模式）！\n專案編號：${newProj.id}\n現在可點選該卡片下方「➕ 主任交辦/派發子任務」指派任務！`);
       }
     }
 

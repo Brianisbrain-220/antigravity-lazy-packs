@@ -173,21 +173,30 @@ async function handleQueryRequest(email) {
 async function checkAdminRole(user) {
     try {
         let role = null;
-        
-        // 1. Check by UID first
-        let doc = await db.collection('consumables_admins').doc(user.uid).get();
-        if (doc.exists) {
-            role = doc.data().role;
-        } else if (user.email) {
-            // 2. Check by Email
-            const emailLower = user.email.toLowerCase().trim();
-            let emailDoc = await db.collection('consumables_admins').doc(emailLower).get();
-            if (emailDoc.exists) {
-                role = emailDoc.data().role;
-            } else {
-                const snap = await db.collection('consumables_admins').where('email', '==', emailLower).get();
-                if (!snap.empty) {
-                    role = snap.docs[0].data().role;
+        const emailLower = (user.email || '').toLowerCase().trim();
+
+        // 1. Central hub_grants (via hubAuth.js)
+        if (emailLower && typeof getHubAuthPermission === 'function') {
+            const hubResult = await getHubAuthPermission(emailLower);
+            if (hubResult.role) {
+                role = hubResult.isSysadmin ? 'sysadmin' : 'manager';
+            }
+        }
+
+        // 2. Fallback: consumables_admins by UID (hub_grants only stores emails)
+        if (!role) {
+            let doc = await db.collection('consumables_admins').doc(user.uid).get();
+            if (doc.exists) {
+                role = doc.data().role;
+            } else if (emailLower) {
+                let emailDoc = await db.collection('consumables_admins').doc(emailLower).get();
+                if (emailDoc.exists) {
+                    role = emailDoc.data().role;
+                } else {
+                    const snap = await db.collection('consumables_admins').where('email', '==', emailLower).get();
+                    if (!snap.empty) {
+                        role = snap.docs[0].data().role;
+                    }
                 }
             }
         }
@@ -198,7 +207,7 @@ async function checkAdminRole(user) {
             const main = document.querySelector('main');
             if (nav) nav.classList.remove('hidden');
             if (main) main.classList.remove('hidden');
-            
+
             applyAdminTheme();
             setupNavigation();
             switchTab('manage');

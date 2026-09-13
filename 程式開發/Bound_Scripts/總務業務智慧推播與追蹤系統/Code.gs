@@ -1,8 +1,8 @@
 /**
  * ============================================================================
- * 高雄市中正國小 總務處智慧業務推播與追蹤管理系統 — Code.gs (v3.3.1 正式版)
+ * 高雄市中正國小 總務處智慧業務推播與追蹤管理系統 — Code.gs (v3.4.0 正式版)
  * ============================================================================
- * 依據計畫書《中正國小總務處_智慧業務追蹤與多通道推播系統_系統設計與GAS部署開發計畫書_v3.3.1.md》
+ * 依據計畫書《中正國小總務處_智慧業務追蹤與多通道推播系統_系統設計與GAS部署開發計畫書_v3.4.0.md》
  * 包含完整後端 API 指引、試算表資料庫自動遷移 (Schema Migration)、多通道推播與 RWD Web App 控制器
  *
  * 【主要導出方法 (GAS API Specifications)】
@@ -20,13 +20,31 @@ const SHEET_PROJECTS    = "Projects";
 const SHEET_SUBTASKS    = "SubTasks";
 const SHEET_PUSH_CONFIG = "PushConfig";
 const PARENT_DRIVE_FOLDER_ID = ""; // 若留空，預設於 Google Drive 根目錄建立
+const SPREADSHEET_ID    = "1_hSnXnn2x_-cKf0v345hAP7rN7bFwP9z1O4x5xWcPQI";
+
+/**
+ * 取得試算表實體 — 自動相容於試算表容器繫結與獨立 Web App / 定時觸發器模式
+ */
+function getSpreadsheet_() {
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {
+    // 忽略 Web App context 無 active Spreadsheet 的報錯
+  }
+  try {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (err) {
+    throw new Error("無法開啟雲端試算表 (ID: " + SPREADSHEET_ID + ")，請確認對試算表具有存取或編輯權限：" + err.toString());
+  }
+}
 
 /**
  * Google Sheets 開啟時建立自訂選單
  */
 function onOpen(e) {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu("🏢 總務處智慧追蹤與推播 (v3.3.1)")
+  ui.createMenu("🏢 總務處智慧追蹤與推播 (v3.4.0)")
     .addItem("🖥️ 1. 在此試算表直接開啟「決策戰情室」視窗", "openDashboardModal")
     .addItem("🌐 2. 顯示獨立 Web App 專屬線上網址", "showWebAppUrlDialog")
     .addSeparator()
@@ -45,10 +63,10 @@ function onOpen(e) {
 function openDashboardModal() {
   const template = HtmlService.createTemplateFromFile("DirectorDashboard");
   const html = template.evaluate()
-    .setTitle("中正國小總務處 — 決策戰情室 [系統版本: v3.3.1]")
+    .setTitle("中正國小總務處 — 決策戰情室 [系統版本: v3.4.0]")
     .setWidth(1300)
     .setHeight(820);
-  SpreadsheetApp.getUi().showModalDialog(html, "🏢 中正國小總務處 — 智慧決策戰情室 [v3.3.1]");
+  SpreadsheetApp.getUi().showModalDialog(html, "🏢 中正國小總務處 — 智慧決策戰情室 [v3.4.0]");
 }
 
 /**
@@ -83,7 +101,7 @@ function showWebAppUrlDialog() {
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile("DirectorDashboard");
   const output = template.evaluate();
-  output.setTitle("中正國小總務處 — 智慧主副欄決策戰情室 [系統版本: v3.3.1]");
+  output.setTitle("中正國小總務處 — 智慧主副欄決策戰情室 [系統版本: v3.4.0]");
   output.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   output.addMetaTag("viewport", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no");
   return output;
@@ -122,7 +140,7 @@ function createJsonResponse_(obj) {
  * @returns {Object} { projects: [...], periodicTemplates: [...], pushConfig: {...} }
  */
 function getDashboardData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   let sheetProjects = ss.getSheetByName(SHEET_PROJECTS);
   let sheetSubtasks = ss.getSheetByName(SHEET_SUBTASKS);
   let sheetPushConfig = ss.getSheetByName(SHEET_PUSH_CONFIG);
@@ -263,7 +281,7 @@ function getDashboardData() {
  * ============================================================================
  */
 function updateSubtaskStatus(projId, taskId, isDone, report, note, dueDate) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const ws = ss.getSheetByName(SHEET_SUBTASKS);
   if (!ws) return { success: false, error: "找不到 SubTasks 工作表" };
 
@@ -301,7 +319,7 @@ function updateSubtaskStatus(projId, taskId, isDone, report, note, dueDate) {
  * ============================================================================
  */
 function createDirectorSubtask(payload) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const wsSub = ss.getSheetByName(SHEET_SUBTASKS);
   const wsProj = ss.getSheetByName(SHEET_PROJECTS);
   if (!wsSub || !wsProj) return { success: false, error: "找不到資料表" };
@@ -360,11 +378,56 @@ function createDirectorSubtask(payload) {
 
 /**
  * ============================================================================
+ * 核心 API 3-2: 主任線上增設新工程 / 重點業務專案 (新增至 Projects 表)
+ * ============================================================================
+ */
+function createDirectorProject(payload) {
+  const ss = getSpreadsheet_();
+  const wsProj = ss.getSheetByName(SHEET_PROJECTS);
+  if (!wsProj) return { success: false, error: "找不到 Projects 資料表" };
+
+  const title = String(payload.title || "").trim();
+  const category = String(payload.category || "大額工程").trim();
+  const priority = parseInt(payload.priority, 10) || 2;
+  const deadline = String(payload.deadline || "2026-07-31").trim();
+  const isFocus = payload.isFocus ? "TRUE" : "FALSE";
+  const sections = Array.isArray(payload.sections) && payload.sections.length > 0 ? payload.sections : ["事務組", "總務主任"];
+  const folderUrl = String(payload.folderUrl || "file:///H:/我的雲端硬碟/++++總務主任/採購業務").trim();
+
+  const projValues = wsProj.getDataRange().getValues();
+  let maxNum = 0;
+  for (let i = 1; i < projValues.length; i++) {
+    const idStr = String(projValues[i][0]).trim();
+    const match = idStr.match(/^PRJ-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  }
+  const newNum = maxNum + 1;
+  const newProjId = `PRJ-${String(newNum).padStart(2, "0")}`;
+
+  wsProj.appendRow([
+    newProjId,
+    title,
+    category,
+    priority,
+    deadline,
+    isFocus,
+    JSON.stringify(sections),
+    folderUrl
+  ]);
+
+  return { success: true, projId: newProjId };
+}
+
+/**
+ * ============================================================================
  * 核心 API 4: 儲存各組推播管道配置 (同步更新 PushConfig 表)
  * ============================================================================
  */
 function savePushConfiguration(configPayload) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const ws = ss.getSheetByName(SHEET_PUSH_CONFIG);
   if (!ws) return { success: false, error: "找不到 PushConfig 表" };
 
@@ -408,7 +471,7 @@ function savePushConfiguration(configPayload) {
  * ============================================================================
  */
 function redeployPeriodicProject(tempId) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const wsProj = ss.getSheetByName(SHEET_PROJECTS);
   const wsSub = ss.getSheetByName(SHEET_SUBTASKS);
   if (!wsProj || !wsSub) return { success: false, error: "資料表不存在" };
@@ -555,7 +618,7 @@ function triggerManualPushNotify() {
  * ============================================================================
  */
 function initSpreadsheetSchema() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   // 1. 建立 / 格式化 Projects 工作表
   let wsProj = ss.getSheetByName(SHEET_PROJECTS);
@@ -660,7 +723,7 @@ function initSpreadsheetSchema() {
  * 試算表選單輔助方法：自動為選取的專案建立 Drive 目錄
  */
 function createTaskDriveFolder() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const ws = ss.getActiveSheet();
   if (ws.getName() !== SHEET_PROJECTS) {
     SpreadsheetApp.getUi().alert("請在「Projects」工作表選擇專案列執行此功能。");

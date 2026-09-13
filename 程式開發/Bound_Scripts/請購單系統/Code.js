@@ -1,7 +1,7 @@
 /**
  * Serving the HTML Web Application
  */
-var VERSION = "v3.2.0";
+var VERSION = "v3.2.6";
 
 /**
  * Serving the HTML Web Application
@@ -165,7 +165,21 @@ function createRequisition(formData) {
     if (isProcurementCard) {
       applyProcurementCardStamp(body);
     } else {
-      body.replaceText("\\{\\{採購卡\\}\\}", "");
+      // 使用「隱形幽靈空白」技巧：插入與「採購卡支付」等寬的五個全形空白，並清除底線與底色。
+      // 這樣無論有無勾選，排版寬度都完全一致，使用者只需在範本調好一次位置即可完美對齊。
+      var range = body.findText("\\{\\{採購卡\\}\\}");
+      while (range) {
+        var text = range.getElement().asText();
+        var start = range.getStartOffset();
+        var end = range.getEndOffsetInclusive();
+        
+        text.deleteText(start, end);
+        text.insertText(start, "　　　　　　　　　　");
+        text.setBackgroundColor(start, start + 9, null);
+        text.setUnderline(start, start + 9, false);
+        
+        range = body.findText("\\{\\{採購卡\\}\\}", range);
+      }
     }
 
     // Save and close doc
@@ -506,7 +520,20 @@ function summarizePurpose(purpose) {
 function applyProcurementCardStamp(body) {
   // We no longer modify the table cell directly to avoid layout issues.
   // Instead, we rely on the {{採購卡}} placeholder in the document template.
-  body.replaceText("\\{\\{採購卡\\}\\}", "採購卡支付");
+  var range = body.findText("\\{\\{採購卡\\}\\}");
+  while (range) {
+    var text = range.getElement().asText();
+    var start = range.getStartOffset();
+    var end = range.getEndOffsetInclusive();
+    
+    text.deleteText(start, end);
+    text.insertText(start, "採購卡支付");
+    // Clear any background color or underline from the template
+    text.setBackgroundColor(start, start + 4, null);
+    text.setUnderline(start, start + 4, false);
+    
+    range = body.findText("\\{\\{採購卡\\}\\}", range);
+  }
 }
 
 /**

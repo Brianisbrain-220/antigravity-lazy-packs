@@ -34,8 +34,20 @@ class KeepApplier:
             return {}
             
         if dry_run:
-            for note_id, mods in plan.items():
-                logger.info(f"[DRY-RUN] Would modify note {note_id}: Color={mods['color']}, Labels={mods['labels']}")
+            preview_path = CHANGES_DIR.parent / "logs" / "dry_run_preview.md"
+            with open(preview_path, "w", encoding="utf-8") as f:
+                f.write("# Dry Run Preview\n\n")
+                for note_id, mods in plan.items():
+                    note = self.keep.get(note_id)
+                    if note:
+                        title = note.title or "(無標題)"
+                        text_preview = note.text[:100].replace('\n', ' ') + ("..." if len(note.text) > 100 else "")
+                        f.write(f"### {title}\n")
+                        f.write(f"- **內容預覽**: {text_preview}\n")
+                        f.write(f"- **變更顏色**: {mods['color']}\n")
+                        f.write(f"- **新增標籤**: {', '.join(mods['labels'])}\n\n")
+                    logger.info(f"[DRY-RUN] Would modify note {note_id}: Color={mods['color']}, Labels={mods['labels']}")
+            logger.info(f"Markdown preview written to {preview_path}")
             return {}
             
         # 1. Pre-apply sync to get latest timestamps from cloud (B3-2)

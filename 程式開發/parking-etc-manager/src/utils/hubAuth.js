@@ -1,5 +1,5 @@
 import { doc, getDoc } from 'firebase/firestore';
-import { db, isDemoMode } from './firebase';
+import { db, isDemoMode, demoAdminEnabled } from './firebase';
 
 // ============================================================================
 // 校務中央權限中心接入模組 (Central Authority Hub Pilot - hubAuth.js)
@@ -7,9 +7,10 @@ import { db, isDemoMode } from './firebase';
 // ============================================================================
 
 // 緊急備援管理員名單 (當中央權限表與 Firestore 皆無法連線時的最後一道防線)
+//
+// ⚠️ 已填入真實存在且已通過 Google / Firebase 授權驗證之帳號
 const EMERGENCY_ADMINS = [
-  'admin@ccps.kh.edu.tw',
-  'director@ccps.kh.edu.tw'
+  'jeason.brian@gmail.com'
 ];
 
 const CACHE_KEY = 'ccps_hub_auth_cache';
@@ -34,15 +35,17 @@ export async function getHubAuthPermission(email) {
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // 1. 展示 / 試玩模式 (Demo Mode) 下預設賦予管理員權限以供試用
+  // 1. 展示 / 試玩模式 (Demo Mode)
+  //    預設一律給「一般使用者」。只有在本機明確設定 VITE_DEMO_ALLOW_ADMIN=true 時,
+  //    才給管理員權限供展示用 —— 正式部署絕不得設定該變數。
   if (isDemoMode) {
     return {
       email: normalizedEmail,
       status: 'active',
-      role: 'ADMIN',
-      isAdmin: true,
-      isOwner: true,
-      name: '事務組管理員 (Demo)',
+      role: demoAdminEnabled ? 'ADMIN' : 'USER',
+      isAdmin: demoAdminEnabled,
+      isOwner: demoAdminEnabled,
+      name: demoAdminEnabled ? '事務組管理員 (Demo)' : '一般使用者 (Demo)',
       source: 'fallback'
     };
   }

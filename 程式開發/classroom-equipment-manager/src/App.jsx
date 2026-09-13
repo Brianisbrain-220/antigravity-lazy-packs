@@ -17,7 +17,19 @@ function MainLayout() {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
           </svg>
-          教室設備清點系統
+          <span 
+            style={{
+              fontSize: '0.82rem',
+              color: '#64748b',
+              marginLeft: '8px',
+              fontWeight: 600,
+              verticalAlign: 'middle',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+          >
+            v2.9
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} className="header-actions">
           {user ? (

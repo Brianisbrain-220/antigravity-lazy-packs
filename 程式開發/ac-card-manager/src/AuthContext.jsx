@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { googleProvider } from './firebase';
-import { isAdmin } from './db';
+import { getHubAuthPermission } from './utils/hubAuth';
 
 const AuthContext = createContext(null);
 
@@ -17,11 +17,11 @@ export function AuthProvider({ children }) {
       setUser(firebaseUser);
       if (firebaseUser) {
         try {
-          const ok = await Promise.race([
-            isAdmin(firebaseUser.email),
+          const hubResult = await Promise.race([
+            getHubAuthPermission(firebaseUser.email),
             new Promise((_, reject) => setTimeout(() => reject(new Error('驗證逾時，可能是網路連線異常或資料庫限制。')), 10000))
           ]);
-          setAdminVerified(ok);
+          setAdminVerified(hubResult.isAdmin);
         } catch (e) {
           console.error("Auth Error:", e);
           setAuthError(e.message || "發生未知驗證錯誤");

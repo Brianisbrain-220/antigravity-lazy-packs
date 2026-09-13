@@ -41,10 +41,22 @@ class TestKeepSafeguards(unittest.TestCase):
         self.patcher2 = patch("restore.CHANGES_DIR", self.temp_path)
         self.patcher1.start()
         self.patcher2.start()
+        
+        # Disable all FileHandlers to prevent polluting app.log
+        import logging
+        self.removed_handlers = []
+        for name in logging.root.manager.loggerDict:
+            logger = logging.getLogger(name)
+            for handler in logger.handlers[:]:
+                if isinstance(handler, logging.FileHandler):
+                    self.removed_handlers.append((logger, handler))
+                    logger.removeHandler(handler)
 
     def tearDown(self):
         self.patcher1.stop()
         self.patcher2.stop()
+        for logger, handler in self.removed_handlers:
+            logger.addHandler(handler)
         self.temp_dir.cleanup()
 
     # ------------------------------------------------------------------
@@ -308,6 +320,9 @@ class TestKeepSafeguards(unittest.TestCase):
 
         # At least one note must have been applied (not skipped)
         self.assertTrue(len(result) > 0, "At least one note should be applied, not skipped")
+        
+        # §12.12 e2e assertion: all colored notes must actually be in the result
+        self.assertTrue(set(colored) <= set(result), "All colored notes must be applied")
 
         # Verify change log was written
         change_files = list(self.temp_path.glob("*.json"))

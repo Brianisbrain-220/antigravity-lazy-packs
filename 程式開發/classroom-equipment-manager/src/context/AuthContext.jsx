@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, googleProvider, db } from '../firebase';
+import { auth, googleProvider } from '../firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { getHubAuthPermission } from '../utils/hubAuth';
 
 const AuthContext = createContext(null);
 
@@ -16,29 +16,9 @@ export function AuthProvider({ children }) {
       setUser(firebaseUser);
       if (firebaseUser?.email) {
         try {
-          // Normalize to lowercase for compatibility, but check both to be safe
-          const emailLower = firebaseUser.email.toLowerCase().trim();
-          const adminDoc = await getDoc(doc(db, 'admins', emailLower));
-          let docData = null;
-          if (adminDoc.exists()) {
-            setIsAdmin(true);
-            docData = adminDoc.data();
-          } else {
-            const adminDocCase = await getDoc(doc(db, 'admins', firebaseUser.email.trim()));
-            if (adminDocCase.exists()) {
-              setIsAdmin(true);
-              docData = adminDocCase.data();
-            } else {
-              setIsAdmin(false);
-            }
-          }
-          if (docData) {
-            // 如果資料庫中 role 為 super_admin，或是舊有帳號無 role 欄位時自動設定為超級管理員
-            const isSuper = docData.role === 'super_admin' || !docData.role;
-            setIsSuperAdmin(isSuper);
-          } else {
-            setIsSuperAdmin(false);
-          }
+          const hubResult = await getHubAuthPermission(firebaseUser.email);
+          setIsAdmin(hubResult.isAdmin);
+          setIsSuperAdmin(hubResult.isOwner);
         } catch (err) {
           console.error("Error verifying admin status:", err);
           setIsAdmin(false);

@@ -16,3 +16,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+export const isDemoMode = firebaseConfig.apiKey === 'demo-key' || !firebaseConfig.apiKey;
+export const demoAdminEnabled =
+  isDemoMode && import.meta.env.VITE_DEMO_ALLOW_ADMIN === 'true';

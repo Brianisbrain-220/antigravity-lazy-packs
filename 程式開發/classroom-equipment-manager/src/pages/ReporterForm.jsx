@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '../context/AuthContext';
-import { seedEquipmentItems, seedClassrooms, seedSettings, DEFAULT_CATEGORIES, DEFAULT_CLASSROOMS, DEFAULT_EQUIPMENT_ITEMS } from '../seedData';
+import { seedEquipmentItems, seedClassrooms, DEFAULT_CATEGORIES, DEFAULT_CLASSROOMS, DEFAULT_EQUIPMENT_ITEMS } from '../seedData';
 
 const getSortWeight = (item) => {
   if (item?.sortOrder === undefined || item?.sortOrder === null || item?.sortOrder === '') return 50;
@@ -378,48 +378,6 @@ function ReporterForm() {
 
   return (
     <div className="card fade-in">
-      {/* Prominent Version Banner & Cache-Buster Reload Button */}
-      <div style={{
-        background: '#0f172a',
-        color: '#38bdf8',
-        padding: '0.75rem 1.2rem',
-        borderRadius: '50px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        fontSize: '0.9rem',
-        fontWeight: 700,
-        marginBottom: '1.2rem',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-        flexWrap: 'wrap',
-        gap: '0.5rem',
-        border: '1px solid #1e293b'
-      }}>
-        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-          <span style={{background: '#0284c7', color: 'white', padding: '0.15rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem'}}>最新版本</span>
-          <span>🚀 系統版本: v2.7 (2026/07/28 23:05 - Android/LINE簽名防崩潰安全版)</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            window.location.href = window.location.pathname + '?v=2.7_' + Date.now();
-          }}
-          style={{
-            background: '#10b981',
-            color: 'white',
-            border: 'none',
-            padding: '0.35rem 0.9rem',
-            borderRadius: '20px',
-            fontSize: '0.82rem',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
-          }}
-        >
-          🔄 重新載入最新版本
-        </button>
-      </div>
-
       <h2 style={{marginBottom: '1.5rem', color: 'var(--primary)', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem'}}>
         教室設備清點填報
       </h2>
@@ -869,8 +827,8 @@ function ReporterForm() {
         fontSize: '0.82rem',
         lineHeight: '1.6'
       }}>
-        <div><strong>中正國小教室設備清點與報修系統</strong> | 版本: <span style={{color: '#0284c7', fontWeight: 'bold'}}>v2.7 (2026-07-28 23:05)</span></div>
-        <div>Android / LINE 簽名防崩潰安全版 • 全空間開放報表相容版</div>
+        <div><strong>中正國小教室設備清點與報修系統</strong> | 版本: <span style={{color: '#0284c7', fontWeight: 'bold'}}>v2.9 (2026-07-31)</span></div>
+        <div>管理後台空間折疊與介面整合升級版 • Android / LINE 簽名防崩潰安全版</div>
       </footer>
     </div>
   );
