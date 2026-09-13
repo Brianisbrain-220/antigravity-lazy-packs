@@ -69,14 +69,39 @@ TAXONOMY_RULES = [
         "labels": ["專案-AntiGravity"]
     },
     {
-        "keywords": [r"\b(api|python|bug|ai)\b", "程式", "開發", "專案", "系統"],
+        "keywords": [r"\b(claude|gemini|groq|perplexity|chatgpt|ai)\b", "Notebook", "模型", "提示詞", "prompt"],
+        "color": ColorValue.Teal,
+        "labels": ["專案-AI模型"]
+    },
+    {
+        "keywords": [r"\b(api|python|bug)\b", "程式", "開發", "專案", "系統"],
         "color": ColorValue.Teal,
         "labels": ["專案-程式開發"]
     },
     {
-        "keywords": ["筆記", "心得", "SOP", "流程", "手冊", "知識庫", "反思", "閱讀"],
+        "keywords": ["攻略", "開箱", "筆記", "心得", "SOP", "流程", "手冊", "知識庫", "反思", "閱讀"],
         "color": ColorValue.Purple,
         "labels": ["筆記-知識庫"]
+    },
+    {
+        "keywords": ["理財", "投資", "股票", "ETF", "存款", "記帳", "信用卡", "報稅", "匯率", "利息"],
+        "color": ColorValue.Blue,
+        "labels": ["理財-資訊"]
+    },
+    {
+        "keywords": ["國內旅遊", "高鐵", "台鐵", "民宿", "國旅", "環島", "租車"],
+        "color": ColorValue.Pink,
+        "labels": ["旅遊-國內"]
+    },
+    {
+        "keywords": ["出國", "機票", "護照", "自由行", "免稅", "海關", "行李"],
+        "color": ColorValue.Pink,
+        "labels": ["旅遊-國外"]
+    },
+    {
+        "keywords": ["美食", "餐廳", "聚餐", "訂位", "菜單", "好吃", "餐酒館", "咖啡廳"],
+        "color": ColorValue.Yellow,
+        "labels": ["生活-美食餐廳"]
     },
     {
         "keywords": ["買", "購物", "採買", "清單", "網購", "帳單", "點子", "靈感", "待確認"],
