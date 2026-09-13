@@ -1,3 +1,4 @@
+import re
 from config import TAXONOMY_RULES, setup_logger
 from gkeepapi.node import ColorValue
 
@@ -78,13 +79,15 @@ class KeepClassifier:
                 if matched_rule:
                     plan[note_id] = {
                         "color": rule["color"],
-                        "labels": rule["labels"]
+                        "labels": rule["labels"],
+                        "snapshot_updated": node_updated
                     }
                     matched = True
                     break
                     
-            if not matched:
+            if not matched and not include_labeled:
                 # D1/D7: No rules matched, leave as White (DEFAULT), add '待整理'
+                # But under --include-labeled we skip tagging 待整理 (F3)
                 plan[note_id] = {
                     "color": ColorValue.White,
                     "labels": ["待整理"],

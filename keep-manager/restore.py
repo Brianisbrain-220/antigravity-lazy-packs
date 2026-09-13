@@ -9,7 +9,7 @@ import gkeepapi
 
 logger = setup_logger("RestoreEngine")
 
-def restore_run(run_id, dry_run=False, force=False):
+def restore_run(run_id, dry_run=False, force=False, allow_missing_labels=False):
     change_file = CHANGES_DIR / f"{run_id}.json"
     if not change_file.exists():
         logger.error(f"Change log {change_file} not found.")
@@ -93,8 +93,8 @@ def restore_run(run_id, dry_run=False, force=False):
                 note.labels.add(lbl)
                 changed = True
                 
-        if missing > 0 and not force:
-            logger.error("Missing labels detected. Aborting restore. Use --force to allow missing labels.")
+        if missing > 0 and not allow_missing_labels:
+            logger.error("Missing labels detected. Aborting restore. Use --allow-missing-labels to proceed.")
             raise AssertionError("ABORT: Missing labels for restore.")
             
         if changed:
@@ -120,6 +120,10 @@ def restore_run(run_id, dry_run=False, force=False):
         keys_to_ignore = {"color", "labelIds", "timestamps", "_dirty", "labels"}
         b_clean = {k: v for k, v in b_node.items() if k not in keys_to_ignore}
         a_clean = {k: v for k, v in a_node.items() if k not in keys_to_ignore}
+        b_clean["_trashed"] = str(b_node.get("timestamps", {}).get("trashed") or "1970")
+        a_clean["_trashed"] = str(a_node.get("timestamps", {}).get("trashed") or "1970")
+        b_clean["_deleted"] = str(b_node.get("timestamps", {}).get("deleted") or "1970")
+        a_clean["_deleted"] = str(a_node.get("timestamps", {}).get("deleted") or "1970")
         
         if b_clean != a_clean:
             diff = {k: (b_clean.get(k), a_clean.get(k)) for k in set(b_clean) | set(a_clean) if b_clean.get(k) != a_clean.get(k)}
@@ -135,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("--run", required=True, help="Run ID (e.g. 20260912_180000)")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be restored without pushing")
     parser.add_argument("--force", action="store_true", help="Force restore even if note was modified later")
+    parser.add_argument("--allow-missing-labels", action="store_true", help="Proceed even if some labels no longer exist")
     args = parser.parse_args()
     
-    restore_run(args.run, args.dry_run, args.force)
+    restore_run(args.run, args.dry_run, args.force, args.allow_missing_labels)
