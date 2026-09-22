@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>教師成績考核通知書 Word 轉 Excel 工具 (100% 本機離線版)</title>
+  <title>教師成績考核通知書 Word 轉 Excel 工具 (v0.2.1)</title>
   <style>
 :root {
   --primary: #2563eb;
@@ -463,7 +463,7 @@ footer {
   </div>
 
   <footer>
-    <p>教師成績考核通知書 Word 轉 Excel 離線工具 v1.0.0 | 純本機瀏覽器沙盒執行・無外部網路請求</p>
+    <p>教師成績考核通知書 Word 轉 Excel 離線工具 v0.2.1 | 純本機瀏覽器沙盒執行・無外部網路請求</p>
   </footer>
 </div>
 
@@ -514,139 +514,17 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
 
 </script>
 
-<!-- Application Core Logic -->
+<!-- Parser Core Engine -->
 <script>
-(function() {
+(function(root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.DocxAssessmentParser = factory();
+  }
+})(typeof self !== 'undefined' ? self : this, function() {
   'use strict';
 
-  // State
-  let parsedRecords = [];
-  let currentFileName = '';
-
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('fileInput');
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  const errorBanner = document.getElementById('errorBanner');
-  const errorTitle = document.getElementById('errorTitle');
-  const errorMsg = document.getElementById('errorMsg');
-  const previewCard = document.getElementById('previewCard');
-  const statTotal = document.getElementById('statTotal');
-  const statIssue = document.getElementById('statIssue');
-  const btnDownload = document.getElementById('btnDownload');
-  const btnReset = document.getElementById('btnReset');
-  const searchInput = document.getElementById('searchInput');
-  const toggleMask = document.getElementById('toggleMask');
-  const tableBody = document.getElementById('tableBody');
-
-  // Event Listeners
-  dropZone.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', handleFileSelect);
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFile(e.dataTransfer.files[0]);
-    }
-  });
-
-  btnReset.addEventListener('click', () => {
-    parsedRecords = [];
-    currentFileName = '';
-    fileInput.value = '';
-    previewCard.classList.remove('show');
-    dropZone.style.display = 'block';
-    hideError();
-  });
-
-  searchInput.addEventListener('input', renderTable);
-  toggleMask.addEventListener('change', renderTable);
-  btnDownload.addEventListener('click', () => exportToExcel(parsedRecords));
-
-  function handleFileSelect(e) {
-    if (e.target.files && e.target.files.length > 0) {
-      processFile(e.target.files[0]);
-    }
-  }
-
-  function showError(title, message) {
-    errorTitle.textContent = title;
-    errorMsg.textContent = message;
-    errorBanner.classList.add('show');
-    loadingOverlay.classList.remove('show');
-    dropZone.style.display = 'block';
-  }
-
-  function hideError() {
-    errorBanner.classList.remove('show');
-  }
-
-  // Check Magic Bytes: 50 4B 03 04 (PK\x03\x04)
-  function checkZipMagic(arrayBuffer) {
-    if (!arrayBuffer || arrayBuffer.byteLength < 4) return false;
-    const view = new Uint8Array(arrayBuffer);
-    return view[0] === 0x50 && view[1] === 0x4B && view[2] === 0x03 && view[3] === 0x04;
-  }
-
-  function processFile(file) {
-    hideError();
-    currentFileName = file.name;
-
-    // Check extension
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      if (file.name.toLowerCase().endsWith('.doc')) {
-        showError(
-          '⚠️ 檔案格式為舊版 .doc',
-          '本工具僅支援現代標準 .docx 格式。請先在 Microsoft Word 中開啟該檔案，點選「檔案」➔「另存新檔」，將存檔類型選擇為「Word 文件 (*.docx)」，再重新上傳。'
-        );
-      } else {
-        showError(
-          '⚠️ 不支援的檔案格式',
-          '請上傳 Word 文件檔 (.docx)。'
-        );
-      }
-      return;
-    }
-
-    dropZone.style.display = 'none';
-    loadingOverlay.classList.add('show');
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const buffer = e.target.result;
-
-      // Validate ZIP magic
-      if (!checkZipMagic(buffer)) {
-        showError(
-          '⚠️ 檔案非標準 DOCX 壓縮格式',
-          '檔案開頭未通過 ZIP 格式驗證（可能為偽裝成 .docx 的舊版 .doc 或檔案損壞）。請用 Microsoft Word 開啟後「另存新檔」為真正的 .docx 格式後重試。'
-        );
-        return;
-      }
-
-      // Allow UI spinner to paint before CPU-heavy parsing
-      setTimeout(() => {
-        executeParse(buffer);
-      }, 50);
-    };
-
-    reader.onerror = function() {
-      showError('⚠️ 檔案讀取失敗', '無法讀取本機檔案，請確認檔案權限後重試。');
-    };
-
-    reader.readAsArrayBuffer(file);
-  }
-
-  // --- DOCX XML Parsing Core (Row-stream State Machine) ---
   const KEYWORDS = [
     { key: '核定薪額', field: '核定薪額' },
     { key: '核定獎懲', field: '核定獎懲' },
@@ -660,6 +538,12 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     { key: '說明',     field: '說明' }
   ];
 
+  function checkZipMagic(arrayBuffer) {
+    if (!arrayBuffer || arrayBuffer.byteLength < 4) return false;
+    const view = new Uint8Array(arrayBuffer);
+    return view[0] === 0x50 && view[1] === 0x4B && view[2] === 0x03 && view[3] === 0x04;
+  }
+
   function extractText(node) {
     const parts = [];
     function walk(n) {
@@ -672,12 +556,18 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
         parts.push(n.textContent || '');
         return;
       }
-      if (name === 'tab' || name === 'br') {
+      if (name === 'tab') {
         parts.push(' ');
         return;
       }
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        walk(c);
+      if (name === 'br') {
+        // P2-A 修復：w:br 為手動換行 (Shift+Enter)，不得轉成空白。
+        // 中文公文排版不需要空白，且標頭正則字元類均排除 \s。
+        // 分頁用的 <w:br w:type="page"/> 落在空段落，不受影響。
+        return;
+      }
+      for (let c = n.firstElementChild || n.firstChild; c; c = c.nextElementSibling || c.nextSibling) {
+        if (c.nodeType === 1) walk(c);
       }
     }
     walk(node);
@@ -690,18 +580,22 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
 
   function getRows(tbl) {
     const rows = [];
-    for (let c = tbl.firstElementChild; c; c = c.nextElementSibling) {
-      const name = c.localName || c.nodeName.split(':').pop();
-      if (name === 'tr') rows.push(c);
+    for (let c = tbl.firstElementChild || tbl.firstChild; c; c = c.nextElementSibling || c.nextSibling) {
+      if (c.nodeType === 1) {
+        const name = c.localName || c.nodeName.split(':').pop();
+        if (name === 'tr') rows.push(c);
+      }
     }
     return rows;
   }
 
   function getCells(tr) {
     const cells = [];
-    for (let c = tr.firstElementChild; c; c = c.nextElementSibling) {
-      const name = c.localName || c.nodeName.split(':').pop();
-      if (name === 'tc') cells.push(c);
+    for (let c = tr.firstElementChild || tr.firstChild; c; c = c.nextElementSibling || c.nextSibling) {
+      if (c.nodeType === 1) {
+        const name = c.localName || c.nodeName.split(':').pop();
+        if (name === 'tc') cells.push(c);
+      }
     }
     return cells;
   }
@@ -715,8 +609,8 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
         paras.push(n);
         return;
       }
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        findP(c);
+      for (let c = n.firstElementChild || n.firstChild; c; c = c.nextElementSibling || c.nextSibling) {
+        if (c.nodeType === 1) findP(c);
       }
     }
     findP(cell);
@@ -727,13 +621,15 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     let found = false;
     function search(n) {
       if (found || !n) return;
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        const name = c.localName || c.nodeName.split(':').pop();
-        if (name === 'tbl') {
-          found = true;
-          return;
+      for (let c = n.firstElementChild || n.firstChild; c; c = c.nextElementSibling || c.nextSibling) {
+        if (c.nodeType === 1) {
+          const name = c.localName || c.nodeName.split(':').pop();
+          if (name === 'tbl') {
+            found = true;
+            return;
+          }
+          search(c);
         }
-        search(c);
       }
     }
     search(tbl);
@@ -852,6 +748,282 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     record['解析備註'] = record.notes.join('；');
   }
 
+  function parseDocxXml(xmlString, customDOMParser) {
+    const ParserClass = customDOMParser || (typeof DOMParser !== 'undefined' ? DOMParser : null);
+    if (!ParserClass) {
+      throw new Error('環境中無可用的 DOMParser');
+    }
+
+    const parser = new ParserClass({
+      errorHandler: {
+        warning: function() {},
+        error: function(msg) {
+          throw new Error('Word 檔案內容損壞（XML 解析失敗: ' + msg + '）。');
+        },
+        fatalError: function(msg) {
+          throw new Error('Word 檔案內容損壞（XML 嚴重解析失敗: ' + msg + '）。');
+        }
+      }
+    });
+    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+    // P3-D 檢查瀏覽器原生 parsererror
+    const parsererrors = (xmlDoc.getElementsByTagName && xmlDoc.getElementsByTagName('parsererror')) || [];
+    const isParserError = (parsererrors && parsererrors.length > 0) ||
+                          (xmlDoc.documentElement && xmlDoc.documentElement.nodeName === 'parsererror');
+    if (isParserError) {
+      throw new Error('Word 檔案內容損壞（XML 解析失敗，偵測到 parsererror）。');
+    }
+
+    let body = null;
+    const bodies = xmlDoc.getElementsByTagNameNS ? xmlDoc.getElementsByTagNameNS('*', 'body') : xmlDoc.getElementsByTagName('w:body');
+    if (bodies && bodies.length > 0) {
+      body = bodies[0];
+    } else {
+      body = xmlDoc.documentElement;
+    }
+
+    const state = {
+      headerBuf: [],
+      currentRecord: null,
+      records: []
+    };
+
+    function processRow(tr) {
+      const cells = getCells(tr);
+      if (cells.length === 0) return;
+
+      const lastCell = cells[cells.length - 1];
+      const value = extractCellText(lastCell).trim();
+
+      const otherCells = cells.slice(0, cells.length - 1);
+      const labelText = otherCells.map(c => extractCellText(c)).join('').replace(/\s+/g, '');
+
+      let matchedField = null;
+      for (const item of KEYWORDS) {
+        if (labelText.includes(item.key)) {
+          matchedField = item.field;
+          break;
+        }
+      }
+
+      if (matchedField === '姓名') {
+        if (state.currentRecord) {
+          finalizeRecord(state.currentRecord);
+          state.records.push(state.currentRecord);
+        }
+        state.currentRecord = createEmptyRecord();
+        state.currentRecord['姓名'] = value;
+        state.currentRecord.headerBuf = [...state.headerBuf];
+        state.headerBuf = [];
+      } else if (matchedField && state.currentRecord) {
+        if (state.currentRecord[matchedField]) {
+          state.currentRecord.notes.push('欄位[' + matchedField + ']重複');
+        } else {
+          state.currentRecord[matchedField] = value;
+        }
+      } else {
+        for (const cell of cells) {
+          const paras = getParagraphs(cell);
+          for (const p of paras) {
+            const pText = extractText(p).trim();
+            if (pText) {
+              state.headerBuf.push(pText);
+            }
+          }
+        }
+      }
+    }
+
+    function processTable(tbl) {
+      const rows = getRows(tbl);
+      for (const r of rows) {
+        processRow(r);
+      }
+    }
+
+    function traverse(node) {
+      for (let child = node.firstElementChild || node.firstChild; child; child = child.nextElementSibling || child.nextSibling) {
+        if (child.nodeType !== 1) continue;
+        const name = child.localName || child.nodeName.split(':').pop();
+        if (name === 'tbl') {
+          if (hasNestedTable(child)) {
+            traverse(child);
+          } else {
+            processTable(child);
+          }
+        } else if (name === 'p') {
+          const text = extractText(child).trim();
+          if (text) {
+            state.headerBuf.push(text);
+          }
+        } else {
+          traverse(child);
+        }
+      }
+    }
+
+    traverse(body);
+
+    if (state.currentRecord) {
+      finalizeRecord(state.currentRecord);
+      state.records.push(state.currentRecord);
+      state.currentRecord = null;
+    }
+
+    return state.records;
+  }
+
+  return {
+    parseDocxXml,
+    parseHeaderFields,
+    checkZipMagic,
+    extractText
+  };
+});
+
+</script>
+
+<!-- Application Core Logic -->
+<script>
+(function() {
+  'use strict';
+
+  // P3-B 集中版本常數
+  const APP_VERSION = 'v0.2.1';
+
+  // State
+  let parsedRecords = [];
+  let currentFileName = '';
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const errorBanner = document.getElementById('errorBanner');
+  const errorTitle = document.getElementById('errorTitle');
+  const errorMsg = document.getElementById('errorMsg');
+  const previewCard = document.getElementById('previewCard');
+  const statTotal = document.getElementById('statTotal');
+  const statIssue = document.getElementById('statIssue');
+  const btnDownload = document.getElementById('btnDownload');
+  const btnReset = document.getElementById('btnReset');
+  const searchInput = document.getElementById('searchInput');
+  const toggleMask = document.getElementById('toggleMask');
+  const tableBody = document.getElementById('tableBody');
+
+  // Event Listeners
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', handleFileSelect);
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // P3-E 多檔拖曳提示
+      if (e.dataTransfer.files.length > 1) {
+        showError(
+          'ℹ️ 提示：一次請處理一個檔案',
+          '偵測到拖曳了多個檔案。本工具每次請處理一個 Word 檔，系統已自動為您載入第一個檔案。'
+        );
+      }
+      processFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  btnReset.addEventListener('click', () => {
+    parsedRecords = [];
+    currentFileName = '';
+    fileInput.value = '';
+    previewCard.classList.remove('show');
+    dropZone.style.display = 'block';
+    hideError();
+  });
+
+  searchInput.addEventListener('input', renderTable);
+  toggleMask.addEventListener('change', renderTable);
+  btnDownload.addEventListener('click', () => exportToExcel(parsedRecords));
+
+  function handleFileSelect(e) {
+    if (e.target.files && e.target.files.length > 0) {
+      if (e.target.files.length > 1) {
+        showError(
+          'ℹ️ 提示：一次請處理一個檔案',
+          '每次請選擇單一 Word 檔案，系統已自動為您載入第一個檔案。'
+        );
+      }
+      processFile(e.target.files[0]);
+    }
+  }
+
+  function showError(title, message) {
+    errorTitle.textContent = title;
+    errorMsg.textContent = message;
+    errorBanner.classList.add('show');
+    loadingOverlay.classList.remove('show');
+    dropZone.style.display = 'block';
+  }
+
+  function hideError() {
+    errorBanner.classList.remove('show');
+  }
+
+  function processFile(file) {
+    currentFileName = file.name;
+
+    // Check extension
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      if (file.name.toLowerCase().endsWith('.doc')) {
+        showError(
+          '⚠️ 檔案格式為舊版 .doc',
+          '本工具僅支援現代標準 .docx 格式。請先在 Microsoft Word 中開啟該檔案，點選「檔案」➔「另存新檔」，將存檔類型選擇為「Word 文件 (*.docx)」，再重新上傳。'
+        );
+      } else {
+        showError(
+          '⚠️ 不支援的檔案格式',
+          '請上傳 Word 文件檔 (.docx)。'
+        );
+      }
+      return;
+    }
+
+    dropZone.style.display = 'none';
+    loadingOverlay.classList.add('show');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const buffer = e.target.result;
+
+      // Validate ZIP magic
+      if (!DocxAssessmentParser.checkZipMagic(buffer)) {
+        showError(
+          '⚠️ 檔案非標準 DOCX 壓縮格式',
+          '檔案開頭未通過 ZIP 格式驗證（可能為偽裝成 .docx 的舊版 .doc 或檔案損壞）。請用 Microsoft Word 開啟後「另存新檔」為真正的 .docx 格式後重試。'
+        );
+        return;
+      }
+
+      // Allow UI spinner to paint before CPU-heavy parsing
+      setTimeout(() => {
+        executeParse(buffer);
+      }, 50);
+    };
+
+    reader.onerror = function() {
+      showError('⚠️ 檔案讀取失敗', '無法讀取本機檔案，請確認檔案權限後重試。');
+    };
+
+    reader.readAsArrayBuffer(file);
+  }
+
   async function executeParse(buffer) {
     try {
       const zip = await JSZip.loadAsync(buffer);
@@ -862,105 +1034,9 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
       }
 
       const xmlText = await xmlFile.async('string');
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-      let body = null;
-      const bodies = xmlDoc.getElementsByTagNameNS ? xmlDoc.getElementsByTagNameNS('*', 'body') : xmlDoc.getElementsByTagName('w:body');
-      if (bodies && bodies.length > 0) {
-        body = bodies[0];
-      } else {
-        body = xmlDoc.documentElement;
-      }
-
-      const state = {
-        headerBuf: [],
-        currentRecord: null,
-        records: []
-      };
-
-      function processRow(tr) {
-        const cells = getCells(tr);
-        if (cells.length === 0) return;
-
-        const lastCell = cells[cells.length - 1];
-        const value = extractCellText(lastCell).trim();
-
-        const otherCells = cells.slice(0, cells.length - 1);
-        const labelText = otherCells.map(c => extractCellText(c)).join('').replace(/\s+/g, '');
-
-        let matchedField = null;
-        for (const item of KEYWORDS) {
-          if (labelText.includes(item.key)) {
-            matchedField = item.field;
-            break;
-          }
-        }
-
-        if (matchedField === '姓名') {
-          if (state.currentRecord) {
-            finalizeRecord(state.currentRecord);
-            state.records.push(state.currentRecord);
-          }
-          state.currentRecord = createEmptyRecord();
-          state.currentRecord['姓名'] = value;
-          state.currentRecord.headerBuf = [...state.headerBuf];
-          state.headerBuf = [];
-        } else if (matchedField && state.currentRecord) {
-          if (state.currentRecord[matchedField]) {
-            state.currentRecord.notes.push('欄位[' + matchedField + ']重複');
-          } else {
-            state.currentRecord[matchedField] = value;
-          }
-        } else {
-          for (const cell of cells) {
-            const paras = getParagraphs(cell);
-            for (const p of paras) {
-              const pText = extractText(p).trim();
-              if (pText) {
-                state.headerBuf.push(pText);
-              }
-            }
-          }
-        }
-      }
-
-      function processTable(tbl) {
-        const rows = getRows(tbl);
-        for (const r of rows) {
-          processRow(r);
-        }
-      }
-
-      function traverse(node) {
-        for (let child = node.firstElementChild; child; child = child.nextElementSibling) {
-          const name = child.localName || child.nodeName.split(':').pop();
-          if (name === 'tbl') {
-            if (hasNestedTable(child)) {
-              traverse(child);
-            } else {
-              processTable(child);
-            }
-          } else if (name === 'p') {
-            const text = extractText(child).trim();
-            if (text) {
-              state.headerBuf.push(text);
-            }
-          } else {
-            traverse(child);
-          }
-        }
-      }
-
-      traverse(body);
-
-      if (state.currentRecord) {
-        finalizeRecord(state.currentRecord);
-        state.records.push(state.currentRecord);
-        state.currentRecord = null;
-      }
-
-      parsedRecords = state.records;
+      
+      // P3-D: parseDocxXml 內部已做 parsererror 檢查並丟出明確例外
+      parsedRecords = DocxAssessmentParser.parseDocxXml(xmlText);
 
       loadingOverlay.classList.remove('show');
 
@@ -977,7 +1053,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
 
     } catch (err) {
       console.error(err);
-      showError('⚠️ 解析過程發生錯誤', '錯誤詳情：' + (err.message || err));
+      showError('⚠️ 檔案內容解析失敗', err.message || '未知錯誤');
     }
   }
 

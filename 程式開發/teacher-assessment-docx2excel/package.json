@@ -1,0 +1,12 @@
+{
+  "name": "teacher-assessment-docx2excel",
+  "version": "0.2.1",
+  "description": "教師成績考核通知書 Word 轉 Excel 100% 本機離線工具",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test_parser.js"
+  },
+  "devDependencies": {
+    "@xmldom/xmldom": "^0.8.10"
+  }
+}

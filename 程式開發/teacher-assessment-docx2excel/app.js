@@ -1,6 +1,9 @@
 (function() {
   'use strict';
 
+  // P3-B 集中版本常數
+  const APP_VERSION = 'v0.2.1';
+
   // State
   let parsedRecords = [];
   let currentFileName = '';
@@ -37,6 +40,13 @@
     e.preventDefault();
     dropZone.classList.remove('dragover');
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // P3-E 多檔拖曳提示
+      if (e.dataTransfer.files.length > 1) {
+        showError(
+          'ℹ️ 提示：一次請處理一個檔案',
+          '偵測到拖曳了多個檔案。本工具每次請處理一個 Word 檔，系統已自動為您載入第一個檔案。'
+        );
+      }
       processFile(e.dataTransfer.files[0]);
     }
   });
@@ -56,6 +66,12 @@
 
   function handleFileSelect(e) {
     if (e.target.files && e.target.files.length > 0) {
+      if (e.target.files.length > 1) {
+        showError(
+          'ℹ️ 提示：一次請處理一個檔案',
+          '每次請選擇單一 Word 檔案，系統已自動為您載入第一個檔案。'
+        );
+      }
       processFile(e.target.files[0]);
     }
   }
@@ -72,15 +88,7 @@
     errorBanner.classList.remove('show');
   }
 
-  // Check Magic Bytes: 50 4B 03 04 (PK\x03\x04)
-  function checkZipMagic(arrayBuffer) {
-    if (!arrayBuffer || arrayBuffer.byteLength < 4) return false;
-    const view = new Uint8Array(arrayBuffer);
-    return view[0] === 0x50 && view[1] === 0x4B && view[2] === 0x03 && view[3] === 0x04;
-  }
-
   function processFile(file) {
-    hideError();
     currentFileName = file.name;
 
     // Check extension
@@ -107,7 +115,7 @@
       const buffer = e.target.result;
 
       // Validate ZIP magic
-      if (!checkZipMagic(buffer)) {
+      if (!DocxAssessmentParser.checkZipMagic(buffer)) {
         showError(
           '⚠️ 檔案非標準 DOCX 壓縮格式',
           '檔案開頭未通過 ZIP 格式驗證（可能為偽裝成 .docx 的舊版 .doc 或檔案損壞）。請用 Microsoft Word 開啟後「另存新檔」為真正的 .docx 格式後重試。'
@@ -128,212 +136,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // --- DOCX XML Parsing Core (Row-stream State Machine) ---
-  const KEYWORDS = [
-    { key: '核定薪額', field: '核定薪額' },
-    { key: '核定獎懲', field: '核定獎懲' },
-    { key: '身分證',   field: '身分證字號' },
-    { key: '姓名',     field: '姓名' },
-    { key: '現職',     field: '現職' },
-    { key: '年功薪',   field: '現支年功薪' },
-    { key: '本薪',     field: '現支本薪' },
-    { key: '合計',     field: '現支薪額合計' },
-    { key: '符合條款', field: '符合條款' },
-    { key: '說明',     field: '說明' }
-  ];
-
-  function extractText(node) {
-    const parts = [];
-    function walk(n) {
-      if (!n) return;
-      const name = n.localName || n.nodeName.split(':').pop();
-      if (name === 'del' || name === 'instrText' || name === 'Fallback') {
-        return;
-      }
-      if (name === 't') {
-        parts.push(n.textContent || '');
-        return;
-      }
-      if (name === 'tab' || name === 'br') {
-        parts.push(' ');
-        return;
-      }
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        walk(c);
-      }
-    }
-    walk(node);
-    return parts.join('').normalize('NFKC');
-  }
-
-  function extractCellText(cell) {
-    return extractText(cell);
-  }
-
-  function getRows(tbl) {
-    const rows = [];
-    for (let c = tbl.firstElementChild; c; c = c.nextElementSibling) {
-      const name = c.localName || c.nodeName.split(':').pop();
-      if (name === 'tr') rows.push(c);
-    }
-    return rows;
-  }
-
-  function getCells(tr) {
-    const cells = [];
-    for (let c = tr.firstElementChild; c; c = c.nextElementSibling) {
-      const name = c.localName || c.nodeName.split(':').pop();
-      if (name === 'tc') cells.push(c);
-    }
-    return cells;
-  }
-
-  function getParagraphs(cell) {
-    const paras = [];
-    function findP(n) {
-      if (!n) return;
-      const name = n.localName || n.nodeName.split(':').pop();
-      if (name === 'p') {
-        paras.push(n);
-        return;
-      }
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        findP(c);
-      }
-    }
-    findP(cell);
-    return paras;
-  }
-
-  function hasNestedTable(tbl) {
-    let found = false;
-    function search(n) {
-      if (found || !n) return;
-      for (let c = n.firstElementChild; c; c = c.nextElementSibling) {
-        const name = c.localName || c.nodeName.split(':').pop();
-        if (name === 'tbl') {
-          found = true;
-          return;
-        }
-        search(c);
-      }
-    }
-    search(tbl);
-    return found;
-  }
-
-  function escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  function parseHeaderFields(headerBuf) {
-    const fullText = headerBuf.join('\n');
-    const normalized = fullText.normalize('NFKC');
-
-    const lastRecipientIdx = normalized.lastIndexOf('受文者');
-    let headText = '';
-    let bodyText = '';
-
-    if (lastRecipientIdx !== -1) {
-      headText = normalized.substring(0, lastRecipientIdx);
-      bodyText = normalized.substring(lastRecipientIdx);
-    } else {
-      headText = normalized;
-      bodyText = normalized;
-    }
-
-    // 發文日期: last 中華民國\s*\d+\s*年\s*\d+\s*月\s*\d+\s*日
-    const dateRegex = /中華民國\s*\d+\s*年\s*\d+\s*月\s*\d+\s*日/g;
-    let dateMatches = [...headText.matchAll(dateRegex)];
-    let issueDate = '';
-    if (dateMatches.length > 0) {
-      issueDate = dateMatches[dateMatches.length - 1][0].trim();
-    }
-
-    // Replace date with \n, then find last notice number:
-    const headWithoutDate = issueDate ? headText.replace(new RegExp(escapeRegExp(issueDate), 'g'), '\n') : headText;
-    const issueNoRegex = /[^\n\s，。：:]+?字第\s*\d+\s*號/g;
-    let issueNoMatches = [...headWithoutDate.matchAll(issueNoRegex)];
-    let issueNo = '';
-    if (issueNoMatches.length > 0) {
-      issueNo = issueNoMatches[issueNoMatches.length - 1][0].trim();
-    }
-
-    // 受文者: 受文者\s*[:：]\s*([^\n]+)
-    let recipient = '';
-    const recipientMatch = bodyText.match(/受文者\s*[:：]\s*([^\n]+)/);
-    if (recipientMatch) {
-      recipient = recipientMatch[1].trim();
-    }
-
-    // 核定學年度: (\d+)\s*學年度
-    let academicYear = '';
-    const yearMatch = bodyText.match(/(\d+)\s*學年度/);
-    if (yearMatch) {
-      academicYear = yearMatch[1] + '學年度';
-    }
-
-    // 核定文號: \d+\s*年\s*\d+\s*月\s*\d+\s*日[^\n\s，。]*?字第\s*\d+\s*號
-    let approvalNo = '';
-    const approvalNoMatch = bodyText.match(/\d+\s*年\s*\d+\s*月\s*\d+\s*日[^\n\s，。]*?字第\s*\d+\s*號/);
-    if (approvalNoMatch) {
-      approvalNo = approvalNoMatch[0].trim();
-    }
-
-    return {
-      受文者: recipient,
-      發文日期: issueDate,
-      發文字號: issueNo,
-      核定學年度: academicYear,
-      核定文號: approvalNo
-    };
-  }
-
-  function createEmptyRecord() {
-    return {
-      受文者: '',
-      發文日期: '',
-      發文字號: '',
-      核定學年度: '',
-      核定文號: '',
-      姓名: '',
-      身分證字號: '',
-      現職: '',
-      現支本薪: '',
-      現支年功薪: '',
-      現支薪額合計: '',
-      符合條款: '',
-      核定薪額: '',
-      核定獎懲: '',
-      說明: '',
-      解析備註: '',
-      notes: [],
-      headerBuf: []
-    };
-  }
-
-  function finalizeRecord(record) {
-    const headerData = parseHeaderFields(record.headerBuf || []);
-    record['受文者'] = headerData.受文者 || '';
-    record['發文日期'] = headerData.發文日期 || '';
-    record['發文字號'] = headerData.發文字號 || '';
-    record['核定學年度'] = headerData.核定學年度 || '';
-    record['核定文號'] = headerData.核定文號 || '';
-
-    const requiredFields = [
-      '受文者', '發文日期', '發文字號', '核定學年度', '核定文號',
-      '姓名', '身分證字號', '現職', '現支本薪', '現支年功薪',
-      '現支薪額合計', '符合條款', '核定薪額', '核定獎懲', '說明'
-    ];
-    for (const f of requiredFields) {
-      if (!record[f] || String(record[f]).trim() === '') {
-        record.notes.push(f + '缺');
-      }
-    }
-
-    record['解析備註'] = record.notes.join('；');
-  }
-
   async function executeParse(buffer) {
     try {
       const zip = await JSZip.loadAsync(buffer);
@@ -344,105 +146,9 @@
       }
 
       const xmlText = await xmlFile.async('string');
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-      let body = null;
-      const bodies = xmlDoc.getElementsByTagNameNS ? xmlDoc.getElementsByTagNameNS('*', 'body') : xmlDoc.getElementsByTagName('w:body');
-      if (bodies && bodies.length > 0) {
-        body = bodies[0];
-      } else {
-        body = xmlDoc.documentElement;
-      }
-
-      const state = {
-        headerBuf: [],
-        currentRecord: null,
-        records: []
-      };
-
-      function processRow(tr) {
-        const cells = getCells(tr);
-        if (cells.length === 0) return;
-
-        const lastCell = cells[cells.length - 1];
-        const value = extractCellText(lastCell).trim();
-
-        const otherCells = cells.slice(0, cells.length - 1);
-        const labelText = otherCells.map(c => extractCellText(c)).join('').replace(/\s+/g, '');
-
-        let matchedField = null;
-        for (const item of KEYWORDS) {
-          if (labelText.includes(item.key)) {
-            matchedField = item.field;
-            break;
-          }
-        }
-
-        if (matchedField === '姓名') {
-          if (state.currentRecord) {
-            finalizeRecord(state.currentRecord);
-            state.records.push(state.currentRecord);
-          }
-          state.currentRecord = createEmptyRecord();
-          state.currentRecord['姓名'] = value;
-          state.currentRecord.headerBuf = [...state.headerBuf];
-          state.headerBuf = [];
-        } else if (matchedField && state.currentRecord) {
-          if (state.currentRecord[matchedField]) {
-            state.currentRecord.notes.push('欄位[' + matchedField + ']重複');
-          } else {
-            state.currentRecord[matchedField] = value;
-          }
-        } else {
-          for (const cell of cells) {
-            const paras = getParagraphs(cell);
-            for (const p of paras) {
-              const pText = extractText(p).trim();
-              if (pText) {
-                state.headerBuf.push(pText);
-              }
-            }
-          }
-        }
-      }
-
-      function processTable(tbl) {
-        const rows = getRows(tbl);
-        for (const r of rows) {
-          processRow(r);
-        }
-      }
-
-      function traverse(node) {
-        for (let child = node.firstElementChild; child; child = child.nextElementSibling) {
-          const name = child.localName || child.nodeName.split(':').pop();
-          if (name === 'tbl') {
-            if (hasNestedTable(child)) {
-              traverse(child);
-            } else {
-              processTable(child);
-            }
-          } else if (name === 'p') {
-            const text = extractText(child).trim();
-            if (text) {
-              state.headerBuf.push(text);
-            }
-          } else {
-            traverse(child);
-          }
-        }
-      }
-
-      traverse(body);
-
-      if (state.currentRecord) {
-        finalizeRecord(state.currentRecord);
-        state.records.push(state.currentRecord);
-        state.currentRecord = null;
-      }
-
-      parsedRecords = state.records;
+      
+      // P3-D: parseDocxXml 內部已做 parsererror 檢查並丟出明確例外
+      parsedRecords = DocxAssessmentParser.parseDocxXml(xmlText);
 
       loadingOverlay.classList.remove('show');
 
@@ -459,7 +165,7 @@
 
     } catch (err) {
       console.error(err);
-      showError('⚠️ 解析過程發生錯誤', '錯誤詳情：' + (err.message || err));
+      showError('⚠️ 檔案內容解析失敗', err.message || '未知錯誤');
     }
   }
 

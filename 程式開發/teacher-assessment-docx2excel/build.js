@@ -1,9 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
+const APP_VERSION = 'v0.2.1';
+
 const cssCode = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
 const jszipCode = fs.readFileSync(path.join(__dirname, 'jszip.min.js'), 'utf8');
 const xlsxCode = fs.readFileSync(path.join(__dirname, 'xlsx.full.min.js'), 'utf8');
+const parserCode = fs.readFileSync(path.join(__dirname, 'parser.js'), 'utf8');
 const appCode = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 
 const html = `<!DOCTYPE html>
@@ -11,7 +14,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>教師成績考核通知書 Word 轉 Excel 工具 (100% 本機離線版)</title>
+  <title>教師成績考核通知書 Word 轉 Excel 工具 (${APP_VERSION})</title>
   <style>
 ${cssCode}
   </style>
@@ -103,7 +106,7 @@ ${cssCode}
   </div>
 
   <footer>
-    <p>教師成績考核通知書 Word 轉 Excel 離線工具 v1.0.0 | 純本機瀏覽器沙盒執行・無外部網路請求</p>
+    <p>教師成績考核通知書 Word 轉 Excel 離線工具 ${APP_VERSION} | 純本機瀏覽器沙盒執行・無外部網路請求</p>
   </footer>
 </div>
 
@@ -116,6 +119,11 @@ ${jszipCode}
 <script>
 // --- SheetJS v0.20.3 ---
 ${xlsxCode}
+</script>
+
+<!-- Parser Core Engine -->
+<script>
+${parserCode}
 </script>
 
 <!-- Application Core Logic -->
