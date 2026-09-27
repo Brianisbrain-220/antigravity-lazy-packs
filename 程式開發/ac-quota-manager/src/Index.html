@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include_('Styles'); ?>
+  </head>
+  <body>
+    <div id="loader" class="hidden">
+      <div class="spinner"></div>
+    </div>
+    
+    <div class="container">
+      <header>
+        <h1>冷氣時數管理系統</h1>
+        <div>
+          <button id="btn-login-modal" class="secondary" title="管理員登入">⚙️</button>
+          <button id="btn-logout" class="hidden">登出</button>
+        </div>
+      </header>
+      
+      <main id="view-public">
+        <div class="card">
+          <h2>查詢單位冷氣使用狀況</h2>
+          <div class="form-group">
+            <select id="pub-unit-select">
+              <option value="">請選擇使用單位...</option>
+            </select>
+          </div>
+        </div>
+        
+        <div id="pub-dashboard" class="hidden">
+          <div class="grid">
+            <div class="card kpi-card">
+              <h3>目前賽期基本剩餘</h3>
+              <div id="kpi-base" class="kpi-value">0.0</div>
+              <small id="kpi-period-name" class="text-muted"></small>
+            </div>
+            <div class="card kpi-card">
+              <h3>自費時數餘額</h3>
+              <div id="kpi-wallet" class="kpi-value">0.0</div>
+            </div>
+            <div class="card kpi-card">
+              <h3>目前可用</h3>
+              <div id="kpi-available" class="kpi-value">0.0</div>
+            </div>
+          </div>
+          
+          <div id="pub-owed-alert" class="card hidden" style="background-color: var(--danger); color: white;">
+            <h3 style="margin:0; text-align:center;">應補繳 <span id="pub-owed-hours"></span> 小時</h3>
+          </div>
+          
+          <div class="card">
+            <h3>使用紀錄明細</h3>
+            <div style="overflow-x: auto;">
+              <table id="pub-usages-table">
+                <thead>
+                  <tr>
+                    <th>使用日期</th>
+                    <th>場地</th>
+                    <th>時段</th>
+                    <th>扣抵時數</th>
+                    <th>賽期歸屬</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <main id="view-admin" class="hidden">
+        <h2>管理後台</h2>
+        <!-- 簡化：為節省空間，這裡放最基本的按鈕，實際依需求切換 Tabs -->
+        <div style="margin-bottom: 1rem;">
+          <button id="tab-add-usage">登記使用</button>
+          <button id="tab-add-topup">登記加值</button>
+        </div>
+        
+        <div id="admin-panel-usage" class="card">
+          <h3>登記冷氣使用</h3>
+          <form id="form-add-usage">
+            <div class="form-group">
+              <label>使用單位</label>
+              <select id="usage-unit" required></select>
+            </div>
+            <div class="form-group">
+              <label>場地</label>
+              <select id="usage-venue" required>
+                <option value="禮堂">禮堂</option>
+                <option value="韻律體操教室">韻律體操教室</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>日期</label>
+              <input type="date" id="usage-date" required>
+            </div>
+            <div class="form-group">
+              <label>時間</label>
+              <div style="display:flex; gap:0.5rem;">
+                <input type="time" id="usage-start" required> -
+                <input type="time" id="usage-end" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>覆寫扣抵時數 (選填)</label>
+              <input type="number" id="usage-override" min="1" step="1">
+            </div>
+            <div class="form-group">
+              <label>備註原因</label>
+              <input type="text" id="usage-note">
+            </div>
+            <button type="submit">預覽並登記</button>
+          </form>
+        </div>
+      </main>
+      
+      <footer>
+        &copy; 2026 冷氣時數管理系統 | <?= version ?>
+      </footer>
+    </div>
+    
+    <!-- Login Modal -->
+    <div id="modal-login" class="modal-overlay hidden">
+      <div class="modal">
+        <h2>管理員登入</h2>
+        <form id="form-login">
+          <div class="form-group">
+            <label>帳號</label>
+            <input type="text" id="login-user" required>
+          </div>
+          <div class="form-group">
+            <label>密碼</label>
+            <input type="password" id="login-pass" required>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <button type="button" class="secondary" onclick="document.getElementById('modal-login').classList.add('hidden')">取消</button>
+            <button type="submit">登入</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <script>
+      const APP_MODE = '<?= mode ?>';
+      const APP_VERSION = '<?= version ?>';
+    </script>
+    <?!= include_('Client'); ?>
+  </body>
+</html>

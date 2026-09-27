@@ -1,0 +1,206 @@
+<script>
+  console.log('%c AC Quota Manager ' + APP_VERSION + ' ', 'background: #4f46e5; color: white; border-radius: 4px; font-weight: bold;');
+
+  const safeStore = {
+    get: function(key) {
+      try { return sessionStorage.getItem(key); } catch(e) { return window['_fallback_' + key]; }
+    },
+    set: function(key, val) {
+      try { sessionStorage.setItem(key, val); } catch(e) { window['_fallback_' + key] = val; }
+    },
+    remove: function(key) {
+      try { sessionStorage.removeItem(key); } catch(e) { delete window['_fallback_' + key]; }
+    }
+  };
+
+  function showLoader() { document.getElementById('loader').classList.remove('hidden'); }
+  function hideLoader() { document.getElementById('loader').classList.add('hidden'); }
+
+  function callApi(fnName, ...args) {
+    showLoader();
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(res => {
+          hideLoader();
+          resolve(res);
+        })
+        .withFailureHandler(err => {
+          hideLoader();
+          if (err.message && err.message.startsWith('SESSION_EXPIRED')) {
+            safeStore.remove('token');
+            alert('登入逾時，請重新登入');
+            document.getElementById('modal-login').classList.remove('hidden');
+          } else {
+            alert('錯誤: ' + err.message);
+          }
+          reject(err);
+        })[fnName](...args);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+  });
+
+  function initApp() {
+    document.getElementById('btn-login-modal').addEventListener('click', () => {
+      document.getElementById('modal-login').classList.remove('hidden');
+    });
+    
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      const token = safeStore.get('token');
+      if (token) {
+        callApi('logout', token).then(() => {
+          safeStore.remove('token');
+          window.location.reload();
+        }).catch(()=> {
+          safeStore.remove('token');
+          window.location.reload();
+        });
+      }
+    });
+
+    document.getElementById('form-login').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const u = document.getElementById('login-user').value;
+      const p = document.getElementById('login-pass').value;
+      callApi('login', u, p).then(res => {
+        if (res.ok) {
+          safeStore.set('token', res.token);
+          document.getElementById('modal-login').classList.add('hidden');
+          alert('登入成功: ' + res.displayName);
+          loadAdminView();
+        }
+      });
+    });
+    
+    document.getElementById('pub-unit-select').addEventListener('change', (e) => {
+      const uid = e.target.value;
+      if (uid) loadUnitDetail(uid);
+      else document.getElementById('pub-dashboard').classList.add('hidden');
+    });
+    
+    document.getElementById('form-add-usage').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const token = safeStore.get('token');
+      const payload = {
+        unitId: document.getElementById('usage-unit').value,
+        venue: document.getElementById('usage-venue').value,
+        date: document.getElementById('usage-date').value,
+        start: document.getElementById('usage-start').value,
+        end: document.getElementById('usage-end').value,
+        hoursOverride: document.getElementById('usage-override').value,
+        note: document.getElementById('usage-note').value
+      };
+      
+      // confirm flow
+      callApi('adminAddUsage', token, payload, false).then(res => {
+        if (res.needConfirm) {
+          if (confirm(res.reasons.join('\n') + '\n\n確定要強制寫入嗎？')) {
+            callApi('adminAddUsage', token, payload, true).then(r2 => {
+              if (r2.ok) { alert('登記成功'); e.target.reset(); }
+            });
+          }
+        } else if (res.ok) {
+          alert('登記成功');
+          e.target.reset();
+        }
+      });
+    });
+
+    if (APP_MODE === 'admin' || safeStore.get('token')) {
+      if (safeStore.get('token')) {
+        loadAdminView();
+      } else {
+        document.getElementById('modal-login').classList.remove('hidden');
+      }
+    } else {
+      loadPublicView();
+    }
+  }
+
+  function loadPublicView() {
+    document.getElementById('view-public').classList.remove('hidden');
+    document.getElementById('view-admin').classList.add('hidden');
+    document.getElementById('btn-login-modal').classList.remove('hidden');
+    document.getElementById('btn-logout').classList.add('hidden');
+    
+    callApi('getPublicBootstrap').then(res => {
+      if (res.ok) {
+        const sel = document.getElementById('pub-unit-select');
+        sel.innerHTML = '<option value="">請選擇使用單位...</option>';
+        res.data.units.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.unitId;
+          opt.textContent = u.unitName;
+          sel.appendChild(opt);
+        });
+      }
+    });
+  }
+
+  function loadUnitDetail(unitId) {
+    callApi('getPublicUnitDetail', unitId).then(res => {
+      if (res.ok) {
+        document.getElementById('pub-dashboard').classList.remove('hidden');
+        const s = res.data.summary;
+        
+        document.getElementById('kpi-base').textContent = s.currentBaseRemaining;
+        const p = s.periods.find(x => x.periodId === s.currentPeriodId);
+        document.getElementById('kpi-period-name').textContent = p ? p.periodName : '無進行中賽期';
+        
+        document.getElementById('kpi-wallet').textContent = s.walletAvailable;
+        const avail = document.getElementById('kpi-available');
+        avail.textContent = s.availableNow;
+        
+        avail.className = 'kpi-value';
+        if (s.availableNow > 4) avail.classList.add('green');
+        else if (s.availableNow > 0) avail.classList.add('amber');
+        else avail.classList.add('red');
+        
+        const alertBox = document.getElementById('pub-owed-alert');
+        if (s.owedHours > 0) {
+          alertBox.classList.remove('hidden');
+          document.getElementById('pub-owed-hours').textContent = s.owedHours;
+        } else {
+          alertBox.classList.add('hidden');
+        }
+        
+        const tbody = document.querySelector('#pub-usages-table tbody');
+        tbody.innerHTML = '';
+        res.data.usages.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td data-label="日期">${u.date}</td>
+            <td data-label="場地">${u.venue}</td>
+            <td data-label="時段">${u.start} - ${u.end}</td>
+            <td data-label="時數">${u.hours}</td>
+            <td data-label="歸屬">${u.periodName}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    });
+  }
+
+  function loadAdminView() {
+    document.getElementById('view-public').classList.add('hidden');
+    document.getElementById('view-admin').classList.remove('hidden');
+    document.getElementById('btn-login-modal').classList.add('hidden');
+    document.getElementById('btn-logout').classList.remove('hidden');
+    
+    callApi('adminGetBootstrap', safeStore.get('token')).then(res => {
+      if (res.ok) {
+        const sel = document.getElementById('usage-unit');
+        sel.innerHTML = '<option value="">請選擇使用單位...</option>';
+        res.data.units.filter(u => u['啟用狀態']==='啟用').forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u['單位ID'];
+          opt.textContent = u['單位名稱'];
+          sel.appendChild(opt);
+        });
+        document.getElementById('usage-date').value = new Date().toISOString().split('T')[0];
+      }
+    });
+  }
+</script>

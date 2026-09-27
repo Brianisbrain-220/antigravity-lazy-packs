@@ -1,0 +1,8 @@
+{
+  "name": "@my-app/ac-quota-manager",
+  "version": "1.0.0",
+  "description": "AC Quota Manager",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
