@@ -23,8 +23,8 @@ function adminSetup() {
   
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('SPREADSHEET_ID')) {
-    console.error('SPREADSHEET_ID is not set in ScriptProperties.');
-    return;
+    props.setProperty('SPREADSHEET_ID', '1JiOD6iKtxj7alSFHm9eRq-4UoVxcLqqn_befEx0nF9Q');
+    console.log('Set SPREADSHEET_ID to 1JiOD6iKtxj7alSFHm9eRq-4UoVxcLqqn_befEx0nF9Q');
   }
   
   checkAndMigrateDb_();
